@@ -191,6 +191,7 @@ export default function SellScreen() {
   return (
     <MKBackground disableSafeArea>
       <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
           {
@@ -557,6 +558,10 @@ export default function SellScreen() {
 }
 
 const styles = StyleSheet.create({
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
   scrollContent: {
     paddingHorizontal: 20,
     gap: 16,

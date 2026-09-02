@@ -101,6 +101,7 @@ export default function MoreScreen() {
   return (
     <MKBackground disableSafeArea>
       <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={[styles.content, { paddingTop: topPadding, paddingBottom: bottomPadding }]}
         showsVerticalScrollIndicator={false}
       >
@@ -347,6 +348,10 @@ function MenuRow({ item, isLast }: { item: MenuItem; isLast: boolean }) {
 }
 
 const styles = StyleSheet.create({
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
   content: {
     paddingHorizontal: 18,
   },

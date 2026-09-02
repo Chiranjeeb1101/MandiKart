@@ -33,12 +33,21 @@ const ONION_CROP_URI =
 type OrderTab = 'All' | 'Pending' | 'Active' | 'Completed';
 
 export default function OrdersScreen() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [selectedTab, setSelectedTab] = useState<OrderTab>('Active');
+
+  const topPadding = Math.max(insets.top + 16, 50);
+  const bottomPadding = Math.max(insets.bottom + 80, 110);
 
   return (
     <MKBackground disableSafeArea>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        style={styles.scrollView}
+        contentContainerStyle={[
+          styles.scrollContent,
+          { paddingTop: topPadding, paddingBottom: bottomPadding },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
@@ -298,10 +307,12 @@ export default function OrdersScreen() {
 }
 
 const styles = StyleSheet.create({
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 54,
-    paddingBottom: 28,
     gap: 16,
   },
   header: {

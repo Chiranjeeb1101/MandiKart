@@ -52,6 +52,7 @@ export default function ProduceScreen() {
   return (
     <MKBackground disableSafeArea>
       <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={[
           styles.scrollContent,
           {
@@ -267,6 +268,10 @@ export default function ProduceScreen() {
 }
 
 const styles = StyleSheet.create({
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
   scrollContent: {
     paddingHorizontal: 20,
     gap: 16,

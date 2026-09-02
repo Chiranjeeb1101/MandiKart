@@ -54,6 +54,7 @@ export default function HomeScreen() {
   return (
     <MKBackground disableSafeArea>
       <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={[styles.scrollContent, { paddingTop: topPadding }]}
         showsVerticalScrollIndicator={false}
       >
@@ -126,7 +127,7 @@ export default function HomeScreen() {
 
         {/* Decision Support Card */}
         <MKCard
-          style={styles.decisionCard}
+          padding="none"
           onPress={() => router.push('/(tabs)/sell')}
         >
           {/* Crop row */}
@@ -146,7 +147,7 @@ export default function HomeScreen() {
           </View>
 
           {/* Net Return */}
-          <View style={styles.netReturnRow}>
+          <View style={[styles.netReturnRow, { marginTop: 0 }]}>
             <Text style={styles.netReturnLabel}>Estimated Net Return</Text>
             <Text style={styles.netReturnValue}>
               ₹22.00 <Text style={styles.unitText}>/kg</Text>
@@ -239,6 +240,10 @@ export default function HomeScreen() {
 }
 
 const styles = StyleSheet.create({
+  scrollView: {
+    flex: 1,
+    width: '100%',
+  },
   scrollContent: {
     paddingHorizontal: 20,
     paddingBottom: 28,
