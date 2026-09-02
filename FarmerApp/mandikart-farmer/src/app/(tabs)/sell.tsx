@@ -1,12 +1,8 @@
 /**
  * MandiKart Farmer App — Screen 10: Sell (Guided Selection Flow)
- * 
- * Implements the approved Stitch visual design:
- * Crop horizontal selector with photos & "+ Add Crop" card,
- * Quantity dropdown bar & stepper, Quality Grade dropdown modal picker,
- * market intelligence 2-card bento grid (Market Price & Demand),
- * "Top Match for You" net return calculation card with verified buyer profile,
- * and 3D primary FIND BEST SELLING OPTIONS action.
+ *
+ * Built using MandiKart production layout primitives (MKScreen, MKSection, MKCard).
+ * Robust horizontal layouts, responsive bento grid, dropdowns, and modals.
  */
 
 import React, { useState } from 'react';
@@ -22,7 +18,6 @@ import {
   TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   TrendingUp,
   Flame,
@@ -39,7 +34,9 @@ import {
   X,
   Sprout,
 } from 'lucide-react-native';
-import { MKBackground, MKButton, MKCard, MKStatusBadge } from '@/components/ui';
+import { MKScreen, MKCard, MKButton } from '@/components/ui';
+import { MKColors } from '@/constants/colors';
+import { MKSpacing } from '@/constants/spacing';
 
 interface CropItem {
   id: string;
@@ -130,7 +127,6 @@ const BUYER_AVATAR_URI =
 
 export default function SellScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
 
   const [cropsList, setCropsList] = useState<CropItem[]>(INITIAL_CROPS);
   const [selectedCropId, setSelectedCropId] = useState('onion');
@@ -164,7 +160,8 @@ export default function SellScreen() {
     const newCropItem: CropItem = {
       id: `custom_${Date.now()}`,
       name: customCropName.trim(),
-      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCDOJL8RKbbBEQi0du8hHGGe-fNpsnVqibsmptRi9ANv4FaE2LMboZqWH-2gppsktLNvVx7JSEyIU7uFwWEwW_oPILiWrX--jYxolR5dfUcXhKUUF-9cJbkgQ_8gyjelFWX8ZwXTeUjNw-KboozHRyg_JSSPA-o-tGFXdfyIhuXXnpbyl4_aNaN-vY2CjsppXPuL2phZuIDm3b1kNIqcfZ0gthemK3IivuhVUaf9GTfWi3xjfl-HDHjcg',
+      image:
+        'https://lh3.googleusercontent.com/aida-public/AB6AXuCDOJL8RKbbBEQi0du8hHGGe-fNpsnVqibsmptRi9ANv4FaE2LMboZqWH-2gppsktLNvVx7JSEyIU7uFwWEwW_oPILiWrX--jYxolR5dfUcXhKUUF-9cJbkgQ_8gyjelFWX8ZwXTeUjNw-KboozHRyg_JSSPA-o-tGFXdfyIhuXXnpbyl4_aNaN-vY2CjsppXPuL2phZuIDm3b1kNIqcfZ0gthemK3IivuhVUaf9GTfWi3xjfl-HDHjcg',
       price: 25,
       transport: 2,
       marketRange: '₹22-28',
@@ -189,250 +186,247 @@ export default function SellScreen() {
   };
 
   return (
-    <MKBackground disableSafeArea>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[
-          styles.scrollContent,
-          {
-            paddingTop: Math.max(insets.top + 16, 50),
-            paddingBottom: Math.max(insets.bottom + 80, 110),
-          },
-        ]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerTitle}>Sell Produce</Text>
-          <Text style={styles.headerSubtitle}>Calculate net return & connect with buyers</Text>
-        </View>
+    <MKScreen>
+      {/* ── Header ── */}
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>Sell Produce</Text>
+        <Text style={styles.headerSubtitle}>Calculate net return & connect with buyers</Text>
+      </View>
 
-        {/* Section 1: Crop & Quantity Selection Card */}
-        <MKCard style={styles.cropSelectorCard}>
-          <Text style={styles.sectionTitle}>What do you want to sell?</Text>
+      {/* ── Section 1: Crop & Quantity Selection Card ── */}
+      <MKCard style={styles.cropSelectorCard}>
+        <Text style={styles.sectionTitle}>What do you want to sell?</Text>
 
-          {/* Horizontal Crop Scroll including "+ Add Crop" card */}
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.cropScrollContent}
-          >
-            {cropsList.map((crop) => {
-              const isSelected = selectedCropId === crop.id;
-              return (
-                <Pressable
-                  key={crop.id}
-                  onPress={() => setSelectedCropId(crop.id)}
-                  style={({ pressed }) => [
-                    styles.cropSelectBtn,
-                    isSelected && styles.cropSelectBtnActive,
-                    pressed && { transform: [{ scale: 0.93 }], opacity: 0.9 },
-                  ]}
-                >
-                  <View style={styles.cropImageWrapper}>
-                    <Image source={{ uri: crop.image }} style={styles.cropThumb} />
-                  </View>
-                  <Text
-                    style={[
-                      styles.cropSelectName,
-                      isSelected && styles.cropSelectNameActive,
-                    ]}
-                  >
-                    {crop.name}
-                  </Text>
-                </Pressable>
-              );
-            })}
-
-            {/* + ADD CROP CARD */}
-            <Pressable
-              onPress={() => setAddCropModalOpen(true)}
-              style={({ pressed }) => [
-                styles.addCropCardBtn,
-                pressed && { transform: [{ scale: 0.93 }], opacity: 0.85 },
-              ]}
-            >
-              <View style={styles.addCropCircle}>
-                <Plus size={22} color="#1E5A2A" strokeWidth={2.8} />
-              </View>
-              <Text style={styles.addCropCardText}>Add Crop</Text>
-            </Pressable>
-          </ScrollView>
-
-          {/* Quantity & Quality Dropdown Section */}
-          <View style={styles.dropdownsSection}>
-            
-            {/* Quantity Dropdown & Stepper Bar */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Quantity (KG)</Text>
-              <View style={styles.qtyControlRow}>
-                {/* Quantity Dropdown Selector */}
-                <Pressable
-                  onPress={() => setQtyModalOpen(true)}
-                  style={({ pressed }) => [
-                    styles.dropdownBar,
-                    styles.qtyDropdownBar,
-                    pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
-                  ]}
-                >
-                  <Scale size={18} color="#1E5A2A" />
-                  <Text style={styles.dropdownBarText}>{quantity.toLocaleString()} KG</Text>
-                  <ChevronDown size={18} color="#7A7A7A" />
-                </Pressable>
-
-                {/* +/- Stepper Buttons */}
-                <View style={styles.stepperBox}>
-                  <Pressable
-                    onPress={handleDecreaseQty}
-                    style={({ pressed }) => [
-                      styles.stepperBtn,
-                      pressed && { transform: [{ scale: 0.88 }], opacity: 0.8 },
-                    ]}
-                  >
-                    <Minus size={16} color="#1E5A2A" strokeWidth={2.5} />
-                  </Pressable>
-                  <Pressable
-                    onPress={handleIncreaseQty}
-                    style={({ pressed }) => [
-                      styles.stepperBtn,
-                      pressed && { transform: [{ scale: 0.88 }], opacity: 0.8 },
-                    ]}
-                  >
-                    <Plus size={16} color="#1E5A2A" strokeWidth={2.5} />
-                  </Pressable>
-                </View>
-              </View>
-            </View>
-
-            {/* Quality Grade Dropdown Bar */}
-            <View style={styles.inputGroup}>
-              <Text style={styles.inputLabel}>Quality Grade</Text>
+        {/* Horizontal Crop Scroll including "+ Add Crop" card */}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.cropScrollContent}
+        >
+          {cropsList.map((crop) => {
+            const isSelected = selectedCropId === crop.id;
+            return (
               <Pressable
-                onPress={() => setGradeModalOpen(true)}
+                key={crop.id}
+                onPress={() => setSelectedCropId(crop.id)}
+                style={({ pressed }) => [
+                  styles.cropSelectBtn,
+                  isSelected && styles.cropSelectBtnActive,
+                  pressed && { transform: [{ scale: 0.93 }], opacity: 0.9 },
+                ]}
+              >
+                <View style={styles.cropImageWrapper}>
+                  <Image source={{ uri: crop.image }} style={styles.cropThumb} />
+                </View>
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.cropSelectName,
+                    isSelected && styles.cropSelectNameActive,
+                  ]}
+                >
+                  {crop.name}
+                </Text>
+              </Pressable>
+            );
+          })}
+
+          {/* + ADD CROP CARD */}
+          <Pressable
+            onPress={() => setAddCropModalOpen(true)}
+            style={({ pressed }) => [
+              styles.addCropCardBtn,
+              pressed && { transform: [{ scale: 0.93 }], opacity: 0.85 },
+            ]}
+          >
+            <View style={styles.addCropCircle}>
+              <Plus size={22} color={MKColors.primaryGreen} strokeWidth={2.8} />
+            </View>
+            <Text style={styles.addCropCardText}>Add Crop</Text>
+          </Pressable>
+        </ScrollView>
+
+        {/* Quantity & Quality Dropdown Section */}
+        <View style={styles.dropdownsSection}>
+          {/* Quantity Dropdown & Stepper Bar */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Quantity (KG)</Text>
+            <View style={styles.qtyControlRow}>
+              {/* Quantity Dropdown Selector */}
+              <Pressable
+                onPress={() => setQtyModalOpen(true)}
                 style={({ pressed }) => [
                   styles.dropdownBar,
+                  styles.qtyDropdownBar,
                   pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
                 ]}
               >
-                <View style={styles.dropdownLeftRow}>
-                  <Award size={18} color="#EF7D1A" />
-                  <Text style={styles.dropdownBarText}>{grade}</Text>
-                </View>
+                <Scale size={18} color={MKColors.primaryGreen} />
+                <Text style={styles.dropdownBarText}>{quantity.toLocaleString()} KG</Text>
                 <ChevronDown size={18} color="#7A7A7A" />
               </Pressable>
+
+              {/* +/- Stepper Buttons */}
+              <View style={styles.stepperBox}>
+                <Pressable
+                  onPress={handleDecreaseQty}
+                  style={({ pressed }) => [
+                    styles.stepperBtn,
+                    pressed && { transform: [{ scale: 0.88 }], opacity: 0.8 },
+                  ]}
+                >
+                  <Minus size={16} color={MKColors.primaryGreen} strokeWidth={2.5} />
+                </Pressable>
+                <Pressable
+                  onPress={handleIncreaseQty}
+                  style={({ pressed }) => [
+                    styles.stepperBtn,
+                    pressed && { transform: [{ scale: 0.88 }], opacity: 0.8 },
+                  ]}
+                >
+                  <Plus size={16} color={MKColors.primaryGreen} strokeWidth={2.5} />
+                </Pressable>
+              </View>
             </View>
           </View>
-        </MKCard>
 
-        {/* Section 2: Market Intelligence Bento Grid (2 Cards) */}
-        <View style={styles.bentoGrid}>
-          {/* Card 1: Mandi Price */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.bentoCard,
-              pressed && { transform: [{ scale: 0.96 }], opacity: 0.92 },
-            ]}
-          >
-            <View style={styles.bentoIconTop}>
-              <TrendingUp size={24} color="#1565C0" opacity={0.3} />
-            </View>
-            <Text style={styles.bentoLabel}>Nashik Mandi Rate</Text>
-            <View>
-              <Text style={styles.bentoPrice}>
-                {currentCrop.marketRange} <Text style={styles.bentoUnit}>/kg</Text>
-              </Text>
-              <Text style={styles.bentoChange}>+₹2.00 from yesterday</Text>
-            </View>
-          </Pressable>
-
-          {/* Card 2: Buyer Demand */}
-          <Pressable
-            style={({ pressed }) => [
-              styles.bentoCard,
-              styles.bentoCardDemand,
-              pressed && { transform: [{ scale: 0.96 }], opacity: 0.92 },
-            ]}
-          >
-            <View style={styles.bentoIconTop}>
-              <Flame size={24} color="#EF7D1A" opacity={0.3} />
-            </View>
-            <Text style={styles.bentoLabel}>Buyer Demand</Text>
-            <View>
-              <View style={styles.demandHeaderRow}>
-                <Text style={styles.demandText}>High</Text>
-                <Flame size={16} color="#EF7D1A" fill="#EF7D1A" />
+          {/* Quality Grade Dropdown Bar */}
+          <View style={styles.inputGroup}>
+            <Text style={styles.inputLabel}>Quality Grade</Text>
+            <Pressable
+              onPress={() => setGradeModalOpen(true)}
+              style={({ pressed }) => [
+                styles.dropdownBar,
+                pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+              ]}
+            >
+              <View style={styles.dropdownLeftRow}>
+                <Award size={18} color={MKColors.accentOrange} />
+                <Text style={styles.dropdownBarText}>{grade}</Text>
               </View>
-              <Text style={styles.demandCount}>15+ active buyers nearby</Text>
+              <ChevronDown size={18} color="#7A7A7A" />
+            </Pressable>
+          </View>
+        </View>
+      </MKCard>
+
+      {/* ── Section 2: Market Intelligence Bento Grid (2 Equal Cards) ── */}
+      <View style={styles.bentoGrid}>
+        {/* Card 1: Mandi Price */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.bentoCard,
+            pressed && { transform: [{ scale: 0.96 }], opacity: 0.92 },
+          ]}
+        >
+          <View style={styles.bentoIconTop}>
+            <TrendingUp size={24} color="#1565C0" opacity={0.3} />
+          </View>
+          <Text style={styles.bentoLabel}>Nashik Mandi Rate</Text>
+          <View>
+            <Text style={styles.bentoPrice}>
+              {currentCrop.marketRange} <Text style={styles.bentoUnit}>/kg</Text>
+            </Text>
+            <Text style={styles.bentoChange}>+₹2.00 from yesterday</Text>
+          </View>
+        </Pressable>
+
+        {/* Card 2: Buyer Demand */}
+        <Pressable
+          style={({ pressed }) => [
+            styles.bentoCard,
+            styles.bentoCardDemand,
+            pressed && { transform: [{ scale: 0.96 }], opacity: 0.92 },
+          ]}
+        >
+          <View style={styles.bentoIconTop}>
+            <Flame size={24} color={MKColors.accentOrange} opacity={0.3} />
+          </View>
+          <Text style={styles.bentoLabel}>Buyer Demand</Text>
+          <View>
+            <View style={styles.demandHeaderRow}>
+              <Text style={styles.demandText}>High</Text>
+              <Flame size={16} color={MKColors.accentOrange} fill={MKColors.accentOrange} />
             </View>
-          </Pressable>
+            <Text style={styles.demandCount}>15+ active buyers nearby</Text>
+          </View>
+        </Pressable>
+      </View>
+
+      {/* ── Section 3: Top Match & Net Return Calculation Card ── */}
+      <View style={styles.matchCard}>
+        <View style={styles.matchHeaderBanner}>
+          <View style={styles.matchBadgeLeft}>
+            <Star size={14} color="#FFFFFF" fill="#FFFFFF" />
+            <Text style={styles.matchBadgeText}>TOP MATCH FOR YOU</Text>
+          </View>
+          <Text style={styles.matchScorePill}>94% MATCH</Text>
         </View>
 
-        {/* Section 3: Top Match & Net Return Calculation Card */}
-        <View style={styles.matchCard}>
-          <View style={styles.matchHeaderBanner}>
-            <View style={styles.matchBadgeLeft}>
-              <Star size={14} color="#FFFFFF" fill="#FFFFFF" />
-              <Text style={styles.matchBadgeText}>TOP MATCH FOR YOU</Text>
+        <View style={styles.matchBody}>
+          <View style={styles.matchCalculationRow}>
+            <View style={styles.netReturnCol}>
+              <Text style={styles.netReturnTitle}>Estimated Net Return</Text>
+              <Text style={styles.netReturnAmount}>
+                ₹{netReturn.toFixed(2)}{' '}
+                <Text style={styles.netReturnUnit}>/kg</Text>
+              </Text>
             </View>
-            <Text style={styles.matchScorePill}>94% MATCH</Text>
+
+            <View style={styles.matchCalculationRight}>
+              <Text style={styles.grossPriceText}>Selling Price: ₹{sellingPrice}.00/kg</Text>
+              <Text style={styles.deductionText}>- ₹{transportCost}.00/kg Transport</Text>
+            </View>
           </View>
 
-          <View style={styles.matchBody}>
-            <View style={styles.matchCalculationRow}>
-              <View>
-                <Text style={styles.netReturnTitle}>Estimated Net Return</Text>
-                <Text style={styles.netReturnAmount}>
-                  ₹{netReturn.toFixed(2)}{' '}
-                  <Text style={styles.netReturnUnit}>/kg</Text>
+          {/* Buyer Profile Mini Card */}
+          <View style={styles.buyerMiniCard}>
+            <Image source={{ uri: BUYER_AVATAR_URI }} style={styles.buyerThumb} />
+            <View style={styles.buyerDetails}>
+              <View style={styles.buyerNameRow}>
+                <Text numberOfLines={1} style={styles.buyerName}>
+                  ABC Foods & Wholesale
+                </Text>
+                <CheckCircle2 size={16} color={MKColors.primaryGreen} />
+              </View>
+              <View style={styles.buyerLocationRow}>
+                <MapPin size={12} color={MKColors.textSecondary} />
+                <Text numberOfLines={1} style={styles.buyerDistText}>
+                  45 KM away • Pickup Included
                 </Text>
               </View>
-
-              <View style={styles.matchCalculationRight}>
-                <Text style={styles.grossPriceText}>Selling Price: ₹{sellingPrice}.00/kg</Text>
-                <Text style={styles.deductionText}>- ₹{transportCost}.00/kg Transport</Text>
-              </View>
-            </View>
-
-            {/* Buyer Profile Mini Card */}
-            <View style={styles.buyerMiniCard}>
-              <Image source={{ uri: BUYER_AVATAR_URI }} style={styles.buyerThumb} />
-              <View style={styles.buyerDetails}>
-                <View style={styles.buyerNameRow}>
-                  <Text style={styles.buyerName}>ABC Foods & Wholesale</Text>
-                  <CheckCircle2 size={16} color="#1E5A2A" />
-                </View>
-                <View style={styles.buyerLocationRow}>
-                  <MapPin size={12} color="#5F6368" />
-                  <Text style={styles.buyerDistText}>45 KM away • Pickup Included</Text>
-                </View>
-              </View>
             </View>
           </View>
         </View>
+      </View>
 
-        {/* Primary CTA */}
-        <View style={styles.actionWrapper}>
-          <MKButton
-            title="FIND BEST SELLING OPTIONS"
-            onPress={handleFindOptions}
-            variant="primary"
-            size="lg"
-            rightIcon={<ArrowRight size={20} color="#FFFFFF" strokeWidth={2.5} />}
-          />
-        </View>
-      </ScrollView>
+      {/* ── 4. Primary Action CTA ── */}
+      <View style={styles.actionWrapper}>
+        <MKButton
+          title="FIND BEST SELLING OPTIONS"
+          onPress={handleFindOptions}
+          variant="primary"
+          size="lg"
+          rightIcon={<ArrowRight size={20} color="#FFFFFF" strokeWidth={2.5} />}
+        />
+      </View>
 
       {/* ── MODAL 1: ADD CROP MODAL ── */}
-      <Modal transparent visible={addCropModalOpen} animationType="slide" onRequestClose={() => setAddCropModalOpen(false)}>
+      <Modal
+        transparent
+        visible={addCropModalOpen}
+        animationType="slide"
+        onRequestClose={() => setAddCropModalOpen(false)}
+      >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalSheet}>
             <View style={styles.modalHeaderRow}>
               <View style={styles.modalHeaderTitleRow}>
-                <Sprout size={20} color="#1E5A2A" />
+                <Sprout size={20} color={MKColors.primaryGreen} />
                 <Text style={styles.modalTitleText}>Add More Crops</Text>
               </View>
               <Pressable onPress={() => setAddCropModalOpen(false)} style={styles.closeBtn}>
-                <X size={20} color="#5F6368" />
+                <X size={20} color={MKColors.textSecondary} />
               </Pressable>
             </View>
 
@@ -446,7 +440,9 @@ export default function SellScreen() {
                   style={styles.presetItemCard}
                 >
                   <Image source={{ uri: preset.image }} style={styles.presetThumb} />
-                  <Text style={styles.presetItemName}>{preset.name}</Text>
+                  <Text numberOfLines={1} style={styles.presetItemName}>
+                    {preset.name}
+                  </Text>
                   <Text style={styles.presetItemRate}>{preset.marketRange}/kg</Text>
                 </Pressable>
               ))}
@@ -458,6 +454,7 @@ export default function SellScreen() {
                 <TextInput
                   style={styles.customInput}
                   placeholder="E.g. Garlic, Chilli, Ginger"
+                  placeholderTextColor="#9AA0A6"
                   value={customCropName}
                   onChangeText={setCustomCropName}
                 />
@@ -471,16 +468,21 @@ export default function SellScreen() {
       </Modal>
 
       {/* ── MODAL 2: QUANTITY DROPDOWN MODAL ── */}
-      <Modal transparent visible={qtyModalOpen} animationType="fade" onRequestClose={() => setQtyModalOpen(false)}>
+      <Modal
+        transparent
+        visible={qtyModalOpen}
+        animationType="fade"
+        onRequestClose={() => setQtyModalOpen(false)}
+      >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalSheet}>
             <View style={styles.modalHeaderRow}>
               <View style={styles.modalHeaderTitleRow}>
-                <Scale size={20} color="#1E5A2A" />
+                <Scale size={20} color={MKColors.primaryGreen} />
                 <Text style={styles.modalTitleText}>Select Quantity</Text>
               </View>
               <Pressable onPress={() => setQtyModalOpen(false)} style={styles.closeBtn}>
-                <X size={20} color="#5F6368" />
+                <X size={20} color={MKColors.textSecondary} />
               </Pressable>
             </View>
 
@@ -499,7 +501,7 @@ export default function SellScreen() {
                     <Text style={[styles.optionLabel, isSelected && styles.optionLabelActive]}>
                       {opt.label}
                     </Text>
-                    {isSelected && <Check size={18} color="#1E5A2A" strokeWidth={3} />}
+                    {isSelected && <Check size={18} color={MKColors.primaryGreen} strokeWidth={3} />}
                   </Pressable>
                 );
               })}
@@ -509,16 +511,21 @@ export default function SellScreen() {
       </Modal>
 
       {/* ── MODAL 3: QUALITY GRADE DROPDOWN MODAL ── */}
-      <Modal transparent visible={gradeModalOpen} animationType="fade" onRequestClose={() => setGradeModalOpen(false)}>
+      <Modal
+        transparent
+        visible={gradeModalOpen}
+        animationType="fade"
+        onRequestClose={() => setGradeModalOpen(false)}
+      >
         <View style={styles.modalBackdrop}>
           <View style={styles.modalSheet}>
             <View style={styles.modalHeaderRow}>
               <View style={styles.modalHeaderTitleRow}>
-                <Award size={20} color="#EF7D1A" />
+                <Award size={20} color={MKColors.accentOrange} />
                 <Text style={styles.modalTitleText}>Select Quality Grade</Text>
               </View>
               <Pressable onPress={() => setGradeModalOpen(false)} style={styles.closeBtn}>
-                <X size={20} color="#5F6368" />
+                <X size={20} color={MKColors.textSecondary} />
               </Pressable>
             </View>
 
@@ -552,45 +559,39 @@ export default function SellScreen() {
           </View>
         </View>
       </Modal>
-
-    </MKBackground>
+    </MKScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-    width: '100%',
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    gap: 16,
-  },
+  /* ── Header ── */
   header: {
-    marginBottom: 4,
+    marginBottom: MKSpacing.lg,
+    width: '100%',
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#1A1C1E',
+    color: MKColors.textPrimary,
     letterSpacing: -0.4,
   },
   headerSubtitle: {
     fontSize: 13,
-    color: '#5F6368',
+    color: MKColors.textSecondary,
     marginTop: 2,
   },
+
+  /* ── Section 1: Crop Selector ── */
   cropSelectorCard: {
-    padding: 18,
-    gap: 14,
+    marginBottom: MKSpacing.lg,
   },
   sectionTitle: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A1C1E',
+    color: MKColors.textPrimary,
+    marginBottom: MKSpacing.sm,
   },
   cropScrollContent: {
-    gap: 12,
     paddingVertical: 4,
   },
   cropSelectBtn: {
@@ -601,9 +602,10 @@ const styles = StyleSheet.create({
     borderColor: '#F0ECE4',
     backgroundColor: '#FAF9F6',
     minWidth: 80,
+    marginRight: MKSpacing.md,
   },
   cropSelectBtnActive: {
-    borderColor: '#EF7D1A',
+    borderColor: MKColors.accentOrange,
     backgroundColor: '#FFF3E0',
   },
   cropImageWrapper: {
@@ -620,10 +622,10 @@ const styles = StyleSheet.create({
   cropSelectName: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#5F6368',
+    color: MKColors.textSecondary,
   },
   cropSelectNameActive: {
-    color: '#EF7D1A',
+    color: MKColors.accentOrange,
     fontWeight: '800',
   },
 
@@ -634,7 +636,7 @@ const styles = StyleSheet.create({
     padding: 8,
     borderRadius: 18,
     borderWidth: 1.5,
-    borderColor: '#1E5A2A',
+    borderColor: MKColors.primaryGreen,
     borderStyle: 'dashed',
     backgroundColor: '#E8F5E9',
     minWidth: 80,
@@ -648,35 +650,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
     elevation: 2,
   },
   addCropCardText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#1E5A2A',
+    color: MKColors.primaryGreen,
   },
 
   /* Dropdowns */
   dropdownsSection: {
-    gap: 12,
-    marginTop: 6,
+    marginTop: MKSpacing.md,
+    width: '100%',
   },
   inputGroup: {
-    gap: 6,
+    marginBottom: MKSpacing.md,
+    width: '100%',
   },
   inputLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#5F6368',
+    color: MKColors.textSecondary,
+    marginBottom: 6,
   },
   qtyControlRow: {
     flexDirection: 'row',
-    gap: 10,
     alignItems: 'center',
+    width: '100%',
   },
   dropdownBar: {
     flexDirection: 'row',
@@ -689,24 +689,26 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     height: 48,
     flex: 1,
+    minWidth: 0,
   },
   qtyDropdownBar: {
-    flex: 1,
+    marginRight: MKSpacing.sm,
   },
   dropdownLeftRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    flex: 1,
+    minWidth: 0,
   },
   dropdownBarText: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1C1E',
+    color: MKColors.textPrimary,
     marginLeft: 6,
   },
   stepperBox: {
     flexDirection: 'row',
-    gap: 6,
+    flexShrink: 0,
   },
   stepperBtn: {
     width: 44,
@@ -717,12 +719,14 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     borderWidth: 1,
     borderColor: '#C8E6C9',
+    marginLeft: 6,
   },
 
   /* Bento Grid */
   bentoGrid: {
     flexDirection: 'row',
-    gap: 12,
+    width: '100%',
+    marginBottom: MKSpacing.lg,
   },
   bentoCard: {
     flex: 1,
@@ -731,72 +735,68 @@ const styles = StyleSheet.create({
     padding: 16,
     justifyContent: 'space-between',
     minHeight: 125,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
     elevation: 2,
     borderWidth: 1,
     borderColor: '#F0ECE4',
-    position: 'relative',
+    marginRight: MKSpacing.sm,
+    minWidth: 0,
   },
   bentoCardDemand: {
     borderColor: '#FFE0B2',
+    marginRight: 0,
   },
   bentoIconTop: {
-    position: 'absolute',
-    top: 10,
-    right: 10,
+    alignSelf: 'flex-end',
+    marginBottom: 4,
   },
   bentoLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#5F6368',
+    color: MKColors.textSecondary,
+    marginBottom: 6,
   },
   bentoPrice: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#1A1C1E',
+    color: MKColors.textPrimary,
   },
   bentoUnit: {
     fontSize: 12,
     fontWeight: '500',
-    color: '#5F6368',
+    color: MKColors.textSecondary,
   },
   bentoChange: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#1E5A2A',
+    color: MKColors.primaryGreen,
     marginTop: 2,
   },
   demandHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
   },
   demandText: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#EF7D1A',
+    color: MKColors.accentOrange,
+    marginRight: 4,
   },
   demandCount: {
     fontSize: 11,
-    color: '#5F6368',
+    color: MKColors.textSecondary,
     marginTop: 2,
   },
 
   /* Match Card */
   matchCard: {
+    width: '100%',
     backgroundColor: '#FFFFFF',
     borderRadius: 22,
     overflow: 'hidden',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.06,
-    shadowRadius: 16,
     elevation: 3,
     borderWidth: 1,
     borderColor: '#C8E6C9',
+    marginBottom: MKSpacing.lg,
   },
   matchHeaderBanner: {
     backgroundColor: '#E8F5E9',
@@ -805,22 +805,23 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    width: '100%',
   },
   matchBadgeLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
   },
   matchBadgeText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#1E5A2A',
+    color: MKColors.primaryGreen,
     letterSpacing: 0.5,
+    marginLeft: 6,
   },
   matchScorePill: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#1E5A2A',
+    color: MKColors.primaryGreen,
     backgroundColor: '#C8E6C9',
     paddingHorizontal: 8,
     paddingVertical: 2,
@@ -828,83 +829,94 @@ const styles = StyleSheet.create({
   },
   matchBody: {
     padding: 16,
-    gap: 14,
+    width: '100%',
   },
   matchCalculationRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    width: '100%',
+    marginBottom: MKSpacing.md,
+  },
+  netReturnCol: {
+    flex: 1,
+    marginRight: MKSpacing.sm,
   },
   netReturnTitle: {
     fontSize: 12,
-    color: '#5F6368',
+    color: MKColors.textSecondary,
     marginBottom: 2,
   },
   netReturnAmount: {
     fontSize: 24,
     fontWeight: '800',
-    color: '#1E5A2A',
+    color: MKColors.primaryGreen,
     letterSpacing: -0.5,
   },
   netReturnUnit: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#5F6368',
+    color: MKColors.textSecondary,
   },
   matchCalculationRight: {
     alignItems: 'flex-end',
+    flexShrink: 0,
   },
   grossPriceText: {
     fontSize: 12,
-    color: '#1A1C1E',
+    color: MKColors.textPrimary,
     fontWeight: '600',
   },
   deductionText: {
     fontSize: 12,
-    color: '#D32F2F',
+    color: MKColors.error,
     fontWeight: '600',
     marginTop: 2,
   },
   buyerMiniCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
     backgroundColor: '#FAF9F6',
     borderRadius: 14,
     padding: 12,
     borderWidth: 1,
     borderColor: '#E8E4DA',
+    width: '100%',
   },
   buyerThumb: {
     width: 42,
     height: 42,
     borderRadius: 21,
+    marginRight: 12,
+    flexShrink: 0,
   },
   buyerDetails: {
     flex: 1,
+    minWidth: 0,
   },
   buyerNameRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
   },
   buyerName: {
     fontSize: 14,
     fontWeight: '700',
-    color: '#1A1C1E',
+    color: MKColors.textPrimary,
+    marginRight: 6,
   },
   buyerLocationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
     marginTop: 2,
   },
   buyerDistText: {
     fontSize: 11,
-    color: '#5F6368',
+    color: MKColors.textSecondary,
+    marginLeft: 4,
   },
   actionWrapper: {
-    marginTop: 6,
+    width: '100%',
+    marginBottom: MKSpacing.md,
   },
 
   /* Modals */
@@ -918,34 +930,38 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 28,
     borderTopRightRadius: 28,
     padding: 20,
-    gap: 16,
     maxHeight: '80%',
+    width: '100%',
   },
   modalHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: MKSpacing.md,
   },
   modalHeaderTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
   },
   modalTitleText: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#1A1C1E',
+    color: MKColors.textPrimary,
+    marginLeft: 8,
   },
   closeBtn: {
     padding: 6,
   },
   modalSubtext: {
     fontSize: 13,
-    color: '#5F6368',
+    color: MKColors.textSecondary,
+    marginBottom: MKSpacing.md,
   },
   presetsGrid: {
     flexDirection: 'row',
-    gap: 10,
+    width: '100%',
+    marginBottom: MKSpacing.md,
   },
   presetItemCard: {
     flex: 1,
@@ -955,6 +971,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: '#E8E4DA',
+    marginRight: MKSpacing.sm,
+    minWidth: 0,
   },
   presetThumb: {
     width: 48,
@@ -965,26 +983,27 @@ const styles = StyleSheet.create({
   presetItemName: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1A1C1E',
+    color: MKColors.textPrimary,
   },
   presetItemRate: {
     fontSize: 11,
-    color: '#1E5A2A',
+    color: MKColors.primaryGreen,
     fontWeight: '600',
     marginTop: 2,
   },
   customCropContainer: {
-    marginTop: 6,
-    gap: 8,
+    marginTop: MKSpacing.sm,
+    width: '100%',
   },
   customLabel: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#5F6368',
+    color: MKColors.textSecondary,
+    marginBottom: 8,
   },
   customInputRow: {
     flexDirection: 'row',
-    gap: 10,
+    width: '100%',
   },
   customInput: {
     flex: 1,
@@ -995,14 +1014,16 @@ const styles = StyleSheet.create({
     borderColor: '#E8E4DA',
     paddingHorizontal: 14,
     fontSize: 14,
-    color: '#1A1C1E',
+    color: MKColors.textPrimary,
+    marginRight: 10,
   },
   addCustomBtn: {
-    backgroundColor: '#1E5A2A',
+    backgroundColor: MKColors.primaryGreen,
     borderRadius: 12,
     paddingHorizontal: 20,
     justifyContent: 'center',
     alignItems: 'center',
+    flexShrink: 0,
   },
   addCustomBtnText: {
     color: '#FFFFFF',
@@ -1012,7 +1033,7 @@ const styles = StyleSheet.create({
 
   /* Options list */
   optionsList: {
-    gap: 10,
+    width: '100%',
   },
   optionRow: {
     flexDirection: 'row',
@@ -1024,18 +1045,20 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#E8E4DA',
+    marginBottom: MKSpacing.sm,
+    width: '100%',
   },
   optionRowActive: {
     backgroundColor: '#E8F5E9',
-    borderColor: '#1E5A2A',
+    borderColor: MKColors.primaryGreen,
   },
   optionLabel: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#1A1C1E',
+    color: MKColors.textPrimary,
   },
   optionLabelActive: {
-    color: '#1E5A2A',
+    color: MKColors.primaryGreen,
     fontWeight: '800',
   },
 
@@ -1049,34 +1072,38 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E8E4DA',
+    marginBottom: MKSpacing.sm,
+    width: '100%',
   },
   gradeOptionCardActive: {
     backgroundColor: '#FFF3E0',
-    borderColor: '#EF7D1A',
+    borderColor: MKColors.accentOrange,
   },
   gradeOptionLeft: {
     flex: 1,
+    minWidth: 0,
   },
   gradeOptionTitle: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1C1E',
+    color: MKColors.textPrimary,
     marginBottom: 2,
   },
   gradeOptionTitleActive: {
-    color: '#EF7D1A',
+    color: MKColors.accentOrange,
   },
   gradeOptionDesc: {
     fontSize: 12,
-    color: '#5F6368',
+    color: MKColors.textSecondary,
   },
   checkBadge: {
     width: 24,
     height: 24,
     borderRadius: 12,
-    backgroundColor: '#EF7D1A',
+    backgroundColor: MKColors.accentOrange,
     alignItems: 'center',
     justifyContent: 'center',
     marginLeft: 10,
+    flexShrink: 0,
   },
 });

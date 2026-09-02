@@ -10,4 +10,6 @@ export type { MKColorKey } from './colors';
 export { MKTypography } from './typography';
 export { MKSpacing, MKRadius } from './spacing';
 export { MKShadows } from './shadows';
+export { MKLayout } from './layout';
 export { MKConfig } from './config';
+

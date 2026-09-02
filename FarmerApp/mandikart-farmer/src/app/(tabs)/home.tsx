@@ -1,8 +1,8 @@
 /**
- * MandiKart Farmer App — Screen 8: Home (Selling Command Center)
+ * MandiKart Farmer App — Home Screen (Selling Command Center)
  *
- * Layout uses explicit marginBottom instead of gap throughout
- * to ensure compatibility across all React Native / Expo versions.
+ * Built using the MandiKart production layout primitives (MKScreen, MKSection, MKCard).
+ * 100% responsive, robust spacing, content-driven heights, safe area aware.
  */
 
 import React from 'react';
@@ -10,12 +10,10 @@ import {
   View,
   Text,
   StyleSheet,
-  ScrollView,
   Image,
   Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   MapPin,
   Bell,
@@ -27,8 +25,10 @@ import {
   Truck,
   Wallet,
 } from 'lucide-react-native';
-import { MKBackground, MKButton, MKCard, MKStatusBadge } from '@/components/ui';
+import { MKScreen, MKSection, MKCard, MKButton, MKStatusBadge } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
+import { MKColors } from '@/constants/colors';
+import { MKSpacing } from '@/constants/spacing';
 
 const FARMER_AVATAR_URI =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuDinV_e5owfh89gPtLCA76lilmicdcRz2kVnA2Yc9o1WkX48o_T_n3jQJM14Pd5TzCDO4wlsbaGX0MQobV3MiwbDMh_K5EKRmgf0eI8pRMYw_B6wqagFKWaxqrUJIgxjDZUOYpKdhuUafcuBaY-IYqkRsWsqFJBVqY9DNpM28aWfm0Bx3cC4BIZ7XuRvUVz2QESdXpE_HWcoRfFdn7bX6n8eMifz13XnCsxdFX-ybqll4FE_idueiq4kQ';
@@ -42,95 +42,78 @@ const ONION_PHOTO_URI =
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const insets = useSafeAreaInsets();
 
   const farmerName = user?.name ? user.name.split(' ')[0] : 'Ramesh';
   const locationName = user?.district
     ? `${user.district}, ${user.state}`
     : 'Nashik, Maharashtra';
 
-  const topPadding = Math.max(insets.top + 16, 54);
-
   return (
-    <MKBackground disableSafeArea>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.scrollContent, { paddingTop: topPadding }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* ── Top App Bar ── */}
-        <View style={styles.topAppBar}>
-          <View style={styles.farmerProfileHeader}>
-            <Image source={{ uri: FARMER_AVATAR_URI }} style={styles.avatarImage} />
-            <View>
-              <Text style={styles.greetingTitle}>Namaste, {farmerName} 👋</Text>
-              <View style={styles.locationRow}>
-                <MapPin size={14} color="#1E5A2A" strokeWidth={2.2} />
-                <Text style={styles.locationText}>{locationName}</Text>
-              </View>
-            </View>
-          </View>
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.notificationBtn,
-              pressed && { transform: [{ scale: 0.90 }], opacity: 0.85 },
-            ]}
-            accessibilityRole="button"
-          >
-            <Bell size={20} color="#1A1C1E" strokeWidth={2} />
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>3</Text>
-            </View>
-          </Pressable>
-        </View>
-
-        {/* ── Section 1: Sell Today Hero Card ── */}
-        <Pressable
-          onPress={() => router.push('/(tabs)/produce')}
-          style={({ pressed }) => [
-            styles.heroSellCard,
-            pressed && { transform: [{ scale: 0.97 }], opacity: 0.92 },
-          ]}
-        >
-          {/* Text content pinned to left */}
-          <View style={styles.heroSellContent}>
-            <Text style={styles.heroSellTitle}>What do you want{'\n'}to sell today?</Text>
-            <Text style={styles.heroSellSubtitle}>
-              Find verified buyers and maximize your net returns
+    <MKScreen>
+      {/* ── 1. Top App Bar ── */}
+      <View style={styles.topAppBar}>
+        <View style={styles.farmerProfileHeader}>
+          <Image source={{ uri: FARMER_AVATAR_URI }} style={styles.avatarImage} />
+          <View style={styles.greetingContainer}>
+            <Text numberOfLines={1} style={styles.greetingTitle}>
+              Namaste, {farmerName} 👋
             </Text>
-            {/* Button is non-interactive; the whole card is the pressable */}
-            <View pointerEvents="none" style={styles.addProduceBtnWrapper}>
-              <View style={styles.inlineAddBtn}>
-                <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
-                <Text style={styles.inlineAddBtnText}>Add Produce</Text>
-              </View>
+            <View style={styles.locationRow}>
+              <MapPin size={14} color={MKColors.primaryGreen} strokeWidth={2.2} />
+              <Text numberOfLines={1} style={styles.locationText}>
+                {locationName}
+              </Text>
             </View>
           </View>
-
-          {/* Decorative image — absolutely positioned to right */}
-          <Image source={{ uri: VEGGIE_BASKET_URI }} style={styles.heroBasketImage} />
-        </Pressable>
-
-        {/* ── Section 2: Best Opportunity For You ── */}
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionHeaderTitle}>Best Opportunity for You</Text>
-          <Pressable
-            style={({ pressed }) => [
-              pressed && { opacity: 0.6, transform: [{ scale: 0.96 }] },
-            ]}
-            onPress={() => router.push('/(tabs)/sell')}
-          >
-            <Text style={styles.viewAllLink}>View all</Text>
-          </Pressable>
         </View>
 
-        {/* Decision Support Card */}
-        <MKCard
-          padding="none"
-          onPress={() => router.push('/(tabs)/sell')}
+        <Pressable
+          style={({ pressed }) => [
+            styles.notificationBtn,
+            pressed && { transform: [{ scale: 0.90 }], opacity: 0.85 },
+          ]}
+          accessibilityRole="button"
+          accessibilityLabel="Notifications"
+          onPress={() => router.push('/more/notifications')}
         >
-          {/* Crop row */}
+          <Bell size={20} color={MKColors.textPrimary} strokeWidth={2} />
+          <View style={styles.notificationBadge}>
+            <Text style={styles.notificationBadgeText}>3</Text>
+          </View>
+        </Pressable>
+      </View>
+
+      {/* ── 2. Sell Today Hero Card ── */}
+      <Pressable
+        onPress={() => router.push('/(tabs)/produce')}
+        style={({ pressed }) => [
+          styles.heroSellCard,
+          pressed && { transform: [{ scale: 0.97 }], opacity: 0.92 },
+        ]}
+      >
+        <View style={styles.heroSellContent}>
+          <Text style={styles.heroSellTitle}>What do you want{'\n'}to sell today?</Text>
+          <Text style={styles.heroSellSubtitle}>
+            Find verified buyers and maximize your net returns
+          </Text>
+          <View pointerEvents="none" style={styles.addProduceBtnWrapper}>
+            <View style={styles.inlineAddBtn}>
+              <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
+              <Text style={styles.inlineAddBtnText}>Add Produce</Text>
+            </View>
+          </View>
+        </View>
+        <Image source={{ uri: VEGGIE_BASKET_URI }} style={styles.heroBasketImage} />
+      </Pressable>
+
+      {/* ── 3. Section: Best Opportunity For You ── */}
+      <MKSection
+        title="Best Opportunity for You"
+        actionText="View all"
+        onActionPress={() => router.push('/(tabs)/sell')}
+      >
+        <MKCard padding="none" onPress={() => router.push('/(tabs)/sell')}>
+          {/* Crop Header */}
           <View style={styles.cropHeaderRow}>
             <View style={styles.cropInfoRow}>
               <Image source={{ uri: ONION_PHOTO_URI }} style={styles.cropImage} />
@@ -139,22 +122,28 @@ export default function HomeScreen() {
                   <Star size={12} color="#FFFFFF" fill="#FFFFFF" />
                   <Text style={styles.recommendedText}>Recommended</Text>
                 </View>
-                <Text style={styles.cropName}>Onion • Grade A</Text>
-                <Text style={styles.cropQty}>1,000 KG Available</Text>
+                <Text numberOfLines={1} style={styles.cropName}>
+                  Onion • Grade A
+                </Text>
+                <Text numberOfLines={1} style={styles.cropQty}>
+                  1,000 KG Available
+                </Text>
               </View>
             </View>
-            <MKStatusBadge label="94% Match" type="match" />
+            <View style={styles.badgeWrapper}>
+              <MKStatusBadge label="94% Match" type="match" />
+            </View>
           </View>
 
           {/* Net Return */}
-          <View style={[styles.netReturnRow, { marginTop: 0 }]}>
+          <View style={styles.netReturnRow}>
             <Text style={styles.netReturnLabel}>Estimated Net Return</Text>
             <Text style={styles.netReturnValue}>
               ₹22.00 <Text style={styles.unitText}>/kg</Text>
             </Text>
           </View>
 
-          {/* Breakdown grid */}
+          {/* Breakdown Grid */}
           <View style={styles.breakdownGrid}>
             <View style={styles.breakdownCol}>
               <Text style={styles.breakdownLabel}>Selling Price</Text>
@@ -168,26 +157,26 @@ export default function HomeScreen() {
               <Text style={styles.breakdownLabel}>Market Demand</Text>
               <View style={styles.demandRow}>
                 <Text style={styles.demandValue}>High</Text>
-                <Flame size={14} color="#EF7D1A" fill="#EF7D1A" />
+                <Flame size={14} color={MKColors.accentOrange} fill={MKColors.accentOrange} />
               </View>
             </View>
           </View>
 
-          {/* Action */}
+          {/* Action Button */}
           <View pointerEvents="none" style={styles.decisionActionWrapper}>
             <MKButton
               title="View Best Options"
               onPress={() => {}}
               variant="secondary"
               size="md"
-              rightIcon={<ArrowRight size={18} color="#1E5A2A" strokeWidth={2.2} />}
+              rightIcon={<ArrowRight size={18} color={MKColors.primaryGreen} strokeWidth={2.2} />}
             />
           </View>
         </MKCard>
+      </MKSection>
 
-        {/* ── Section 3: Today at a Glance ── */}
-        <Text style={[styles.sectionHeaderTitle, { marginBottom: 12 }]}>Today at a Glance</Text>
-
+      {/* ── 4. Section: Today at a Glance ── */}
+      <MKSection title="Today at a Glance">
         <View style={styles.metricsRow}>
           {/* Active Orders */}
           <Pressable
@@ -213,7 +202,7 @@ export default function HomeScreen() {
             ]}
           >
             <View style={[styles.metricIconCircle, { backgroundColor: '#E8F5E9' }]}>
-              <Truck size={18} color="#1E5A2A" />
+              <Truck size={18} color={MKColors.primaryGreen} />
             </View>
             <Text style={styles.metricBigText}>Tomorrow</Text>
             <Text style={styles.metricLabel}>Pickup Schedule</Text>
@@ -224,41 +213,36 @@ export default function HomeScreen() {
             onPress={() => router.push('/more/bank-details')}
             style={({ pressed }) => [
               styles.metricCard,
+              styles.metricCardLast,
               pressed && { transform: [{ scale: 0.94 }], opacity: 0.9 },
             ]}
           >
             <View style={[styles.metricIconCircle, { backgroundColor: '#E8F5E9' }]}>
-              <Wallet size={18} color="#1E5A2A" />
+              <Wallet size={18} color={MKColors.primaryGreen} />
             </View>
             <Text style={styles.metricBigText}>₹48,500</Text>
             <Text style={styles.metricLabel}>Monthly Earning</Text>
           </Pressable>
         </View>
-      </ScrollView>
-    </MKBackground>
+      </MKSection>
+    </MKScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-    width: '100%',
-  },
-  scrollContent: {
-    paddingHorizontal: 20,
-    paddingBottom: 28,
-  },
-
-  /* ── Top bar ── */
+  /* ── Top Bar ── */
   topAppBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: MKSpacing.xl,
+    width: '100%',
   },
   farmerProfileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    marginRight: MKSpacing.md,
   },
   avatarImage: {
     width: 48,
@@ -266,12 +250,17 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 2,
     borderColor: '#FFFFFF',
-    marginRight: 12,
+    marginRight: MKSpacing.md,
+    flexShrink: 0,
+  },
+  greetingContainer: {
+    flex: 1,
+    minWidth: 0,
   },
   greetingTitle: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#1A1C1E',
+    color: MKColors.textPrimary,
     letterSpacing: -0.3,
   },
   locationRow: {
@@ -281,7 +270,7 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 12,
-    color: '#5F6368',
+    color: MKColors.textSecondary,
     fontWeight: '500',
     marginLeft: 4,
   },
@@ -295,7 +284,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F0ECE4',
     elevation: 2,
-    position: 'relative',
+    flexShrink: 0,
   },
   notificationBadge: {
     position: 'absolute',
@@ -304,7 +293,7 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: '#EF7D1A',
+    backgroundColor: MKColors.accentOrange,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
@@ -318,12 +307,10 @@ const styles = StyleSheet.create({
 
   /* ── Hero Sell Card ── */
   heroSellCard: {
+    width: '100%',
     backgroundColor: '#FFFFFF',
     borderRadius: 22,
-    paddingTop: 20,
-    paddingLeft: 20,
-    paddingBottom: 20,
-    paddingRight: 10,
+    padding: 20,
     borderWidth: 1,
     borderColor: '#F0ECE4',
     elevation: 3,
@@ -333,25 +320,25 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     minHeight: 148,
     overflow: 'hidden',
-    marginBottom: 20,
+    marginBottom: MKSpacing.xl,
     flexDirection: 'row',
     alignItems: 'center',
   },
   heroSellContent: {
     flex: 1,
     paddingRight: 8,
-    zIndex: 2,
+    minWidth: 0,
   },
   heroSellTitle: {
     fontSize: 16,
     fontWeight: '800',
-    color: '#1A1C1E',
+    color: MKColors.textPrimary,
     marginBottom: 4,
     lineHeight: 21,
   },
   heroSellSubtitle: {
     fontSize: 12,
-    color: '#5F6368',
+    color: MKColors.textSecondary,
     marginBottom: 14,
     lineHeight: 16,
   },
@@ -361,7 +348,7 @@ const styles = StyleSheet.create({
   inlineAddBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#1E5A2A',
+    backgroundColor: MKColors.primaryGreen,
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 9,
@@ -379,54 +366,37 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
 
-  /* ── Section header ── */
-  sectionHeaderRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 10,
-  },
-  sectionHeaderTitle: {
-    fontSize: 17,
-    fontWeight: '700',
-    color: '#1A1C1E',
-  },
-  viewAllLink: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#1E5A2A',
-  },
-
-  /* ── Decision card ── */
-  decisionCard: {
-    marginBottom: 20,
-  },
+  /* ── Decision Card ── */
   cropHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    padding: 16,
+    padding: MKSpacing.lg,
     paddingBottom: 0,
+    width: '100%',
   },
   cropInfoRow: {
     flexDirection: 'row',
     flex: 1,
-    marginRight: 8,
+    marginRight: MKSpacing.sm,
+    minWidth: 0,
   },
   cropImage: {
     width: 60,
     height: 60,
     borderRadius: 14,
-    marginRight: 12,
+    marginRight: MKSpacing.md,
+    flexShrink: 0,
   },
   cropDetails: {
     flex: 1,
     justifyContent: 'center',
+    minWidth: 0,
   },
   recommendedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EF7D1A',
+    backgroundColor: MKColors.accentOrange,
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -442,47 +412,53 @@ const styles = StyleSheet.create({
   cropName: {
     fontSize: 15,
     fontWeight: '700',
-    color: '#1A1C1E',
+    color: MKColors.textPrimary,
   },
   cropQty: {
     fontSize: 12,
-    color: '#5F6368',
+    color: MKColors.textSecondary,
     marginTop: 2,
+  },
+  badgeWrapper: {
+    flexShrink: 0,
   },
   netReturnRow: {
     borderTopWidth: 1,
     borderTopColor: '#F0ECE4',
-    paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingHorizontal: MKSpacing.lg,
+    paddingTop: MKSpacing.md,
     paddingBottom: 4,
-    marginTop: 12,
+    marginTop: MKSpacing.md,
+    width: '100%',
   },
   netReturnLabel: {
     fontSize: 12,
-    color: '#5F6368',
+    color: MKColors.textSecondary,
     marginBottom: 2,
   },
   netReturnValue: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#1E5A2A',
+    color: MKColors.primaryGreen,
     letterSpacing: -0.5,
   },
   unitText: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#5F6368',
+    color: MKColors.textSecondary,
   },
   breakdownGrid: {
     flexDirection: 'row',
     borderTopWidth: 1,
     borderTopColor: '#F0ECE4',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginTop: 8,
+    paddingHorizontal: MKSpacing.lg,
+    paddingVertical: MKSpacing.md,
+    marginTop: MKSpacing.sm,
+    width: '100%',
   },
   breakdownCol: {
     flex: 1,
+    minWidth: 0,
   },
   breakdownLabel: {
     fontSize: 11,
@@ -492,7 +468,7 @@ const styles = StyleSheet.create({
   breakdownValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1A1C1E',
+    color: MKColors.textPrimary,
   },
   demandRow: {
     flexDirection: 'row',
@@ -501,18 +477,20 @@ const styles = StyleSheet.create({
   demandValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#EF7D1A',
+    color: MKColors.accentOrange,
     marginRight: 3,
   },
   decisionActionWrapper: {
-    paddingHorizontal: 16,
-    paddingBottom: 16,
+    paddingHorizontal: MKSpacing.lg,
+    paddingBottom: MKSpacing.lg,
     marginTop: 4,
+    width: '100%',
   },
 
   /* ── Today at a Glance ── */
   metricsRow: {
     flexDirection: 'row',
+    width: '100%',
   },
   metricCard: {
     flex: 1,
@@ -524,7 +502,11 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#F0ECE4',
     elevation: 2,
-    marginRight: 8,
+    marginRight: MKSpacing.sm,
+    minWidth: 0,
+  },
+  metricCardLast: {
+    marginRight: 0,
   },
   metricIconCircle: {
     width: 36,
@@ -537,19 +519,19 @@ const styles = StyleSheet.create({
   metricBigNumber: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#1A1C1E',
+    color: MKColors.textPrimary,
     marginBottom: 2,
   },
   metricBigText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#1A1C1E',
+    color: MKColors.textPrimary,
     textAlign: 'center',
     marginBottom: 2,
   },
   metricLabel: {
     fontSize: 10,
-    color: '#5F6368',
+    color: MKColors.textSecondary,
     textAlign: 'center',
     fontWeight: '500',
   },

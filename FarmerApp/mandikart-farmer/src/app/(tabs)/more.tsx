@@ -1,20 +1,25 @@
+/**
+ * MandiKart Farmer App — Screen 12: More (Settings, Account & Support)
+ *
+ * Built using MandiKart production layout primitives (MKScreen, MKSection, MKCard, MKRow).
+ * Eliminates all vertical stacking/alignment issues on settings rows forever.
+ * Icon (shrink-0) + Text (flex-1 min-w-0) + Chevron/Status (shrink-0).
+ */
+
 import React, { useCallback, useState } from 'react';
 import {
   Alert,
   Modal,
   Pressable,
-  ScrollView,
   StyleSheet,
   Text,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import {
   Bell,
   CheckCircle2,
-  ChevronRight,
   CircleHelp,
   FileCheck,
   FileText,
@@ -32,22 +37,11 @@ import {
   User,
   WalletCards,
 } from 'lucide-react-native';
-import { MKBackground } from '@/components/ui';
+import { MKScreen, MKSection, MKCard, MKRow } from '@/components/ui';
 import { MKColors } from '@/constants/colors';
-import { MKShadows } from '@/constants/shadows';
+import { MKSpacing } from '@/constants/spacing';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
-
-type IconComponent = React.ComponentType<{ size?: number; color?: string; strokeWidth?: number }>;
-
-interface MenuItem {
-  title: string;
-  subtitle?: string;
-  icon: IconComponent;
-  onPress: () => void;
-  rightText?: string;
-  iconTone?: 'green' | 'orange' | 'neutral';
-}
 
 const languageLabels: Record<string, string> = {
   en: 'English',
@@ -57,7 +51,6 @@ const languageLabels: Record<string, string> = {
 
 export default function MoreScreen() {
   const router = useRouter();
-  const insets = useSafeAreaInsets();
   const { farmer, user, isAuthenticated, logout } = useAuthStore();
   const { language, isOffline } = useAppStore();
   const [logoutOpen, setLogoutOpen] = useState(false);
@@ -72,116 +65,90 @@ export default function MoreScreen() {
     router.push(hasFarmDetails ? '/onboarding/farmer-profile' : '/onboarding/farm-details');
   }, [hasFarmDetails, router]);
 
-  const accountItems: MenuItem[] = [
-    { title: 'Profile', subtitle: 'Personal information', icon: User, onPress: () => router.push('/onboarding/farmer-profile') },
-    { title: 'Farm Details', subtitle: 'Farm, land and location', icon: Sprout, onPress: () => router.push('/onboarding/farm-details'), iconTone: 'green' },
-    { title: 'Documents', subtitle: 'Verification documents', icon: FileText, onPress: () => router.push('/more/documents'), iconTone: 'orange' },
-    { title: 'Bank & Payment Details', subtitle: 'Manage payment information', icon: WalletCards, onPress: () => router.push('/more/bank-details') },
-  ];
-  const preferenceItems: MenuItem[] = [
-    { title: 'Notifications', subtitle: 'Orders, payments and market updates', icon: Bell, rightText: 'On', onPress: () => router.push('/more/notifications'), iconTone: 'orange' },
-    { title: 'Language', subtitle: languageLabels[language] ?? 'English', icon: Languages, onPress: () => router.push('/language-select') },
-    { title: 'App Settings', subtitle: 'App preferences and controls', icon: Settings, onPress: () => router.push('/more/settings') },
-  ];
-  const helpItems: MenuItem[] = [
-    { title: 'Help Center', subtitle: 'Find answers to common questions', icon: CircleHelp, onPress: () => router.push('/more/help-support') },
-    { title: 'Contact Support', subtitle: 'Talk to MandiKart support', icon: Headphones, onPress: () => router.push('/more/help-support'), iconTone: 'green' },
-    { title: 'Report an Issue', subtitle: 'Report a problem with the app', icon: Flag, onPress: () => Alert.alert('Report an issue', 'Support reporting will be available here shortly.'), iconTone: 'orange' },
-  ];
-  const aboutItems: MenuItem[] = [
-    { title: 'About MandiKart', subtitle: 'About the platform', icon: Info, onPress: () => router.push('/more/terms-privacy') },
-    { title: 'Terms & Conditions', icon: FileCheck, onPress: () => router.push('/more/terms-privacy') },
-    { title: 'Privacy Policy', icon: ShieldCheck, onPress: () => router.push('/more/terms-privacy'), iconTone: 'green' },
-    { title: 'App Version', icon: Smartphone, rightText: 'v1.0.0', onPress: () => undefined },
-  ];
-
-  const topPadding = Math.max(insets.top + 16, 50);
-  const bottomPadding = Math.max(insets.bottom + 100, 140);
-
   return (
-    <MKBackground disableSafeArea>
-      <ScrollView
-        style={styles.scrollView}
-        contentContainerStyle={[styles.content, { paddingTop: topPadding, paddingBottom: bottomPadding }]}
-        showsVerticalScrollIndicator={false}
-      >
-        {/* Header */}
-        <Animated.View entering={FadeInDown.duration(360)} style={styles.header}>
-          <View>
-            <Text style={styles.screenTitle}>More</Text>
-            <Text style={styles.screenSubtitle}>Manage your account, farm and preferences</Text>
-          </View>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Open notifications"
-            hitSlop={8}
-            style={({ pressed }) => [
-              styles.headerButton,
-              pressed && { transform: [{ scale: 0.90 }], opacity: 0.85 },
-            ]}
-            onPress={() => router.push('/more/notifications')}
-          >
-            <Bell size={20} color={MKColors.primaryGreenDark} />
-          </Pressable>
-        </Animated.View>
+    <MKScreen>
+      {/* ── 1. Header ── */}
+      <View style={styles.header}>
+        <View style={styles.headerTextCol}>
+          <Text style={styles.screenTitle}>More</Text>
+          <Text style={styles.screenSubtitle}>Manage your account, farm and preferences</Text>
+        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open notifications"
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.headerButton,
+            pressed && { transform: [{ scale: 0.90 }], opacity: 0.85 },
+          ]}
+          onPress={() => router.push('/more/notifications')}
+        >
+          <Bell size={20} color={MKColors.primaryGreenDark} />
+        </Pressable>
+      </View>
 
-        {/* Offline notice */}
-        {isOffline && (
-          <View style={styles.offlineNotice} accessibilityRole="alert">
-            <Text style={styles.offlineTitle}>No internet connection</Text>
-            <Text style={styles.offlineText}>Some account information may be unavailable.</Text>
-          </View>
-        )}
+      {/* Offline notice */}
+      {isOffline && (
+        <View style={styles.offlineNotice} accessibilityRole="alert">
+          <Text style={styles.offlineTitle}>No internet connection</Text>
+          <Text style={styles.offlineText}>Some account information may be unavailable.</Text>
+        </View>
+      )}
 
-        {/* Profile card */}
-        <Animated.View entering={FadeInUp.duration(420).delay(70)}>
-          {profile && name ? (
-            <View style={styles.profileCard}>
-              <View style={styles.profileTop}>
-                <View style={styles.avatar}>
-                  <User size={27} color={MKColors.primaryGreenDark} strokeWidth={2.1} />
-                </View>
-                <View style={styles.profileText}>
-                  <Text numberOfLines={1} style={styles.profileName}>{name}</Text>
-                  {isVerified ? (
-                    <View style={styles.verifiedLine}>
-                      <CheckCircle2 size={14} color={MKColors.primaryGreen} fill={MKColors.primaryGreen} />
-                      <Text style={styles.verifiedText}>Verified Farmer</Text>
-                    </View>
-                  ) : (
-                    <Text style={styles.pendingText}>Account verification pending</Text>
-                  )}
-                  {location ? (
-                    <View style={styles.locationLine}>
-                      <MapPin size={13} color={MKColors.textSecondary} />
-                      <Text numberOfLines={1} style={styles.locationText}>{location}</Text>
-                    </View>
-                  ) : null}
-                </View>
-                <Pressable
-                  accessibilityRole="button"
-                  accessibilityLabel="Edit profile"
-                  style={({ pressed }) => [
-                    styles.editButton,
-                    pressed && { transform: [{ scale: 0.90 }], opacity: 0.8 },
-                  ]}
-                  onPress={completeProfile}
-                >
-                  <Pencil size={17} color={MKColors.primaryGreenDark} />
-                </Pressable>
+      {/* ── 2. Profile Card ── */}
+      <View style={styles.profileSectionWrapper}>
+        {profile && name ? (
+          <MKCard padding="lg">
+            <View style={styles.profileTop}>
+              <View style={styles.avatar}>
+                <User size={27} color={MKColors.primaryGreenDark} strokeWidth={2.1} />
               </View>
-              <View style={styles.profileMeta}>
-                <Text style={styles.metaLabel}>Farmer account</Text>
-                <View style={styles.metaStatus}>
-                  <CheckCircle2 size={12} color={MKColors.primaryGreen} />
-                  <Text style={styles.metaStatusText}>
-                    {isVerified ? 'Verified' : 'Pending verification'}
-                  </Text>
-                </View>
+              <View style={styles.profileText}>
+                <Text numberOfLines={1} style={styles.profileName}>
+                  {name}
+                </Text>
+                {isVerified ? (
+                  <View style={styles.verifiedLine}>
+                    <CheckCircle2 size={14} color={MKColors.primaryGreen} fill={MKColors.primaryGreen} />
+                    <Text style={styles.verifiedText}>Verified Farmer</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.pendingText}>Account verification pending</Text>
+                )}
+                {location ? (
+                  <View style={styles.locationLine}>
+                    <MapPin size={13} color={MKColors.textSecondary} />
+                    <Text numberOfLines={1} style={styles.locationText}>
+                      {location}
+                    </Text>
+                  </View>
+                ) : null}
+              </View>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Edit profile"
+                style={({ pressed }) => [
+                  styles.editButton,
+                  pressed && { transform: [{ scale: 0.90 }], opacity: 0.8 },
+                ]}
+                onPress={completeProfile}
+              >
+                <Pencil size={17} color={MKColors.primaryGreenDark} />
+              </Pressable>
+            </View>
+            <View style={styles.profileMeta}>
+              <Text style={styles.metaLabel}>Farmer account</Text>
+              <View style={styles.metaStatus}>
+                <CheckCircle2 size={12} color={MKColors.primaryGreen} />
+                <Text style={styles.metaStatusText}>
+                  {isVerified ? 'Verified' : 'Pending verification'}
+                </Text>
               </View>
             </View>
-          ) : (
-            <View style={styles.incompleteCard}>
+          </MKCard>
+        ) : (
+          <MKCard padding="md" style={styles.incompleteCard}>
+            <View style={styles.incompleteRow}>
               <View style={styles.incompleteIcon}>
                 <Sprout size={22} color={MKColors.primaryGreenDark} />
               </View>
@@ -193,48 +160,159 @@ export default function MoreScreen() {
                 <Text style={styles.completeLink}>Complete</Text>
               </Pressable>
             </View>
-          )}
-        </Animated.View>
+          </MKCard>
+        )}
+      </View>
 
-        {/* Menu sections */}
-        <Animated.View entering={FadeInUp.duration(420).delay(120)}>
-          <MenuSection title="Your Account" items={accountItems} />
-        </Animated.View>
-        <Animated.View entering={FadeInUp.duration(420).delay(160)}>
-          <MenuSection title="Preferences" items={preferenceItems} />
-        </Animated.View>
-        <Animated.View entering={FadeInUp.duration(420).delay(200)}>
-          <MenuSection title="Help & Support" items={helpItems} />
-        </Animated.View>
-        <Animated.View entering={FadeInUp.duration(420).delay(240)}>
-          <MenuSection title="About MandiKart" items={aboutItems} />
-        </Animated.View>
+      {/* ── 3. Section: Your Account ── */}
+      <MKSection title="Your Account">
+        <MKCard padding="none">
+          <MKRow
+            title="Profile"
+            subtitle="Personal information"
+            icon={<User size={20} color={MKColors.primaryGreenDark} strokeWidth={2.1} />}
+            iconBgColor="#EAF5EB"
+            onPress={() => router.push('/onboarding/farmer-profile')}
+          />
+          <MKRow
+            title="Farm Details"
+            subtitle="Farm, land and location"
+            icon={<Sprout size={20} color={MKColors.primaryGreenDark} strokeWidth={2.1} />}
+            iconBgColor="#EAF5EB"
+            onPress={() => router.push('/onboarding/farm-details')}
+          />
+          <MKRow
+            title="Documents"
+            subtitle="Verification documents"
+            icon={<FileText size={20} color={MKColors.accentOrangeDark} strokeWidth={2.1} />}
+            iconBgColor="#FFF3E5"
+            onPress={() => router.push('/more/documents')}
+          />
+          <MKRow
+            title="Bank & Payment Details"
+            subtitle="Manage payment information"
+            icon={<WalletCards size={20} color={MKColors.primaryGreenDark} strokeWidth={2.1} />}
+            iconBgColor="#EAF5EB"
+            isLast
+            onPress={() => router.push('/more/bank-details')}
+          />
+        </MKCard>
+      </MKSection>
 
-        {/* Logout */}
-        <Pressable
-          accessibilityRole="button"
-          accessibilityLabel="Log out"
-          android_ripple={{ color: '#F4D9D6' }}
-          style={({ pressed }) => [
-            styles.logoutButton,
-            pressed && { transform: [{ scale: 0.97 }], opacity: 0.88 },
-          ]}
-          onPress={() => setLogoutOpen(true)}
-        >
-          <LogOut size={19} color="#B84B4B" />
-          <Text style={styles.logoutText}>Log Out</Text>
-        </Pressable>
+      {/* ── 4. Section: Preferences ── */}
+      <MKSection title="Preferences">
+        <MKCard padding="none">
+          <MKRow
+            title="Notifications"
+            subtitle="Orders, payments and market updates"
+            icon={<Bell size={20} color={MKColors.accentOrangeDark} strokeWidth={2.1} />}
+            iconBgColor="#FFF3E5"
+            rightText="On"
+            onPress={() => router.push('/more/notifications')}
+          />
+          <MKRow
+            title="Language"
+            subtitle={languageLabels[language] ?? 'English'}
+            icon={<Languages size={20} color={MKColors.primaryGreenDark} strokeWidth={2.1} />}
+            iconBgColor="#EAF5EB"
+            onPress={() => router.push('/language-select')}
+          />
+          <MKRow
+            title="App Settings"
+            subtitle="App preferences and controls"
+            icon={<Settings size={20} color={MKColors.primaryGreenDark} strokeWidth={2.1} />}
+            iconBgColor="#EAF5EB"
+            isLast
+            onPress={() => router.push('/more/settings')}
+          />
+        </MKCard>
+      </MKSection>
 
-        {/* Footer */}
-        <View style={styles.footer}>
-          <View style={styles.brandMark}>
-            <Sprout size={14} color={MKColors.accentOrange} />
-          </View>
-          <Text style={styles.brandName}>MandiKart</Text>
-          <Text style={styles.tagline}>Smart selling for better opportunities.</Text>
-          <Text style={styles.madeFor}>Made for farmers</Text>
+      {/* ── 5. Section: Help & Support ── */}
+      <MKSection title="Help & Support">
+        <MKCard padding="none">
+          <MKRow
+            title="Help Center"
+            subtitle="Find answers to common questions"
+            icon={<CircleHelp size={20} color={MKColors.primaryGreenDark} strokeWidth={2.1} />}
+            iconBgColor="#EAF5EB"
+            onPress={() => router.push('/more/help-support')}
+          />
+          <MKRow
+            title="Contact Support"
+            subtitle="Talk to MandiKart support"
+            icon={<Headphones size={20} color={MKColors.primaryGreenDark} strokeWidth={2.1} />}
+            iconBgColor="#EAF5EB"
+            onPress={() => router.push('/more/help-support')}
+          />
+          <MKRow
+            title="Report an Issue"
+            subtitle="Report a problem with the app"
+            icon={<Flag size={20} color={MKColors.accentOrangeDark} strokeWidth={2.1} />}
+            iconBgColor="#FFF3E5"
+            isLast
+            onPress={() => Alert.alert('Report an issue', 'Support reporting will be available here shortly.')}
+          />
+        </MKCard>
+      </MKSection>
+
+      {/* ── 6. Section: About MandiKart ── */}
+      <MKSection title="About MandiKart">
+        <MKCard padding="none">
+          <MKRow
+            title="About MandiKart"
+            subtitle="About the platform"
+            icon={<Info size={20} color={MKColors.primaryGreenDark} strokeWidth={2.1} />}
+            iconBgColor="#EAF5EB"
+            onPress={() => router.push('/more/terms-privacy')}
+          />
+          <MKRow
+            title="Terms & Conditions"
+            icon={<FileCheck size={20} color={MKColors.primaryGreenDark} strokeWidth={2.1} />}
+            iconBgColor="#EAF5EB"
+            onPress={() => router.push('/more/terms-privacy')}
+          />
+          <MKRow
+            title="Privacy Policy"
+            icon={<ShieldCheck size={20} color={MKColors.primaryGreenDark} strokeWidth={2.1} />}
+            iconBgColor="#EAF5EB"
+            onPress={() => router.push('/more/terms-privacy')}
+          />
+          <MKRow
+            title="App Version"
+            icon={<Smartphone size={20} color={MKColors.textSecondary} strokeWidth={2.1} />}
+            iconBgColor="#F1F3F1"
+            rightText="v1.0.0"
+            showChevron={false}
+            isLast
+          />
+        </MKCard>
+      </MKSection>
+
+      {/* ── 7. Logout Button ── */}
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel="Log out"
+        android_ripple={{ color: '#F4D9D6' }}
+        style={({ pressed }) => [
+          styles.logoutButton,
+          pressed && { transform: [{ scale: 0.97 }], opacity: 0.88 },
+        ]}
+        onPress={() => setLogoutOpen(true)}
+      >
+        <LogOut size={19} color="#B84B4B" />
+        <Text style={styles.logoutText}>Log Out</Text>
+      </Pressable>
+
+      {/* ── 8. Footer Brand Mark ── */}
+      <View style={styles.footer}>
+        <View style={styles.brandMark}>
+          <Sprout size={14} color={MKColors.accentOrange} />
         </View>
-      </ScrollView>
+        <Text style={styles.brandName}>MandiKart</Text>
+        <Text style={styles.tagline}>Smart selling for better opportunities.</Text>
+        <Text style={styles.madeFor}>Made for farmers</Text>
+      </View>
 
       {/* Logout Modal */}
       <Modal
@@ -273,95 +351,22 @@ export default function MoreScreen() {
           </Animated.View>
         </View>
       </Modal>
-    </MKBackground>
-  );
-}
-
-function MenuSection({ title, items }: { title: string; items: MenuItem[] }) {
-  return (
-    <View style={styles.section}>
-      <Text style={styles.sectionTitle}>{title}</Text>
-      <View style={styles.groupCard}>
-        {items.map((item, index) => (
-          <MenuRow key={item.title} item={item} isLast={index === items.length - 1} />
-        ))}
-      </View>
-    </View>
-  );
-}
-
-function MenuRow({ item, isLast }: { item: MenuItem; isLast: boolean }) {
-  const Icon = item.icon;
-  const iconBg =
-    item.iconTone === 'orange'
-      ? '#FFF3E5'
-      : item.iconTone === 'neutral'
-      ? '#F1F3F1'
-      : '#EAF5EB';
-  const iconColor =
-    item.iconTone === 'orange'
-      ? MKColors.accentOrangeDark
-      : item.iconTone === 'neutral'
-      ? MKColors.textSecondary
-      : MKColors.primaryGreenDark;
-
-  return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={item.title}
-      android_ripple={{ color: '#E7F0E8', borderless: false }}
-      style={({ pressed }) => [
-        styles.menuRow,
-        !isLast && styles.rowDivider,
-        pressed && { backgroundColor: '#F4FAF5', transform: [{ scale: 0.98 }] },
-      ]}
-      onPress={item.onPress}
-    >
-      {/* Icon box — fixed size, centered */}
-      <View style={[styles.iconBox, { backgroundColor: iconBg }]}>
-        <Icon size={20} color={iconColor} strokeWidth={2.1} />
-      </View>
-
-      {/* Text group */}
-      <View style={styles.rowText}>
-        <Text style={styles.rowTitle}>{item.title}</Text>
-        {item.subtitle ? (
-          <Text numberOfLines={1} style={styles.rowSubtitle}>{item.subtitle}</Text>
-        ) : null}
-      </View>
-
-      {/* Right side: badge + chevron */}
-      <View style={styles.rightActionRow}>
-        {item.rightText ? (
-          <View style={[styles.rightBadge, item.rightText === 'On' && styles.onBadge]}>
-            <Text style={[styles.rightText, item.rightText === 'On' && styles.onText]}>
-              {item.rightText}
-            </Text>
-          </View>
-        ) : null}
-        {item.title !== 'App Version' && (
-          <ChevronRight size={18} color="#A0A5A3" />
-        )}
-      </View>
-    </Pressable>
+    </MKScreen>
   );
 }
 
 const styles = StyleSheet.create({
-  scrollView: {
-    flex: 1,
-    width: '100%',
-  },
-  content: {
-    paddingHorizontal: 18,
-  },
-
   /* ── Header ── */
   header: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 18,
+    marginBottom: MKSpacing.lg,
+    width: '100%',
+  },
+  headerTextCol: {
+    flex: 1,
+    marginRight: MKSpacing.md,
   },
   screenTitle: {
     color: MKColors.textPrimary,
@@ -382,17 +387,21 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFDF9',
     alignItems: 'center',
     justifyContent: 'center',
-    ...MKShadows.sm,
+    borderWidth: 1,
+    borderColor: '#F0ECE4',
+    elevation: 2,
+    flexShrink: 0,
   },
 
   /* ── Offline notice ── */
   offlineNotice: {
-    marginBottom: 14,
+    marginBottom: MKSpacing.md,
     padding: 13,
     borderRadius: 16,
     backgroundColor: '#FFF7E9',
     borderWidth: 1,
     borderColor: '#F9E3B3',
+    width: '100%',
   },
   offlineTitle: {
     color: '#865C12',
@@ -406,19 +415,15 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  /* ── Profile card ── */
-  profileCard: {
-    backgroundColor: MKColors.backgroundCard,
-    borderRadius: 24,
-    padding: 17,
-    borderWidth: 1,
-    borderColor: '#F1EEE6',
-    marginBottom: 0,
-    ...MKShadows.md,
+  /* ── Profile Section ── */
+  profileSectionWrapper: {
+    width: '100%',
+    marginBottom: MKSpacing.xl,
   },
   profileTop: {
     flexDirection: 'row',
     alignItems: 'center',
+    width: '100%',
   },
   avatar: {
     width: 58,
@@ -484,6 +489,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingTop: 12,
     marginTop: 15,
+    width: '100%',
   },
   metaLabel: {
     color: MKColors.textMuted,
@@ -501,16 +507,15 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
 
-  /* ── Incomplete profile card ── */
+  /* ── Incomplete Profile Card ── */
   incompleteCard: {
+    backgroundColor: '#FFFCF5',
+    borderColor: '#F2E8D3',
+  },
+  incompleteRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFCF5',
-    borderRadius: 22,
-    padding: 16,
-    borderWidth: 1,
-    borderColor: '#F2E8D3',
-    ...MKShadows.sm,
+    width: '100%',
   },
   incompleteIcon: {
     width: 42,
@@ -525,6 +530,7 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: 11,
     marginRight: 11,
+    minWidth: 0,
   },
   incompleteTitle: {
     color: MKColors.textPrimary,
@@ -544,88 +550,12 @@ const styles = StyleSheet.create({
     flexShrink: 0,
   },
 
-  /* ── Menu sections ── */
-  section: {
-    marginTop: 22,
-  },
-  sectionTitle: {
-    color: MKColors.textPrimary,
-    fontSize: 17,
-    fontWeight: '800',
-    marginBottom: 10,
-  },
-  groupCard: {
-    backgroundColor: MKColors.backgroundCard,
-    borderRadius: 21,
-    overflow: 'hidden',
-    ...MKShadows.sm,
-  },
-
-  /* ── Menu row ── */
-  menuRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    minHeight: 64,
-  },
-  rowDivider: {
-    borderBottomWidth: StyleSheet.hairlineWidth,
-    borderBottomColor: '#EEEDE9',
-  },
-  iconBox: {
-    width: 40,
-    height: 40,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexShrink: 0,
-  },
-  rowText: {
-    flex: 1,
-    marginLeft: 14,
-    marginRight: 8,
-  },
-  rowTitle: {
-    color: MKColors.textPrimary,
-    fontSize: 14,
-    fontWeight: '700',
-  },
-  rowSubtitle: {
-    color: MKColors.textSecondary,
-    fontSize: 12,
-    lineHeight: 16,
-    marginTop: 2,
-  },
-  rightActionRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flexShrink: 0,
-  },
-  rightBadge: {
-    backgroundColor: '#F1F3F1',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    marginRight: 6,
-  },
-  onBadge: {
-    backgroundColor: '#E8F5E9',
-  },
-  rightText: {
-    color: MKColors.textMuted,
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  onText: {
-    color: MKColors.primaryGreenDark,
-  },
-
-  /* ── Logout button ── */
+  /* ── Logout Button ── */
   logoutButton: {
+    width: '100%',
     height: 52,
     borderRadius: 17,
-    marginTop: 28,
+    marginTop: MKSpacing.md,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -643,8 +573,9 @@ const styles = StyleSheet.create({
   /* ── Footer ── */
   footer: {
     alignItems: 'center',
-    marginTop: 36,
-    marginBottom: 20,
+    marginTop: MKSpacing['3xl'],
+    marginBottom: MKSpacing.md,
+    width: '100%',
   },
   brandMark: {
     width: 26,
@@ -671,7 +602,7 @@ const styles = StyleSheet.create({
     marginTop: 7,
   },
 
-  /* ── Logout modal ── */
+  /* ── Logout Modal ── */
   modalBackdrop: {
     flex: 1,
     alignItems: 'center',
@@ -686,7 +617,7 @@ const styles = StyleSheet.create({
     backgroundColor: MKColors.backgroundCard,
     padding: 22,
     alignItems: 'center',
-    ...MKShadows.lg,
+    elevation: 8,
   },
   modalIcon: {
     width: 46,
