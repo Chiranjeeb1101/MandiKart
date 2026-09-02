@@ -1,10 +1,8 @@
 /**
  * MandiKart Farmer App — Screen 8: Home (Selling Command Center)
- * 
- * Implements the approved Stitch visual design:
- * Farmer greeting header with notification bell, "Sell Today" action hero card,
- * "Best Opportunity for You" decision-support card with Estimated Net Return & Match %,
- * and "Today at a Glance" 3-metric performance cards.
+ *
+ * Layout uses explicit marginBottom instead of gap throughout
+ * to ensure compatibility across all React Native / Expo versions.
  */
 
 import React from 'react';
@@ -47,19 +45,23 @@ export default function HomeScreen() {
   const insets = useSafeAreaInsets();
 
   const farmerName = user?.name ? user.name.split(' ')[0] : 'Ramesh';
-  const locationName = user?.district ? `${user.district}, ${user.state}` : 'Nashik, Maharashtra';
+  const locationName = user?.district
+    ? `${user.district}, ${user.state}`
+    : 'Nashik, Maharashtra';
+
+  const topPadding = Math.max(insets.top + 16, 54);
 
   return (
     <MKBackground disableSafeArea>
       <ScrollView
-        contentContainerStyle={[styles.scrollContent, { paddingTop: Math.max(insets.top + 16, 54) }]}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: topPadding }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* Top App Bar / Greeting Section */}
+        {/* ── Top App Bar ── */}
         <View style={styles.topAppBar}>
           <View style={styles.farmerProfileHeader}>
             <Image source={{ uri: FARMER_AVATAR_URI }} style={styles.avatarImage} />
-            <View style={styles.greetingTextContainer}>
+            <View>
               <Text style={styles.greetingTitle}>Namaste, {farmerName} 👋</Text>
               <View style={styles.locationRow}>
                 <MapPin size={14} color="#1E5A2A" strokeWidth={2.2} />
@@ -68,7 +70,6 @@ export default function HomeScreen() {
             </View>
           </View>
 
-          {/* Notification Button with Badge */}
           <Pressable
             style={({ pressed }) => [
               styles.notificationBtn,
@@ -83,7 +84,7 @@ export default function HomeScreen() {
           </Pressable>
         </View>
 
-        {/* Section 1: Sell Today Hero Card */}
+        {/* ── Section 1: Sell Today Hero Card ── */}
         <Pressable
           onPress={() => router.push('/(tabs)/produce')}
           style={({ pressed }) => [
@@ -91,154 +92,146 @@ export default function HomeScreen() {
             pressed && { transform: [{ scale: 0.97 }], opacity: 0.92 },
           ]}
         >
+          {/* Text content pinned to left */}
           <View style={styles.heroSellContent}>
-            <Text style={styles.heroSellTitle}>What do you want to sell today?</Text>
+            <Text style={styles.heroSellTitle}>What do you want{'\n'}to sell today?</Text>
             <Text style={styles.heroSellSubtitle}>
               Find verified buyers and maximize your net returns
             </Text>
-
-            <View style={styles.addProduceBtnWrapper} pointerEvents="none">
-              <MKButton
-                title="Add Produce"
-                onPress={() => {}}
-                variant="primary"
-                size="md"
-                leftIcon={<Plus size={18} color="#FFFFFF" strokeWidth={2.5} />}
-                fullWidth={false}
-              />
+            {/* Button is non-interactive; the whole card is the pressable */}
+            <View pointerEvents="none" style={styles.addProduceBtnWrapper}>
+              <View style={styles.inlineAddBtn}>
+                <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
+                <Text style={styles.inlineAddBtnText}>Add Produce</Text>
+              </View>
             </View>
           </View>
 
+          {/* Decorative image — absolutely positioned to right */}
           <Image source={{ uri: VEGGIE_BASKET_URI }} style={styles.heroBasketImage} />
         </Pressable>
 
-        {/* Section 2: Best Opportunity For You */}
-        <View style={styles.opportunitySection}>
-          <View style={styles.sectionHeaderRow}>
-            <Text style={styles.sectionHeaderTitle}>Best Opportunity for You</Text>
-            <Pressable
-              style={({ pressed }) => [
-                pressed && { opacity: 0.6, transform: [{ scale: 0.96 }] },
-              ]}
-              onPress={() => router.push('/(tabs)/sell')}
-            >
-              <Text style={styles.viewAllLink}>View all</Text>
-            </Pressable>
-          </View>
-
-          {/* Decision Support Card */}
-          <MKCard
-            style={styles.decisionCard}
+        {/* ── Section 2: Best Opportunity For You ── */}
+        <View style={styles.sectionHeaderRow}>
+          <Text style={styles.sectionHeaderTitle}>Best Opportunity for You</Text>
+          <Pressable
+            style={({ pressed }) => [
+              pressed && { opacity: 0.6, transform: [{ scale: 0.96 }] },
+            ]}
             onPress={() => router.push('/(tabs)/sell')}
           >
-            <View style={styles.cropHeaderRow}>
-              <View style={styles.cropInfoRow}>
-                <Image source={{ uri: ONION_PHOTO_URI }} style={styles.cropImage} />
-                <View style={styles.cropDetails}>
-                  <View style={styles.recommendedBadge}>
-                    <Star size={12} color="#FFFFFF" fill="#FFFFFF" />
-                    <Text style={styles.recommendedText}>Recommended</Text>
-                  </View>
-                  <Text style={styles.cropName}>Onion • Grade A</Text>
-                  <Text style={styles.cropQty}>1,000 KG Available</Text>
-                </View>
-              </View>
-
-              <MKStatusBadge label="94% Match" type="match" />
-            </View>
-
-            {/* Estimated Net Return Highlight */}
-            <View style={styles.netReturnRow}>
-              <Text style={styles.netReturnLabel}>Estimated Net Return</Text>
-              <Text style={styles.netReturnValue}>
-                ₹22.00 <Text style={styles.unitText}>/kg</Text>
-              </Text>
-            </View>
-
-            {/* Cost Breakdown Grid */}
-            <View style={styles.breakdownGrid}>
-              <View style={styles.breakdownCol}>
-                <Text style={styles.breakdownLabel}>Selling Price</Text>
-                <Text style={styles.breakdownValue}>₹24.00 /kg</Text>
-              </View>
-
-              <View style={styles.breakdownCol}>
-                <Text style={styles.breakdownLabel}>Transport Cost</Text>
-                <Text style={styles.breakdownValue}>₹2.00 /kg</Text>
-              </View>
-
-              <View style={styles.breakdownCol}>
-                <Text style={styles.breakdownLabel}>Market Demand</Text>
-                <View style={styles.demandRow}>
-                  <Text style={styles.demandValue}>High</Text>
-                  <Flame size={14} color="#EF7D1A" fill="#EF7D1A" />
-                </View>
-              </View>
-            </View>
-
-            {/* Action Button */}
-            <View style={styles.decisionActionWrapper} pointerEvents="none">
-              <MKButton
-                title="View Best Options"
-                onPress={() => {}}
-                variant="secondary"
-                size="md"
-                rightIcon={<ArrowRight size={18} color="#1E5A2A" strokeWidth={2.2} />}
-              />
-            </View>
-          </MKCard>
+            <Text style={styles.viewAllLink}>View all</Text>
+          </Pressable>
         </View>
 
-        {/* Section 3: Today at a Glance */}
-        <View style={styles.glanceSection}>
-          <Text style={styles.sectionHeaderTitle}>Today at a Glance</Text>
-
-          <View style={styles.metricsRow}>
-            {/* Metric 1: Active Orders */}
-            <Pressable
-              onPress={() => router.push('/(tabs)/orders')}
-              style={({ pressed }) => [
-                styles.metricCard,
-                pressed && { transform: [{ scale: 0.94 }], opacity: 0.9 },
-              ]}
-            >
-              <View style={[styles.metricIconCircle, { backgroundColor: '#FFEADE' }]}>
-                <FileText size={18} color="#964900" />
+        {/* Decision Support Card */}
+        <MKCard
+          style={styles.decisionCard}
+          onPress={() => router.push('/(tabs)/sell')}
+        >
+          {/* Crop row */}
+          <View style={styles.cropHeaderRow}>
+            <View style={styles.cropInfoRow}>
+              <Image source={{ uri: ONION_PHOTO_URI }} style={styles.cropImage} />
+              <View style={styles.cropDetails}>
+                <View style={styles.recommendedBadge}>
+                  <Star size={12} color="#FFFFFF" fill="#FFFFFF" />
+                  <Text style={styles.recommendedText}>Recommended</Text>
+                </View>
+                <Text style={styles.cropName}>Onion • Grade A</Text>
+                <Text style={styles.cropQty}>1,000 KG Available</Text>
               </View>
-              <Text style={styles.metricBigNumber}>2</Text>
-              <Text style={styles.metricLabel}>Active Orders</Text>
-            </Pressable>
-
-            {/* Metric 2: Pickup Schedule */}
-            <Pressable
-              onPress={() => router.push('/(tabs)/orders')}
-              style={({ pressed }) => [
-                styles.metricCard,
-                pressed && { transform: [{ scale: 0.94 }], opacity: 0.9 },
-              ]}
-            >
-              <View style={[styles.metricIconCircle, { backgroundColor: '#E8F5E9' }]}>
-                <Truck size={18} color="#1E5A2A" />
-              </View>
-              <Text style={styles.metricBigText}>Tomorrow</Text>
-              <Text style={styles.metricLabel}>Pickup Schedule</Text>
-            </Pressable>
-
-            {/* Metric 3: Monthly Earning */}
-            <Pressable
-              onPress={() => router.push('/more/bank-details')}
-              style={({ pressed }) => [
-                styles.metricCard,
-                pressed && { transform: [{ scale: 0.94 }], opacity: 0.9 },
-              ]}
-            >
-              <View style={[styles.metricIconCircle, { backgroundColor: '#E8F5E9' }]}>
-                <Wallet size={18} color="#1E5A2A" />
-              </View>
-              <Text style={styles.metricBigText}>₹48,500</Text>
-              <Text style={styles.metricLabel}>Monthly Earning</Text>
-            </Pressable>
+            </View>
+            <MKStatusBadge label="94% Match" type="match" />
           </View>
+
+          {/* Net Return */}
+          <View style={styles.netReturnRow}>
+            <Text style={styles.netReturnLabel}>Estimated Net Return</Text>
+            <Text style={styles.netReturnValue}>
+              ₹22.00 <Text style={styles.unitText}>/kg</Text>
+            </Text>
+          </View>
+
+          {/* Breakdown grid */}
+          <View style={styles.breakdownGrid}>
+            <View style={styles.breakdownCol}>
+              <Text style={styles.breakdownLabel}>Selling Price</Text>
+              <Text style={styles.breakdownValue}>₹24.00 /kg</Text>
+            </View>
+            <View style={styles.breakdownCol}>
+              <Text style={styles.breakdownLabel}>Transport Cost</Text>
+              <Text style={styles.breakdownValue}>₹2.00 /kg</Text>
+            </View>
+            <View style={styles.breakdownCol}>
+              <Text style={styles.breakdownLabel}>Market Demand</Text>
+              <View style={styles.demandRow}>
+                <Text style={styles.demandValue}>High</Text>
+                <Flame size={14} color="#EF7D1A" fill="#EF7D1A" />
+              </View>
+            </View>
+          </View>
+
+          {/* Action */}
+          <View pointerEvents="none" style={styles.decisionActionWrapper}>
+            <MKButton
+              title="View Best Options"
+              onPress={() => {}}
+              variant="secondary"
+              size="md"
+              rightIcon={<ArrowRight size={18} color="#1E5A2A" strokeWidth={2.2} />}
+            />
+          </View>
+        </MKCard>
+
+        {/* ── Section 3: Today at a Glance ── */}
+        <Text style={[styles.sectionHeaderTitle, { marginBottom: 12 }]}>Today at a Glance</Text>
+
+        <View style={styles.metricsRow}>
+          {/* Active Orders */}
+          <Pressable
+            onPress={() => router.push('/(tabs)/orders')}
+            style={({ pressed }) => [
+              styles.metricCard,
+              pressed && { transform: [{ scale: 0.94 }], opacity: 0.9 },
+            ]}
+          >
+            <View style={[styles.metricIconCircle, { backgroundColor: '#FFEADE' }]}>
+              <FileText size={18} color="#964900" />
+            </View>
+            <Text style={styles.metricBigNumber}>2</Text>
+            <Text style={styles.metricLabel}>Active Orders</Text>
+          </Pressable>
+
+          {/* Pickup Schedule */}
+          <Pressable
+            onPress={() => router.push('/(tabs)/orders')}
+            style={({ pressed }) => [
+              styles.metricCard,
+              pressed && { transform: [{ scale: 0.94 }], opacity: 0.9 },
+            ]}
+          >
+            <View style={[styles.metricIconCircle, { backgroundColor: '#E8F5E9' }]}>
+              <Truck size={18} color="#1E5A2A" />
+            </View>
+            <Text style={styles.metricBigText}>Tomorrow</Text>
+            <Text style={styles.metricLabel}>Pickup Schedule</Text>
+          </Pressable>
+
+          {/* Monthly Earning */}
+          <Pressable
+            onPress={() => router.push('/more/bank-details')}
+            style={({ pressed }) => [
+              styles.metricCard,
+              pressed && { transform: [{ scale: 0.94 }], opacity: 0.9 },
+            ]}
+          >
+            <View style={[styles.metricIconCircle, { backgroundColor: '#E8F5E9' }]}>
+              <Wallet size={18} color="#1E5A2A" />
+            </View>
+            <Text style={styles.metricBigText}>₹48,500</Text>
+            <Text style={styles.metricLabel}>Monthly Earning</Text>
+          </Pressable>
         </View>
       </ScrollView>
     </MKBackground>
@@ -248,20 +241,19 @@ export default function HomeScreen() {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 54,
     paddingBottom: 28,
-    gap: 20,
   },
+
+  /* ── Top bar ── */
   topAppBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 4,
+    marginBottom: 20,
   },
   farmerProfileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
   },
   avatarImage: {
     width: 48,
@@ -269,12 +261,8 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 2,
     borderColor: '#FFFFFF',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 6,
+    marginRight: 12,
   },
-  greetingTextContainer: {},
   greetingTitle: {
     fontSize: 18,
     fontWeight: '800',
@@ -284,13 +272,13 @@ const styles = StyleSheet.create({
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
+    marginTop: 3,
   },
   locationText: {
     fontSize: 12,
     color: '#5F6368',
     fontWeight: '500',
+    marginLeft: 4,
   },
   notificationBtn: {
     width: 42,
@@ -299,13 +287,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
-    elevation: 2,
     borderWidth: 1,
     borderColor: '#F0ECE4',
+    elevation: 2,
     position: 'relative',
   },
   notificationBadge: {
@@ -326,32 +310,39 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#FFFFFF',
   },
+
+  /* ── Hero Sell Card ── */
   heroSellCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 22,
-    padding: 20,
-    shadowColor: '#000000',
+    paddingTop: 20,
+    paddingLeft: 20,
+    paddingBottom: 20,
+    paddingRight: 10,
+    borderWidth: 1,
+    borderColor: '#F0ECE4',
+    elevation: 3,
+    shadowColor: '#000',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.05,
     shadowRadius: 16,
-    elevation: 3,
-    borderWidth: 1,
-    borderColor: '#F0ECE4',
-    position: 'relative',
+    minHeight: 148,
     overflow: 'hidden',
-    minHeight: 140,
-    justifyContent: 'center',
+    marginBottom: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   heroSellContent: {
-    maxWidth: '65%',
+    flex: 1,
+    paddingRight: 8,
     zIndex: 2,
   },
   heroSellTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '800',
     color: '#1A1C1E',
     marginBottom: 4,
-    lineHeight: 22,
+    lineHeight: 21,
   },
   heroSellSubtitle: {
     fontSize: 12,
@@ -362,23 +353,33 @@ const styles = StyleSheet.create({
   addProduceBtnWrapper: {
     alignSelf: 'flex-start',
   },
+  inlineAddBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#1E5A2A',
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  inlineAddBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    marginLeft: 6,
+  },
   heroBasketImage: {
-    position: 'absolute',
-    right: -10,
-    bottom: -15,
-    width: 130,
-    height: 120,
+    width: 110,
+    height: 110,
     resizeMode: 'contain',
-    zIndex: 1,
+    flexShrink: 0,
   },
-  opportunitySection: {
-    gap: 10,
-  },
+
+  /* ── Section header ── */
   sectionHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 2,
+    marginBottom: 10,
   },
   sectionHeaderTitle: {
     fontSize: 17,
@@ -390,24 +391,28 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1E5A2A',
   },
+
+  /* ── Decision card ── */
   decisionCard: {
-    padding: 18,
-    gap: 14,
+    marginBottom: 20,
   },
   cropHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
+    padding: 16,
+    paddingBottom: 0,
   },
   cropInfoRow: {
     flexDirection: 'row',
-    gap: 12,
     flex: 1,
+    marginRight: 8,
   },
   cropImage: {
     width: 60,
     height: 60,
     borderRadius: 14,
+    marginRight: 12,
   },
   cropDetails: {
     flex: 1,
@@ -420,7 +425,6 @@ const styles = StyleSheet.create({
     borderRadius: 6,
     paddingHorizontal: 6,
     paddingVertical: 2,
-    gap: 4,
     alignSelf: 'flex-start',
     marginBottom: 4,
   },
@@ -428,7 +432,7 @@ const styles = StyleSheet.create({
     fontSize: 10,
     fontWeight: '700',
     color: '#FFFFFF',
-    letterSpacing: 0.3,
+    marginLeft: 4,
   },
   cropName: {
     fontSize: 15,
@@ -438,12 +442,15 @@ const styles = StyleSheet.create({
   cropQty: {
     fontSize: 12,
     color: '#5F6368',
-    marginTop: 1,
+    marginTop: 2,
   },
   netReturnRow: {
     borderTopWidth: 1,
     borderTopColor: '#F0ECE4',
+    paddingHorizontal: 16,
     paddingTop: 12,
+    paddingBottom: 4,
+    marginTop: 12,
   },
   netReturnLabel: {
     fontSize: 12,
@@ -465,7 +472,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     borderTopWidth: 1,
     borderTopColor: '#F0ECE4',
-    paddingTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    marginTop: 8,
   },
   breakdownCol: {
     flex: 1,
@@ -473,7 +482,7 @@ const styles = StyleSheet.create({
   breakdownLabel: {
     fontSize: 11,
     color: '#7A7A7A',
-    marginBottom: 2,
+    marginBottom: 3,
   },
   breakdownValue: {
     fontSize: 13,
@@ -483,37 +492,34 @@ const styles = StyleSheet.create({
   demandRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
   },
   demandValue: {
     fontSize: 13,
     fontWeight: '700',
     color: '#EF7D1A',
+    marginRight: 3,
   },
   decisionActionWrapper: {
+    paddingHorizontal: 16,
+    paddingBottom: 16,
     marginTop: 4,
   },
-  glanceSection: {
-    gap: 12,
-  },
+
+  /* ── Today at a Glance ── */
   metricsRow: {
     flexDirection: 'row',
-    gap: 10,
   },
   metricCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
-    padding: 14,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
     alignItems: 'center',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.04,
-    shadowRadius: 10,
-    elevation: 2,
     borderWidth: 1,
     borderColor: '#F0ECE4',
-    gap: 6,
+    elevation: 2,
+    marginRight: 8,
   },
   metricIconCircle: {
     width: 36,
@@ -521,18 +527,20 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 2,
+    marginBottom: 6,
   },
   metricBigNumber: {
     fontSize: 22,
     fontWeight: '800',
     color: '#1A1C1E',
+    marginBottom: 2,
   },
   metricBigText: {
     fontSize: 13,
     fontWeight: '800',
     color: '#1A1C1E',
     textAlign: 'center',
+    marginBottom: 2,
   },
   metricLabel: {
     fontSize: 10,
