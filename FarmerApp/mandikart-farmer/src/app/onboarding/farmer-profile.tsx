@@ -27,12 +27,13 @@ import {
   ShieldCheck,
   ArrowRight,
   Check,
+  Briefcase,
+  MapPin,
 } from 'lucide-react-native';
 import { MKBackground, MKButton, MKInput, MKHeader } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
 
-const HERO_FARMER_URI =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuD1zzhHh18hq6LjVAEMcfI1k12J0wlMdsFGAsFBuOiP5lBJXehLGTX1y-lNH0zNqgeliS2rp8oUniLoZbHYXO416Uyk7_flx0esjTeOUNF8JrxJTCmgoborz3nvLbqY_fHF_1qVEOQeJI6GW4jrq1xbDkIyaAlhSGQ8E04XPP4CSwhWSRj9UEAlPUIqUgo0YsA8CppJgXMJkMEslewucIJV55eKiFwwdcMypkvdpixHou1z-zkWqzWM2w';
+const HERO_FARMER_SRC = require('@/assets/images/farmer_phone_hero.png');
 
 const AVATAR_PLACEHOLDER_URI =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuCt_2-uyTSWqni0gL3Ex7_Rtw8iBT7iAzP0jwrSLSYb7w-kRyA7dtkDrIWjibN6Cky_2P32YV2e4V3d2qw803N-_D5l3_AYMFTh8OMxHzlWbF5VTcdgCVUup9BBHTHb-ZOYLRYkkzOb5ZDGQvM5-fcLOsHUaBdmRJkI7r4PD3lunURNeGTMR3Q1y9o4wFl3iMd0gP2iVEASAPtpyWkGI8yJ1nzDTb98yUhM8XWo40qJtL7d74M073HltQ';
@@ -43,13 +44,14 @@ export default function FarmerProfileScreen() {
 
   const [role, setRole] = useState<'INDIVIDUAL' | 'FPO'>('INDIVIDUAL');
   const [fullName, setFullName] = useState(user?.name || 'Ramesh Patil');
-  const [contactName, setContactName] = useState('');
-  const [experienceYears, setExperienceYears] = useState('12');
+  const [village, setVillage] = useState('');
+  const [experienceYears, setExperienceYears] = useState('10');
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
   const validate = () => {
     const errs: { [key: string]: string } = {};
     if (!fullName.trim()) errs.fullName = 'Please enter your full name';
+    if (!village.trim()) errs.village = 'Please enter your village name';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
@@ -80,40 +82,45 @@ export default function FarmerProfileScreen() {
           bounces={false}
         >
           {/* Top Hero Section */}
-          <View style={styles.heroSection}>
-            <MKHeader
-              showBack={true}
-              step={{ current: 1, total: 2, label: 'Profile' }}
-              style={styles.headerAbsolute}
-            />
-
-            {/* Farmer Illustration Overlay */}
+          <View style={styles.heroContainer}>
             <Image
-              source={{ uri: HERO_FARMER_URI }}
-              style={styles.heroFarmerImage}
-              resizeMode="contain"
+              source={HERO_FARMER_SRC}
+              style={styles.heroImage}
+              resizeMode="cover"
             />
+            <View style={styles.heroOverlay} />
 
-            {/* Hero Titles */}
-            <View style={styles.heroTitles}>
-              <Text style={styles.heroMainTitle}>
-                Tell Us <Text style={styles.heroTitleGreen}>About You</Text>
-              </Text>
-              <Text style={styles.heroSubtitle}>
-                This helps us personalize your MandiKart experience
-              </Text>
+            <View style={styles.heroContent}>
+              <MKHeader
+                showBack={true}
+                step={{ current: 1, total: 2, label: 'Profile' }}
+                style={styles.headerRow}
+              />
+
+              <View style={styles.heroTitles}>
+                <Text style={styles.heroMainTitle}>
+                  Tell Us <Text style={styles.heroTitleGreen}>About You</Text>
+                </Text>
+                <Text style={styles.heroSubtitle}>
+                  This helps us personalize your MandiKart experience
+                </Text>
+              </View>
             </View>
           </View>
 
-          {/* Main Card Content */}
-          <View style={styles.mainCard}>
+          {/* Cards Content */}
+          <View style={styles.cardsContainer}>
+            
             {/* Section 1: Role Selection */}
-            <View style={styles.sectionBlock}>
-              <View style={styles.sectionHeaderRow}>
-                <View style={styles.sectionIconBadge}>
-                  <Users size={16} color="#1E5A2A" strokeWidth={2.2} />
+            <View style={styles.card}>
+              <View style={styles.cardHeaderRow}>
+                <View style={styles.cardIconBadge}>
+                  <Users size={18} color="#1E5A2A" strokeWidth={2.2} />
                 </View>
-                <Text style={styles.sectionTitle}>How will you use MandiKart?</Text>
+                <View>
+                  <Text style={styles.cardTitle}>How will you use MandiKart?</Text>
+                  <Text style={styles.cardSubtitle}>Select your account type</Text>
+                </View>
               </View>
 
               <View style={styles.rolesGrid}>
@@ -163,59 +170,91 @@ export default function FarmerProfileScreen() {
               </View>
             </View>
 
-            <View style={styles.divider} />
-
-            {/* Section 2: Profile Details */}
-            <View style={styles.sectionBlock}>
-              <View style={styles.sectionHeaderRow}>
-                <View style={[styles.sectionIconBadge, { backgroundColor: '#FFF3E0' }]}>
-                  <User size={16} color="#EF7D1A" strokeWidth={2.2} />
+            {/* Section 2: Personal Profile */}
+            <View style={styles.card}>
+              <View style={styles.cardHeaderRow}>
+                <View style={[styles.cardIconBadge, { backgroundColor: '#FFF3E0' }]}>
+                  <User size={18} color="#EF7D1A" strokeWidth={2.2} />
                 </View>
-                <Text style={styles.sectionTitle}>Your Profile</Text>
+                <View>
+                  <Text style={styles.cardTitle}>Your Profile</Text>
+                  <Text style={styles.cardSubtitle}>Personal identity details</Text>
+                </View>
               </View>
 
-              {/* Photo & Input Row */}
-              <View style={styles.profileRow}>
-                {/* Photo Uploader */}
-                <View style={styles.photoContainer}>
-                  <View style={styles.avatarWrapper}>
-                    <Image
-                      source={{ uri: AVATAR_PLACEHOLDER_URI }}
-                      style={styles.avatarImage}
-                    />
-                    <View style={styles.cameraBadge}>
-                      <Camera size={14} color="#FFFFFF" strokeWidth={2.5} />
-                    </View>
+              {/* Photo Uploader */}
+              <View style={styles.photoContainer}>
+                <View style={styles.avatarWrapper}>
+                  <Image
+                    source={{ uri: AVATAR_PLACEHOLDER_URI }}
+                    style={styles.avatarImage}
+                  />
+                  <View style={styles.cameraBadge}>
+                    <Camera size={14} color="#FFFFFF" strokeWidth={2.5} />
                   </View>
-                  <Text style={styles.addPhotoText}>Change Photo</Text>
                 </View>
+                <Text style={styles.addPhotoText}>Change Photo</Text>
+              </View>
 
-                {/* Input Fields */}
-                <View style={styles.inputsColumn}>
-                  <MKInput
-                    label="FULL NAME *"
-                    placeholder="Enter your full name"
-                    value={fullName}
-                    onChangeText={setFullName}
-                    error={errors.fullName}
-                  />
+              <View style={styles.inputsContainer}>
+                <MKInput
+                  label="FULL NAME *"
+                  placeholder="E.g. Ramesh Patil"
+                  value={fullName}
+                  onChangeText={setFullName}
+                  error={errors.fullName}
+                  leftIcon={<User size={18} color="#9AA0A6" />}
+                />
 
-                  <MKInput
-                    label="CONTACT PERSON (OPTIONAL)"
-                    placeholder="E.g. Son / Manager"
-                    value={contactName}
-                    onChangeText={setContactName}
-                  />
+                <MKInput
+                  label="VILLAGE / CITY *"
+                  placeholder="E.g. Dindori, Nashik"
+                  value={village}
+                  onChangeText={setVillage}
+                  error={errors.village}
+                  leftIcon={<MapPin size={18} color="#9AA0A6" />}
+                />
+              </View>
+            </View>
+
+            {/* Section 3: Experience */}
+            <View style={styles.card}>
+              <View style={styles.cardHeaderRow}>
+                <View style={[styles.cardIconBadge, { backgroundColor: '#E3F2FD' }]}>
+                  <Briefcase size={18} color="#1976D2" strokeWidth={2.2} />
                 </View>
+                <View>
+                  <Text style={styles.cardTitle}>Farming Experience</Text>
+                  <Text style={styles.cardSubtitle}>Helps build trust with buyers</Text>
+                </View>
+              </View>
+
+              <View style={styles.experiencePresets}>
+                <Pressable
+                  onPress={() => setExperienceYears('2')}
+                  style={[styles.presetPill, experienceYears === '2' && styles.presetPillActive]}
+                >
+                  <Text style={[styles.presetText, experienceYears === '2' && styles.presetTextActive]}>2-5 Yrs</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setExperienceYears('5')}
+                  style={[styles.presetPill, experienceYears === '5' && styles.presetPillActive]}
+                >
+                  <Text style={[styles.presetText, experienceYears === '5' && styles.presetTextActive]}>5-10 Yrs</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setExperienceYears('10')}
+                  style={[styles.presetPill, experienceYears === '10' && styles.presetPillActive]}
+                >
+                  <Text style={[styles.presetText, experienceYears === '10' && styles.presetTextActive]}>10+ Yrs</Text>
+                </Pressable>
               </View>
 
               <MKInput
-                label="FARMING EXPERIENCE (YEARS)"
-                placeholder="E.g. 10"
+                placeholder="Or enter years manually"
                 value={experienceYears}
                 onChangeText={setExperienceYears}
                 keyboardType="numeric"
-                helperText="Helps build trust with high-volume buyers"
               />
             </View>
 
@@ -240,10 +279,10 @@ export default function FarmerProfileScreen() {
                 rightIcon={<ArrowRight size={20} color="#FFFFFF" strokeWidth={2.5} />}
               />
 
-              {/* Step dots (Step 2 of 4) */}
+              {/* Step dots (Step 1 of 2) */}
               <View style={styles.progressDotsRow}>
-                <View style={[styles.dot, styles.dotDone]} />
                 <View style={[styles.dot, styles.dotActive]} />
+                <View style={styles.dot} />
                 <View style={styles.dot} />
                 <View style={styles.dot} />
               </View>
@@ -265,81 +304,101 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     flexGrow: 1,
+    paddingBottom: 36,
   },
-  heroSection: {
-    paddingTop: 54,
-    paddingHorizontal: 20,
-    paddingBottom: 48,
+  heroContainer: {
+    width: '100%',
+    height: 280,
     position: 'relative',
-    minHeight: 220,
+    borderBottomLeftRadius: 32,
+    borderBottomRightRadius: 32,
+    overflow: 'hidden',
   },
-  headerAbsolute: {
-    paddingHorizontal: 0,
-    marginBottom: 8,
+  heroImage: {
+    width: '100%',
+    height: '100%',
   },
-  heroFarmerImage: {
+  heroOverlay: {
     position: 'absolute',
-    top: 40,
-    right: -10,
-    width: 170,
-    height: 180,
-    opacity: 0.85,
-    zIndex: 1,
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(250, 249, 246, 0.75)',
+  },
+  heroContent: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    paddingHorizontal: 20,
+    paddingTop: 48,
+    justifyContent: 'space-between',
+    paddingBottom: 24,
+  },
+  headerRow: {
+    paddingHorizontal: 0,
   },
   heroTitles: {
-    maxWidth: '65%',
-    marginTop: 12,
-    zIndex: 2,
+    maxWidth: '75%',
   },
   heroMainTitle: {
     fontSize: 28,
     fontWeight: '800',
     color: '#1A1C1E',
-    marginBottom: 6,
     letterSpacing: -0.5,
+    lineHeight: 34,
   },
   heroTitleGreen: {
     color: '#1E5A2A',
   },
   heroSubtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#5F6368',
-    lineHeight: 20,
+    marginTop: 6,
+    lineHeight: 18,
   },
-  mainCard: {
+  cardsContainer: {
+    paddingHorizontal: 20,
+    marginTop: -16,
+    gap: 16,
+  },
+  card: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 36,
-    borderTopRightRadius: 36,
-    padding: 24,
+    borderRadius: 22,
+    padding: 18,
     shadowColor: '#000000',
-    shadowOffset: { width: 0, height: -6 },
+    shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.05,
-    shadowRadius: 20,
-    elevation: 8,
-    marginTop: -20,
-    flex: 1,
+    shadowRadius: 16,
+    elevation: 3,
+    borderWidth: 1,
+    borderColor: '#F0ECE4',
   },
-  sectionBlock: {
-    marginBottom: 16,
-  },
-  sectionHeaderRow: {
+  cardHeaderRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
     gap: 10,
+    marginBottom: 16,
   },
-  sectionIconBadge: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+  cardIconBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: '#E8F5E9',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  sectionTitle: {
-    fontSize: 17,
+  cardTitle: {
+    fontSize: 16,
     fontWeight: '700',
     color: '#1A1C1E',
+  },
+  cardSubtitle: {
+    fontSize: 12,
+    color: '#5F6368',
+    marginTop: 1,
   },
   rolesGrid: {
     flexDirection: 'row',
@@ -409,42 +468,32 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: 15,
   },
-  divider: {
-    height: 1,
-    backgroundColor: '#F0ECE4',
-    marginVertical: 20,
-  },
-  profileRow: {
-    flexDirection: 'row',
-    gap: 16,
-    alignItems: 'flex-start',
-    marginBottom: 10,
-  },
   photoContainer: {
     alignItems: 'center',
+    marginBottom: 20,
   },
   avatarWrapper: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: 86,
+    height: 86,
+    borderRadius: 43,
     borderWidth: 3,
     borderColor: '#E8F5E9',
     position: 'relative',
     overflow: 'visible',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   avatarImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 38,
+    borderRadius: 41,
   },
   cameraBadge: {
     position: 'absolute',
-    bottom: -2,
+    bottom: 0,
     right: -2,
-    width: 26,
-    height: 26,
-    borderRadius: 13,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: '#1E5A2A',
     alignItems: 'center',
     justifyContent: 'center',
@@ -452,12 +501,39 @@ const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
   },
   addPhotoText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: '#1E5A2A',
   },
-  inputsColumn: {
+  inputsContainer: {
+    gap: 12,
+  },
+  experiencePresets: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  presetPill: {
     flex: 1,
+    paddingVertical: 10,
+    backgroundColor: '#FAF9F6',
+    borderWidth: 1.5,
+    borderColor: '#E8E4DA',
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  presetPillActive: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#1E5A2A',
+  },
+  presetText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#5F6368',
+  },
+  presetTextActive: {
+    color: '#1E5A2A',
+    fontWeight: '700',
   },
   trustBox: {
     backgroundColor: '#E8F5E9',
@@ -466,8 +542,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     gap: 12,
-    marginTop: 8,
-    marginBottom: 24,
+    marginTop: 4,
     borderWidth: 1,
     borderColor: '#C8E6C9',
   },
@@ -486,7 +561,7 @@ const styles = StyleSheet.create({
     lineHeight: 17,
   },
   actionArea: {
-    paddingTop: 8,
+    paddingTop: 12,
     alignItems: 'center',
   },
   progressDotsRow: {
@@ -500,9 +575,6 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: '#E5D5C5',
-  },
-  dotDone: {
-    backgroundColor: '#1E5A2A',
   },
   dotActive: {
     backgroundColor: '#1E5A2A',

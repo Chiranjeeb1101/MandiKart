@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Bell,
   CheckCircle2,
@@ -56,12 +57,11 @@ const languageLabels: Record<string, string> = {
 
 export default function MoreScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { farmer, user, isAuthenticated, logout } = useAuthStore();
   const { language, isOffline } = useAppStore();
   const [logoutOpen, setLogoutOpen] = useState(false);
 
-  // Never invent account data: show profile details only after an authenticated
-  // session provides them. The values below are intentionally derived from state.
   const profile = isAuthenticated ? farmer ?? user : null;
   const name = farmer?.fullName ?? user?.fullName ?? user?.name;
   const location = [user?.district, user?.state].filter(Boolean).join(', ');
@@ -96,14 +96,32 @@ export default function MoreScreen() {
   ];
 
   return (
-    <MKBackground>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <MKBackground disableSafeArea>
+      <ScrollView
+        contentContainerStyle={[
+          styles.content,
+          {
+            paddingTop: Math.max(insets.top + 16, 50),
+            paddingBottom: Math.max(insets.bottom + 100, 140),
+          },
+        ]}
+        showsVerticalScrollIndicator={false}
+      >
         <Animated.View entering={FadeInDown.duration(360)} style={styles.header}>
           <View>
             <Text style={styles.screenTitle}>More</Text>
             <Text style={styles.screenSubtitle}>Manage your account, farm and preferences</Text>
           </View>
-          <Pressable accessibilityRole="button" accessibilityLabel="Open notifications" hitSlop={8} style={styles.headerButton} onPress={() => router.push('/more/notifications')}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Open notifications"
+            hitSlop={8}
+            style={({ pressed }) => [
+              styles.headerButton,
+              pressed && { transform: [{ scale: 0.90 }], opacity: 0.85 },
+            ]}
+            onPress={() => router.push('/more/notifications')}
+          >
             <Bell size={20} color={MKColors.primaryGreenDark} />
           </Pressable>
         </Animated.View>
@@ -129,7 +147,15 @@ export default function MoreScreen() {
                   ) : <Text style={styles.pendingText}>Account verification pending</Text>}
                   {location ? <View style={styles.locationLine}><MapPin size={13} color={MKColors.textSecondary} /><Text numberOfLines={1} style={styles.locationText}>{location}</Text></View> : null}
                 </View>
-                <Pressable accessibilityRole="button" accessibilityLabel="Edit profile" style={styles.editButton} onPress={completeProfile}>
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Edit profile"
+                  style={({ pressed }) => [
+                    styles.editButton,
+                    pressed && { transform: [{ scale: 0.90 }], opacity: 0.8 },
+                  ]}
+                  onPress={completeProfile}
+                >
                   <Pencil size={17} color={MKColors.primaryGreenDark} />
                 </Pressable>
               </View>
@@ -153,7 +179,10 @@ export default function MoreScreen() {
           accessibilityRole="button"
           accessibilityLabel="Log out"
           android_ripple={{ color: '#F4D9D6' }}
-          style={styles.logoutButton}
+          style={({ pressed }) => [
+            styles.logoutButton,
+            pressed && { transform: [{ scale: 0.97 }], opacity: 0.88 },
+          ]}
           onPress={() => setLogoutOpen(true)}
         >
           <LogOut size={19} color="#B84B4B" /><Text style={styles.logoutText}>Log Out</Text>
@@ -187,25 +216,36 @@ function MenuRow({ item, isLast }: { item: MenuItem; isLast: boolean }) {
   const Icon = item.icon;
   const tone = item.iconTone === 'orange' ? styles.orangeIcon : item.iconTone === 'neutral' ? styles.neutralIcon : styles.greenIcon;
   const iconColor = item.iconTone === 'orange' ? MKColors.accentOrangeDark : item.iconTone === 'neutral' ? MKColors.textSecondary : MKColors.primaryGreenDark;
-  // Use a concrete StyleSheet array here. In the affected Android runtime the
-  // Pressable style callback was not applied, leaving its default column layout.
-  return <Pressable
-    accessibilityRole="button"
-    accessibilityLabel={item.title}
-    android_ripple={{ color: '#E7F0E8', borderless: false }}
-    style={[styles.menuRow, !isLast && styles.rowDivider]}
-    onPress={item.onPress}
-  >
-    <View style={[styles.iconBox, tone]}><Icon size={20} color={iconColor} strokeWidth={2.1} /></View>
-    <View style={styles.rowText}><Text style={styles.rowTitle}>{item.title}</Text>{item.subtitle ? <Text numberOfLines={1} style={styles.rowSubtitle}>{item.subtitle}</Text> : null}</View>
-    {item.rightText ? <Text style={[styles.rightText, item.rightText === 'On' && styles.onText]}>{item.rightText}</Text> : null}
-    {item.title !== 'App Version' && <ChevronRight size={19} color="#A0A5A3" />}
-  </Pressable>;
+  
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel={item.title}
+      android_ripple={{ color: '#E7F0E8', borderless: false }}
+      style={({ pressed }) => [
+        styles.menuRow,
+        !isLast && styles.rowDivider,
+        pressed && { backgroundColor: '#F4FAF5', opacity: 0.9, transform: [{ scale: 0.98 }] },
+      ]}
+      onPress={item.onPress}
+    >
+      <View style={[styles.iconBox, tone]}><Icon size={20} color={iconColor} strokeWidth={2.1} /></View>
+      <View style={styles.rowText}><Text style={styles.rowTitle}>{item.title}</Text>{item.subtitle ? <Text numberOfLines={1} style={styles.rowSubtitle}>{item.subtitle}</Text> : null}</View>
+      <View style={styles.rightActionRow}>
+        {item.rightText ? (
+          <View style={[styles.rightBadge, item.rightText === 'On' && styles.onBadge]}>
+            <Text style={[styles.rightText, item.rightText === 'On' && styles.onText]}>{item.rightText}</Text>
+          </View>
+        ) : null}
+        {item.title !== 'App Version' && <ChevronRight size={18} color="#A0A5A3" />}
+      </View>
+    </Pressable>
+  );
 }
 
 const styles = StyleSheet.create({
-  content: { paddingHorizontal: 18, paddingTop: 20, paddingBottom: 120 },
-  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 20 },
+  content: { paddingHorizontal: 18, paddingTop: 20, paddingBottom: 140 },
+  header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 18 },
   screenTitle: { color: MKColors.textPrimary, fontSize: 27, fontWeight: '800', letterSpacing: -0.5 },
   screenSubtitle: { color: MKColors.textSecondary, fontSize: 13, lineHeight: 19, marginTop: 3 },
   headerButton: { width: 42, height: 42, borderRadius: 15, backgroundColor: '#FFFDF9', alignItems: 'center', justifyContent: 'center', ...MKShadows.sm },
@@ -217,9 +257,13 @@ const styles = StyleSheet.create({
   locationLine: { flexDirection: 'row', alignItems: 'center', gap: 3, marginTop: 4 }, locationText: { flex: 1, color: MKColors.textSecondary, fontSize: 12 }, editButton: { width: 38, height: 38, borderRadius: 19, backgroundColor: '#ECF6ED', alignItems: 'center', justifyContent: 'center', marginLeft: 8 },
   profileMeta: { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: '#EEECE6', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingTop: 12, marginTop: 15 }, metaLabel: { color: MKColors.textMuted, fontSize: 11, fontWeight: '600' }, metaStatus: { flexDirection: 'row', alignItems: 'center', gap: 4 }, metaStatusText: { color: MKColors.primaryGreenDark, fontSize: 11, fontWeight: '700' },
   incompleteCard: { alignItems: 'center', flexDirection: 'row', backgroundColor: '#FFFCF5', borderRadius: 22, padding: 16, borderWidth: 1, borderColor: '#F2E8D3', ...MKShadows.sm }, incompleteIcon: { width: 42, height: 42, alignItems: 'center', justifyContent: 'center', borderRadius: 14, backgroundColor: '#E8F5E9' }, incompleteText: { flex: 1, marginHorizontal: 11 }, incompleteTitle: { color: MKColors.textPrimary, fontSize: 14, fontWeight: '800' }, incompleteSub: { color: MKColors.textSecondary, fontSize: 11, lineHeight: 15, marginTop: 3 }, completeLink: { color: MKColors.primaryGreenDark, fontSize: 12, fontWeight: '800' },
-  section: { marginTop: 24 }, sectionTitle: { color: MKColors.textPrimary, fontSize: 17, fontWeight: '800', marginBottom: 10 }, groupCard: { backgroundColor: MKColors.backgroundCard, borderRadius: 21, paddingHorizontal: 5, overflow: 'hidden', ...MKShadows.sm },
-  menuRow: { minHeight: 66, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 11, paddingVertical: 10 }, rowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EEEDE9' }, iconBox: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center' }, greenIcon: { backgroundColor: '#EAF5EB' }, orangeIcon: { backgroundColor: '#FFF3E5' }, neutralIcon: { backgroundColor: '#F1F3F1' }, rowText: { flex: 1, marginLeft: 13, marginRight: 8 }, rowTitle: { color: MKColors.textPrimary, fontSize: 14, fontWeight: '700' }, rowSubtitle: { color: MKColors.textSecondary, fontSize: 12, lineHeight: 16, marginTop: 2 }, rightText: { color: MKColors.textMuted, fontSize: 12, fontWeight: '700', marginRight: 5 }, onText: { color: MKColors.primaryGreen },
+  section: { marginTop: 22 }, sectionTitle: { color: MKColors.textPrimary, fontSize: 17, fontWeight: '800', marginBottom: 10 }, groupCard: { backgroundColor: MKColors.backgroundCard, borderRadius: 21, paddingHorizontal: 5, overflow: 'hidden', ...MKShadows.sm },
+  menuRow: { minHeight: 62, flexDirection: 'row', alignItems: 'center', paddingHorizontal: 11, paddingVertical: 10 }, rowDivider: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: '#EEEDE9' }, iconBox: { width: 40, height: 40, borderRadius: 13, alignItems: 'center', justifyContent: 'center' }, greenIcon: { backgroundColor: '#EAF5EB' }, orangeIcon: { backgroundColor: '#FFF3E5' }, neutralIcon: { backgroundColor: '#F1F3F1' }, rowText: { flex: 1, marginLeft: 13, marginRight: 8 }, rowTitle: { color: MKColors.textPrimary, fontSize: 14, fontWeight: '700' }, rowSubtitle: { color: MKColors.textSecondary, fontSize: 12, lineHeight: 16, marginTop: 2 },
+  rightActionRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  rightBadge: { backgroundColor: '#F1F3F1', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 },
+  onBadge: { backgroundColor: '#E8F5E9' },
+  rightText: { color: MKColors.textMuted, fontSize: 12, fontWeight: '700' }, onText: { color: MKColors.primaryGreenDark },
   logoutButton: { height: 52, borderRadius: 17, marginTop: 28, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 9, backgroundColor: '#FFF7F6', borderWidth: 1, borderColor: '#F8E5E3' }, logoutText: { color: '#B84B4B', fontSize: 15, fontWeight: '800' },
-  footer: { alignItems: 'center', marginTop: 36 }, brandMark: { width: 26, height: 26, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF1E2' }, brandName: { color: MKColors.primaryGreenDark, fontSize: 14, fontWeight: '800', marginTop: 6 }, tagline: { color: MKColors.textSecondary, fontSize: 11, marginTop: 3 }, madeFor: { color: MKColors.textMuted, fontSize: 10, marginTop: 7 },
+  footer: { alignItems: 'center', marginTop: 36, marginBottom: 20 }, brandMark: { width: 26, height: 26, borderRadius: 9, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF1E2' }, brandName: { color: MKColors.primaryGreenDark, fontSize: 14, fontWeight: '800', marginTop: 6 }, tagline: { color: MKColors.textSecondary, fontSize: 11, marginTop: 3 }, madeFor: { color: MKColors.textMuted, fontSize: 10, marginTop: 7 },
   modalBackdrop: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(24, 29, 25, 0.38)', padding: 24 }, modalCard: { width: '100%', maxWidth: 360, borderRadius: 24, backgroundColor: MKColors.backgroundCard, padding: 22, alignItems: 'center', ...MKShadows.lg }, modalIcon: { width: 46, height: 46, borderRadius: 16, alignItems: 'center', justifyContent: 'center', backgroundColor: '#FFF1F0' }, modalTitle: { color: MKColors.textPrimary, fontSize: 18, fontWeight: '800', marginTop: 14 }, modalMessage: { color: MKColors.textSecondary, fontSize: 13, lineHeight: 19, textAlign: 'center', marginTop: 7 }, modalActions: { flexDirection: 'row', gap: 10, width: '100%', marginTop: 22 }, cancelButton: { flex: 1, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#F5F5F1' }, cancelText: { color: MKColors.textPrimary, fontSize: 14, fontWeight: '800' }, confirmButton: { flex: 1, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center', backgroundColor: '#C95B57' }, confirmText: { color: '#FFFFFF', fontSize: 14, fontWeight: '800' },
 });

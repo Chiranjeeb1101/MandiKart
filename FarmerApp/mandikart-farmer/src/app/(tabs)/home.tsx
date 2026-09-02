@@ -17,6 +17,7 @@ import {
   Pressable,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   MapPin,
   Bell,
@@ -43,6 +44,7 @@ const ONION_PHOTO_URI =
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
+  const insets = useSafeAreaInsets();
 
   const farmerName = user?.name ? user.name.split(' ')[0] : 'Ramesh';
   const locationName = user?.district ? `${user.district}, ${user.state}` : 'Nashik, Maharashtra';
@@ -50,7 +52,7 @@ export default function HomeScreen() {
   return (
     <MKBackground disableSafeArea>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: Math.max(insets.top + 16, 54) }]}
         showsVerticalScrollIndicator={false}
       >
         {/* Top App Bar / Greeting Section */}
@@ -67,7 +69,13 @@ export default function HomeScreen() {
           </View>
 
           {/* Notification Button with Badge */}
-          <Pressable style={styles.notificationBtn} accessibilityRole="button">
+          <Pressable
+            style={({ pressed }) => [
+              styles.notificationBtn,
+              pressed && { transform: [{ scale: 0.90 }], opacity: 0.85 },
+            ]}
+            accessibilityRole="button"
+          >
             <Bell size={20} color="#1A1C1E" strokeWidth={2} />
             <View style={styles.notificationBadge}>
               <Text style={styles.notificationBadgeText}>3</Text>
@@ -76,17 +84,23 @@ export default function HomeScreen() {
         </View>
 
         {/* Section 1: Sell Today Hero Card */}
-        <View style={styles.heroSellCard}>
+        <Pressable
+          onPress={() => router.push('/(tabs)/produce')}
+          style={({ pressed }) => [
+            styles.heroSellCard,
+            pressed && { transform: [{ scale: 0.97 }], opacity: 0.92 },
+          ]}
+        >
           <View style={styles.heroSellContent}>
             <Text style={styles.heroSellTitle}>What do you want to sell today?</Text>
             <Text style={styles.heroSellSubtitle}>
               Find verified buyers and maximize your net returns
             </Text>
 
-            <View style={styles.addProduceBtnWrapper}>
+            <View style={styles.addProduceBtnWrapper} pointerEvents="none">
               <MKButton
                 title="Add Produce"
-                onPress={() => router.push('/(tabs)/produce')}
+                onPress={() => {}}
                 variant="primary"
                 size="md"
                 leftIcon={<Plus size={18} color="#FFFFFF" strokeWidth={2.5} />}
@@ -96,19 +110,27 @@ export default function HomeScreen() {
           </View>
 
           <Image source={{ uri: VEGGIE_BASKET_URI }} style={styles.heroBasketImage} />
-        </View>
+        </Pressable>
 
         {/* Section 2: Best Opportunity For You */}
         <View style={styles.opportunitySection}>
           <View style={styles.sectionHeaderRow}>
             <Text style={styles.sectionHeaderTitle}>Best Opportunity for You</Text>
-            <Pressable onPress={() => router.push('/(tabs)/sell')}>
+            <Pressable
+              style={({ pressed }) => [
+                pressed && { opacity: 0.6, transform: [{ scale: 0.96 }] },
+              ]}
+              onPress={() => router.push('/(tabs)/sell')}
+            >
               <Text style={styles.viewAllLink}>View all</Text>
             </Pressable>
           </View>
 
           {/* Decision Support Card */}
-          <MKCard style={styles.decisionCard}>
+          <MKCard
+            style={styles.decisionCard}
+            onPress={() => router.push('/(tabs)/sell')}
+          >
             <View style={styles.cropHeaderRow}>
               <View style={styles.cropInfoRow}>
                 <Image source={{ uri: ONION_PHOTO_URI }} style={styles.cropImage} />
@@ -155,10 +177,10 @@ export default function HomeScreen() {
             </View>
 
             {/* Action Button */}
-            <View style={styles.decisionActionWrapper}>
+            <View style={styles.decisionActionWrapper} pointerEvents="none">
               <MKButton
                 title="View Best Options"
-                onPress={() => router.push('/(tabs)/sell')}
+                onPress={() => {}}
                 variant="secondary"
                 size="md"
                 rightIcon={<ArrowRight size={18} color="#1E5A2A" strokeWidth={2.2} />}
@@ -173,31 +195,49 @@ export default function HomeScreen() {
 
           <View style={styles.metricsRow}>
             {/* Metric 1: Active Orders */}
-            <View style={styles.metricCard}>
+            <Pressable
+              onPress={() => router.push('/(tabs)/orders')}
+              style={({ pressed }) => [
+                styles.metricCard,
+                pressed && { transform: [{ scale: 0.94 }], opacity: 0.9 },
+              ]}
+            >
               <View style={[styles.metricIconCircle, { backgroundColor: '#FFEADE' }]}>
                 <FileText size={18} color="#964900" />
               </View>
               <Text style={styles.metricBigNumber}>2</Text>
               <Text style={styles.metricLabel}>Active Orders</Text>
-            </View>
+            </Pressable>
 
             {/* Metric 2: Pickup Schedule */}
-            <View style={styles.metricCard}>
+            <Pressable
+              onPress={() => router.push('/(tabs)/orders')}
+              style={({ pressed }) => [
+                styles.metricCard,
+                pressed && { transform: [{ scale: 0.94 }], opacity: 0.9 },
+              ]}
+            >
               <View style={[styles.metricIconCircle, { backgroundColor: '#E8F5E9' }]}>
                 <Truck size={18} color="#1E5A2A" />
               </View>
               <Text style={styles.metricBigText}>Tomorrow</Text>
               <Text style={styles.metricLabel}>Pickup Schedule</Text>
-            </View>
+            </Pressable>
 
             {/* Metric 3: Monthly Earning */}
-            <View style={styles.metricCard}>
+            <Pressable
+              onPress={() => router.push('/more/bank-details')}
+              style={({ pressed }) => [
+                styles.metricCard,
+                pressed && { transform: [{ scale: 0.94 }], opacity: 0.9 },
+              ]}
+            >
               <View style={[styles.metricIconCircle, { backgroundColor: '#E8F5E9' }]}>
                 <Wallet size={18} color="#1E5A2A" />
               </View>
               <Text style={styles.metricBigText}>₹48,500</Text>
               <Text style={styles.metricLabel}>Monthly Earning</Text>
-            </View>
+            </Pressable>
           </View>
         </View>
       </ScrollView>

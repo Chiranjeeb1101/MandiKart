@@ -18,6 +18,7 @@ import {
   TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Sprout,
   Plus,
@@ -42,6 +43,7 @@ type FilterTab = 'Available' | 'Listed' | 'Sold';
 
 export default function ProduceScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
 
   const [activeTab, setActiveTab] = useState<FilterTab>('Available');
@@ -50,7 +52,13 @@ export default function ProduceScreen() {
   return (
     <MKBackground disableSafeArea>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: Math.max(insets.top + 16, 50),
+            paddingBottom: Math.max(insets.bottom + 80, 110),
+          },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
@@ -68,35 +76,58 @@ export default function ProduceScreen() {
 
         {/* Summary Strip (3 Columns) */}
         <View style={styles.summaryStrip}>
-          <View style={styles.summaryBox}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.summaryBox,
+              pressed && { transform: [{ scale: 0.94 }], opacity: 0.88 },
+            ]}
+          >
             <Text style={styles.summaryLabel}>AVAILABLE</Text>
             <Text style={styles.summaryValue}>2,500 KG</Text>
-          </View>
+          </Pressable>
 
-          <View style={styles.summaryBox}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.summaryBox,
+              pressed && { transform: [{ scale: 0.94 }], opacity: 0.88 },
+            ]}
+          >
             <Text style={styles.summaryLabel}>LISTED</Text>
             <Text style={styles.summaryValue}>4</Text>
-          </View>
+          </Pressable>
 
-          <View style={styles.summaryBox}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.summaryBox,
+              pressed && { transform: [{ scale: 0.94 }], opacity: 0.88 },
+            ]}
+          >
             <Text style={styles.summaryLabel}>SOLD</Text>
             <Text style={styles.summaryValue}>1,200 KG</Text>
-          </View>
+          </Pressable>
         </View>
 
-        {/* Add Produce Primary Banner */}
+        {/* Add Produce Primary Hero Banner - High Visibility Dark Green */}
         <Pressable
           onPress={() => router.push('/(tabs)/sell')}
           style={({ pressed }) => [
             styles.addProduceBanner,
-            pressed && { transform: [{ scale: 0.98 }] },
+            pressed && { transform: [{ scale: 0.97 }], opacity: 0.92 },
           ]}
         >
-          <View style={styles.addProduceRow}>
-            <Plus size={20} color="#FFFFFF" strokeWidth={3} />
-            <Text style={styles.addProduceTitle}>ADD PRODUCE</Text>
+          <View style={styles.bannerLeftRow}>
+            <View style={styles.plusIconBadge}>
+              <Plus size={22} color="#1E5A2A" strokeWidth={3} />
+            </View>
+            <View style={styles.bannerTextCol}>
+              <Text style={styles.addProduceTitle}>+ ADD PRODUCE</Text>
+              <Text style={styles.addProduceSubtext}>List your crop & find verified buyers</Text>
+            </View>
           </View>
-          <Text style={styles.addProduceSubtext}>List your crop and find verified buyers</Text>
+
+          <View style={styles.bannerArrowBadge}>
+            <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.5} />
+          </View>
         </Pressable>
 
         {/* Segmented Filter Tabs */}
@@ -105,7 +136,11 @@ export default function ProduceScreen() {
             <Pressable
               key={tab}
               onPress={() => setActiveTab(tab)}
-              style={[styles.tabBtn, activeTab === tab && styles.tabBtnActive]}
+              style={({ pressed }) => [
+                styles.tabBtn,
+                activeTab === tab && styles.tabBtnActive,
+                pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] },
+              ]}
             >
               <Text
                 style={[styles.tabText, activeTab === tab && styles.tabTextActive]}
@@ -131,7 +166,10 @@ export default function ProduceScreen() {
         {/* Produce Cards List */}
         <View style={styles.produceList}>
           {/* Card 1: Onion */}
-          <MKCard style={styles.produceCard}>
+          <MKCard
+            style={styles.produceCard}
+            onPress={() => router.push('/(tabs)/sell')}
+          >
             <View style={styles.produceRowTop}>
               <Image source={{ uri: ONION_IMG_URI }} style={styles.produceThumb} />
               <View style={styles.produceDetails}>
@@ -166,20 +204,26 @@ export default function ProduceScreen() {
             <View style={styles.cardActionRow}>
               <Pressable
                 onPress={() => router.push('/(tabs)/sell')}
-                style={styles.viewOptionsBtn}
+                style={({ pressed }) => [
+                  styles.viewOptionsBtn,
+                  pressed && { opacity: 0.6, transform: [{ scale: 0.96 }] },
+                ]}
               >
                 <Text style={styles.viewOptionsText}>VIEW BEST OPTIONS</Text>
                 <ArrowRight size={16} color="#1E5A2A" strokeWidth={2.5} />
               </Pressable>
 
-              <Pressable>
+              <Pressable style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
                 <Text style={styles.editText}>Edit</Text>
               </Pressable>
             </View>
           </MKCard>
 
           {/* Card 2: Wheat */}
-          <MKCard style={styles.produceCard}>
+          <MKCard
+            style={styles.produceCard}
+            onPress={() => router.push('/(tabs)/orders')}
+          >
             <View style={styles.produceRowTop}>
               <Image source={{ uri: WHEAT_IMG_URI }} style={styles.produceThumb} />
               <View style={styles.produceDetails}>
@@ -202,13 +246,16 @@ export default function ProduceScreen() {
             <View style={styles.cardActionRow}>
               <Pressable
                 onPress={() => router.push('/(tabs)/orders')}
-                style={styles.viewOptionsBtn}
+                style={({ pressed }) => [
+                  styles.viewOptionsBtn,
+                  pressed && { opacity: 0.6, transform: [{ scale: 0.96 }] },
+                ]}
               >
                 <Text style={styles.viewOptionsText}>VIEW ORDER</Text>
                 <ArrowRight size={16} color="#1E5A2A" strokeWidth={2.5} />
               </Pressable>
 
-              <Pressable>
+              <Pressable style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
                 <Text style={styles.editText}>Edit</Text>
               </Pressable>
             </View>
@@ -222,8 +269,6 @@ export default function ProduceScreen() {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 54,
-    paddingBottom: 28,
     gap: 16,
   },
   header: {
@@ -292,49 +337,82 @@ const styles = StyleSheet.create({
   addProduceBanner: {
     backgroundColor: '#1E5A2A',
     borderRadius: 20,
-    padding: 18,
+    padding: 16,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     shadowColor: '#16481A',
     shadowOffset: { width: 0, height: 6 },
     shadowOpacity: 0.35,
     shadowRadius: 10,
-    elevation: 4,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: '#2B7038',
   },
-  addProduceRow: {
+  bannerLeftRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 12,
+    flex: 1,
+  },
+  plusIconBadge: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  bannerTextCol: {
+    flex: 1,
   },
   addProduceTitle: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '900',
     color: '#FFFFFF',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   addProduceSubtext: {
     fontSize: 12,
-    color: 'rgba(255, 255, 255, 0.85)',
+    color: '#E8F5E9',
     marginTop: 2,
+    fontWeight: '500',
+  },
+  bannerArrowBadge: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   tabsContainer: {
     flexDirection: 'row',
-    backgroundColor: '#F0ECE4',
+    backgroundColor: '#EAE6DC',
     borderRadius: 14,
-    padding: 3,
+    padding: 4,
+    gap: 6,
   },
   tabBtn: {
     flex: 1,
-    paddingVertical: 8,
+    paddingVertical: 10,
     alignItems: 'center',
-    borderRadius: 11,
+    borderRadius: 10,
   },
   tabBtnActive: {
     backgroundColor: '#FFFFFF',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.08,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 3,
   },
   tabText: {
     fontSize: 13,
@@ -342,8 +420,8 @@ const styles = StyleSheet.create({
     color: '#5F6368',
   },
   tabTextActive: {
-    color: '#1A1C1E',
-    fontWeight: '700',
+    color: '#1E5A2A',
+    fontWeight: '800',
   },
   searchContainer: {
     flexDirection: 'row',

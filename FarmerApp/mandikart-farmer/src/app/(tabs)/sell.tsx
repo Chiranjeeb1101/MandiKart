@@ -2,7 +2,8 @@
  * MandiKart Farmer App — Screen 10: Sell (Guided Selection Flow)
  * 
  * Implements the approved Stitch visual design:
- * Crop horizontal selector with photos, quantity counter stepper with grade dropdown,
+ * Crop horizontal selector with photos & "+ Add Crop" card,
+ * Quantity dropdown bar & stepper, Quality Grade dropdown modal picker,
  * market intelligence 2-card bento grid (Market Price & Demand),
  * "Top Match for You" net return calculation card with verified buyer profile,
  * and 3D primary FIND BEST SELLING OPTIONS action.
@@ -17,8 +18,11 @@ import {
   Image,
   Pressable,
   Alert,
+  Modal,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   TrendingUp,
   Flame,
@@ -29,10 +33,24 @@ import {
   MapPin,
   ArrowRight,
   ChevronDown,
+  Scale,
+  Award,
+  Check,
+  X,
+  Sprout,
 } from 'lucide-react-native';
 import { MKBackground, MKButton, MKCard, MKStatusBadge } from '@/components/ui';
 
-const CROPS = [
+interface CropItem {
+  id: string;
+  name: string;
+  image: string;
+  price: number;
+  transport: number;
+  marketRange: string;
+}
+
+const INITIAL_CROPS: CropItem[] = [
   {
     id: 'onion',
     name: 'Onion',
@@ -62,17 +80,70 @@ const CROPS = [
   },
 ];
 
+const EXTRA_CROPS_PRESETS: CropItem[] = [
+  {
+    id: 'wheat',
+    name: 'Wheat',
+    image:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuBp1Zj0OQSZz-R5lwjzzVMhfIpQ7UZXXJyh99AhnWV3qwaT4O0bqL8-SHei9CGxNR0OrSLAyvpnMs7-3ByBBSeCVimUuDZZEokQeqa9V0vPd7JtriOCnbXwyG0OZejq9zA4Ag6Tr27my0GcXPmYgPzRqfyiIRMe5nibIxEvfXjrKjMlUkrTBvO_JVftDlMfe6zs6mF3JYv4No9dchmW3SEJlp45WvmqSBErKdRcr7VJWZ5HZiBOkoPdbA',
+    price: 22,
+    transport: 2,
+    marketRange: '₹20-25',
+  },
+  {
+    id: 'rice',
+    name: 'Rice',
+    image:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuCnSLJjSUyWgLdbXU3_H2F3g0FW9V1FkqNh60JzX2kcs1jUaS2rYWSwYwXwhowBfWfwhrhZjqYfxllcN5Xdcsts1A6kAt5O4LmQPny8e04Fp0y84FS6TpCEv6Ead9nuauzJ7PzfgHsXoqM7YL56z7eugidEni2b94tc7VaVKHgRQpgJqD0FmceLE7P-1C9I838IelI2xmVlACO7rX5mVD65970EQP4WrdCAJY1P_9-3zSyE78Vh_QrNBA',
+    price: 36,
+    transport: 3,
+    marketRange: '₹32-40',
+  },
+  {
+    id: 'garlic',
+    name: 'Garlic',
+    image:
+      'https://lh3.googleusercontent.com/aida-public/AB6AXuCDOJL8RKbbBEQi0du8hHGGe-fNpsnVqibsmptRi9ANv4FaE2LMboZqWH-2gppsktLNvVx7JSEyIU7uFwWEwW_oPILiWrX--jYxolR5dfUcXhKUUF-9cJbkgQ_8gyjelFWX8ZwXTeUjNw-KboozHRyg_JSSPA-o-tGFXdfyIhuXXnpbyl4_aNaN-vY2CjsppXPuL2phZuIDm3b1kNIqcfZ0gthemK3IivuhVUaf9GTfWi3xjfl-HDHjcg',
+    price: 85,
+    transport: 5,
+    marketRange: '₹80-95',
+  },
+];
+
+const QUANTITY_OPTIONS = [
+  { label: '500 KG (0.5 Ton)', value: 500 },
+  { label: '1,000 KG (1 Ton)', value: 1000 },
+  { label: '2,500 KG (2.5 Tons)', value: 2500 },
+  { label: '5,000 KG (5 Tons)', value: 5000 },
+  { label: '10,000 KG (10 Tons)', value: 10000 },
+];
+
+const QUALITY_GRADES = [
+  { id: 'Grade A', name: 'Grade A (Export / Premium)', desc: 'Uniform size, zero damage, top luster' },
+  { id: 'Grade B', name: 'Grade B (Standard Mandi)', desc: 'Good quality, minor variation in size' },
+  { id: 'Grade C', name: 'Grade C (Processing)', desc: 'Ideal for juices, pastes & food factories' },
+  { id: 'Organic', name: 'Organic Certified', desc: 'Chemical-free with lab certificate' },
+];
+
 const BUYER_AVATAR_URI =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuCsiGgdNTdwdzhHT51YSgwvNdShC0__Wu24dv1CcbVou-08kHaF50TnNAr-IA4hoY6hcIQ8HF-zHS6M9DY_rNpUegqDAqP49C9fp-TtpVVuQqZwRC_19oX9AwOggRZ2zhJKJeL8KWXIgd7XssPOZUNgpcSGlfZip3jLGCaPeF1ejDvtqzrcrp8j9wwkAaTiLyfJNYiFh0cpRkWZSrtcFHpH6vkhEpi-cDnLgzW0WOnCgNLsuCPyY3cPjg';
 
 export default function SellScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
 
+  const [cropsList, setCropsList] = useState<CropItem[]>(INITIAL_CROPS);
   const [selectedCropId, setSelectedCropId] = useState('onion');
   const [quantity, setQuantity] = useState(1000);
   const [grade, setGrade] = useState('Grade A');
 
-  const currentCrop = CROPS.find((c) => c.id === selectedCropId) || CROPS[0];
+  // Modals state
+  const [addCropModalOpen, setAddCropModalOpen] = useState(false);
+  const [qtyModalOpen, setQtyModalOpen] = useState(false);
+  const [gradeModalOpen, setGradeModalOpen] = useState(false);
+  const [customCropName, setCustomCropName] = useState('');
+
+  const currentCrop = cropsList.find((c) => c.id === selectedCropId) || cropsList[0];
   const sellingPrice = currentCrop.price;
   const transportCost = currentCrop.transport;
   const netReturn = sellingPrice - transportCost;
@@ -80,10 +151,34 @@ export default function SellScreen() {
   const handleIncreaseQty = () => setQuantity((prev) => prev + 250);
   const handleDecreaseQty = () => setQuantity((prev) => (prev > 250 ? prev - 250 : 250));
 
+  const handleAddCrop = (crop: CropItem) => {
+    if (!cropsList.some((c) => c.id === crop.id)) {
+      setCropsList([...cropsList, crop]);
+    }
+    setSelectedCropId(crop.id);
+    setAddCropModalOpen(false);
+  };
+
+  const handleAddCustomCrop = () => {
+    if (!customCropName.trim()) return;
+    const newCropItem: CropItem = {
+      id: `custom_${Date.now()}`,
+      name: customCropName.trim(),
+      image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCDOJL8RKbbBEQi0du8hHGGe-fNpsnVqibsmptRi9ANv4FaE2LMboZqWH-2gppsktLNvVx7JSEyIU7uFwWEwW_oPILiWrX--jYxolR5dfUcXhKUUF-9cJbkgQ_8gyjelFWX8ZwXTeUjNw-KboozHRyg_JSSPA-o-tGFXdfyIhuXXnpbyl4_aNaN-vY2CjsppXPuL2phZuIDm3b1kNIqcfZ0gthemK3IivuhVUaf9GTfWi3xjfl-HDHjcg',
+      price: 25,
+      transport: 2,
+      marketRange: '₹22-28',
+    };
+    setCropsList([...cropsList, newCropItem]);
+    setSelectedCropId(newCropItem.id);
+    setCustomCropName('');
+    setAddCropModalOpen(false);
+  };
+
   const handleFindOptions = () => {
     Alert.alert(
       'Purchase Request Sent! 🎉',
-      `Your offer for ${quantity} KG ${currentCrop.name} (${grade}) has been matched with ABC Foods at ₹${sellingPrice}/KG (Net Return: ₹${netReturn}/KG).`,
+      `Your offer for ${quantity.toLocaleString()} KG ${currentCrop.name} (${grade}) has been matched with ABC Foods at ₹${sellingPrice}/KG (Net Return: ₹${netReturn}/KG).`,
       [
         {
           text: 'Track Order',
@@ -96,7 +191,13 @@ export default function SellScreen() {
   return (
     <MKBackground disableSafeArea>
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[
+          styles.scrollContent,
+          {
+            paddingTop: Math.max(insets.top + 16, 50),
+            paddingBottom: Math.max(insets.bottom + 80, 110),
+          },
+        ]}
         showsVerticalScrollIndicator={false}
       >
         {/* Header */}
@@ -109,21 +210,22 @@ export default function SellScreen() {
         <MKCard style={styles.cropSelectorCard}>
           <Text style={styles.sectionTitle}>What do you want to sell?</Text>
 
-          {/* Horizontal Crop Scroll */}
+          {/* Horizontal Crop Scroll including "+ Add Crop" card */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.cropScrollContent}
           >
-            {CROPS.map((crop) => {
+            {cropsList.map((crop) => {
               const isSelected = selectedCropId === crop.id;
               return (
                 <Pressable
                   key={crop.id}
                   onPress={() => setSelectedCropId(crop.id)}
-                  style={[
+                  style={({ pressed }) => [
                     styles.cropSelectBtn,
                     isSelected && styles.cropSelectBtnActive,
+                    pressed && { transform: [{ scale: 0.93 }], opacity: 0.9 },
                   ]}
                 >
                   <View style={styles.cropImageWrapper}>
@@ -140,34 +242,81 @@ export default function SellScreen() {
                 </Pressable>
               );
             })}
+
+            {/* + ADD CROP CARD */}
+            <Pressable
+              onPress={() => setAddCropModalOpen(true)}
+              style={({ pressed }) => [
+                styles.addCropCardBtn,
+                pressed && { transform: [{ scale: 0.93 }], opacity: 0.85 },
+              ]}
+            >
+              <View style={styles.addCropCircle}>
+                <Plus size={22} color="#1E5A2A" strokeWidth={2.8} />
+              </View>
+              <Text style={styles.addCropCardText}>Add Crop</Text>
+            </Pressable>
           </ScrollView>
 
-          {/* Quantity & Grade 2-Column Row */}
-          <View style={styles.qtyGradeGrid}>
-            {/* Quantity Counter */}
-            <View style={styles.qtyCol}>
+          {/* Quantity & Quality Dropdown Section */}
+          <View style={styles.dropdownsSection}>
+            
+            {/* Quantity Dropdown & Stepper Bar */}
+            <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Quantity (KG)</Text>
-              <View style={styles.stepperContainer}>
-                <Pressable onPress={handleDecreaseQty} style={styles.stepperBtn}>
-                  <Minus size={16} color="#1E5A2A" strokeWidth={2.5} />
+              <View style={styles.qtyControlRow}>
+                {/* Quantity Dropdown Selector */}
+                <Pressable
+                  onPress={() => setQtyModalOpen(true)}
+                  style={({ pressed }) => [
+                    styles.dropdownBar,
+                    styles.qtyDropdownBar,
+                    pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+                  ]}
+                >
+                  <Scale size={18} color="#1E5A2A" />
+                  <Text style={styles.dropdownBarText}>{quantity.toLocaleString()} KG</Text>
+                  <ChevronDown size={18} color="#7A7A7A" />
                 </Pressable>
-                <Text style={styles.qtyNumber}>{quantity.toLocaleString()}</Text>
-                <Pressable onPress={handleIncreaseQty} style={styles.stepperBtn}>
-                  <Plus size={16} color="#1E5A2A" strokeWidth={2.5} />
-                </Pressable>
+
+                {/* +/- Stepper Buttons */}
+                <View style={styles.stepperBox}>
+                  <Pressable
+                    onPress={handleDecreaseQty}
+                    style={({ pressed }) => [
+                      styles.stepperBtn,
+                      pressed && { transform: [{ scale: 0.88 }], opacity: 0.8 },
+                    ]}
+                  >
+                    <Minus size={16} color="#1E5A2A" strokeWidth={2.5} />
+                  </Pressable>
+                  <Pressable
+                    onPress={handleIncreaseQty}
+                    style={({ pressed }) => [
+                      styles.stepperBtn,
+                      pressed && { transform: [{ scale: 0.88 }], opacity: 0.8 },
+                    ]}
+                  >
+                    <Plus size={16} color="#1E5A2A" strokeWidth={2.5} />
+                  </Pressable>
+                </View>
               </View>
             </View>
 
-            {/* Grade Selector */}
-            <View style={styles.qtyCol}>
+            {/* Quality Grade Dropdown Bar */}
+            <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Quality Grade</Text>
               <Pressable
-                onPress={() =>
-                  setGrade((g) => (g === 'Grade A' ? 'Grade B' : 'Grade A'))
-                }
-                style={styles.gradeDropdownBtn}
+                onPress={() => setGradeModalOpen(true)}
+                style={({ pressed }) => [
+                  styles.dropdownBar,
+                  pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+                ]}
               >
-                <Text style={styles.gradeText}>{grade}</Text>
+                <View style={styles.dropdownLeftRow}>
+                  <Award size={18} color="#EF7D1A" />
+                  <Text style={styles.dropdownBarText}>{grade}</Text>
+                </View>
                 <ChevronDown size={18} color="#7A7A7A" />
               </Pressable>
             </View>
@@ -177,7 +326,12 @@ export default function SellScreen() {
         {/* Section 2: Market Intelligence Bento Grid (2 Cards) */}
         <View style={styles.bentoGrid}>
           {/* Card 1: Mandi Price */}
-          <View style={styles.bentoCard}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.bentoCard,
+              pressed && { transform: [{ scale: 0.96 }], opacity: 0.92 },
+            ]}
+          >
             <View style={styles.bentoIconTop}>
               <TrendingUp size={24} color="#1565C0" opacity={0.3} />
             </View>
@@ -188,10 +342,16 @@ export default function SellScreen() {
               </Text>
               <Text style={styles.bentoChange}>+₹2.00 from yesterday</Text>
             </View>
-          </View>
+          </Pressable>
 
           {/* Card 2: Buyer Demand */}
-          <View style={[styles.bentoCard, styles.bentoCardDemand]}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.bentoCard,
+              styles.bentoCardDemand,
+              pressed && { transform: [{ scale: 0.96 }], opacity: 0.92 },
+            ]}
+          >
             <View style={styles.bentoIconTop}>
               <Flame size={24} color="#EF7D1A" opacity={0.3} />
             </View>
@@ -203,7 +363,7 @@ export default function SellScreen() {
               </View>
               <Text style={styles.demandCount}>15+ active buyers nearby</Text>
             </View>
-          </View>
+          </Pressable>
         </View>
 
         {/* Section 3: Top Match & Net Return Calculation Card */}
@@ -260,6 +420,138 @@ export default function SellScreen() {
           />
         </View>
       </ScrollView>
+
+      {/* ── MODAL 1: ADD CROP MODAL ── */}
+      <Modal transparent visible={addCropModalOpen} animationType="slide" onRequestClose={() => setAddCropModalOpen(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeaderRow}>
+              <View style={styles.modalHeaderTitleRow}>
+                <Sprout size={20} color="#1E5A2A" />
+                <Text style={styles.modalTitleText}>Add More Crops</Text>
+              </View>
+              <Pressable onPress={() => setAddCropModalOpen(false)} style={styles.closeBtn}>
+                <X size={20} color="#5F6368" />
+              </Pressable>
+            </View>
+
+            <Text style={styles.modalSubtext}>Select a crop to add to your selling list:</Text>
+
+            <View style={styles.presetsGrid}>
+              {EXTRA_CROPS_PRESETS.map((preset) => (
+                <Pressable
+                  key={preset.id}
+                  onPress={() => handleAddCrop(preset)}
+                  style={styles.presetItemCard}
+                >
+                  <Image source={{ uri: preset.image }} style={styles.presetThumb} />
+                  <Text style={styles.presetItemName}>{preset.name}</Text>
+                  <Text style={styles.presetItemRate}>{preset.marketRange}/kg</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <View style={styles.customCropContainer}>
+              <Text style={styles.customLabel}>Or add a custom crop name:</Text>
+              <View style={styles.customInputRow}>
+                <TextInput
+                  style={styles.customInput}
+                  placeholder="E.g. Garlic, Chilli, Ginger"
+                  value={customCropName}
+                  onChangeText={setCustomCropName}
+                />
+                <Pressable onPress={handleAddCustomCrop} style={styles.addCustomBtn}>
+                  <Text style={styles.addCustomBtnText}>Add</Text>
+                </Pressable>
+              </View>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── MODAL 2: QUANTITY DROPDOWN MODAL ── */}
+      <Modal transparent visible={qtyModalOpen} animationType="fade" onRequestClose={() => setQtyModalOpen(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeaderRow}>
+              <View style={styles.modalHeaderTitleRow}>
+                <Scale size={20} color="#1E5A2A" />
+                <Text style={styles.modalTitleText}>Select Quantity</Text>
+              </View>
+              <Pressable onPress={() => setQtyModalOpen(false)} style={styles.closeBtn}>
+                <X size={20} color="#5F6368" />
+              </Pressable>
+            </View>
+
+            <View style={styles.optionsList}>
+              {QUANTITY_OPTIONS.map((opt) => {
+                const isSelected = quantity === opt.value;
+                return (
+                  <Pressable
+                    key={opt.value}
+                    onPress={() => {
+                      setQuantity(opt.value);
+                      setQtyModalOpen(false);
+                    }}
+                    style={[styles.optionRow, isSelected && styles.optionRowActive]}
+                  >
+                    <Text style={[styles.optionLabel, isSelected && styles.optionLabelActive]}>
+                      {opt.label}
+                    </Text>
+                    {isSelected && <Check size={18} color="#1E5A2A" strokeWidth={3} />}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── MODAL 3: QUALITY GRADE DROPDOWN MODAL ── */}
+      <Modal transparent visible={gradeModalOpen} animationType="fade" onRequestClose={() => setGradeModalOpen(false)}>
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeaderRow}>
+              <View style={styles.modalHeaderTitleRow}>
+                <Award size={20} color="#EF7D1A" />
+                <Text style={styles.modalTitleText}>Select Quality Grade</Text>
+              </View>
+              <Pressable onPress={() => setGradeModalOpen(false)} style={styles.closeBtn}>
+                <X size={20} color="#5F6368" />
+              </Pressable>
+            </View>
+
+            <View style={styles.optionsList}>
+              {QUALITY_GRADES.map((g) => {
+                const isSelected = grade === g.id;
+                return (
+                  <Pressable
+                    key={g.id}
+                    onPress={() => {
+                      setGrade(g.id);
+                      setGradeModalOpen(false);
+                    }}
+                    style={[styles.gradeOptionCard, isSelected && styles.gradeOptionCardActive]}
+                  >
+                    <View style={styles.gradeOptionLeft}>
+                      <Text style={[styles.gradeOptionTitle, isSelected && styles.gradeOptionTitleActive]}>
+                        {g.name}
+                      </Text>
+                      <Text style={styles.gradeOptionDesc}>{g.desc}</Text>
+                    </View>
+                    {isSelected && (
+                      <View style={styles.checkBadge}>
+                        <Check size={14} color="#FFFFFF" strokeWidth={3} />
+                      </View>
+                    )}
+                  </Pressable>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </MKBackground>
   );
 }
@@ -267,8 +559,6 @@ export default function SellScreen() {
 const styles = StyleSheet.create({
   scrollContent: {
     paddingHorizontal: 20,
-    paddingTop: 54,
-    paddingBottom: 28,
     gap: 16,
   },
   header: {
@@ -331,45 +621,59 @@ const styles = StyleSheet.create({
     color: '#EF7D1A',
     fontWeight: '800',
   },
-  qtyGradeGrid: {
-    flexDirection: 'row',
+
+  /* + Add Crop Card */
+  addCropCardBtn: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#1E5A2A',
+    borderStyle: 'dashed',
+    backgroundColor: '#E8F5E9',
+    minWidth: 80,
+    height: 94,
+  },
+  addCropCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  addCropCardText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#1E5A2A',
+  },
+
+  /* Dropdowns */
+  dropdownsSection: {
     gap: 12,
     marginTop: 6,
   },
-  qtyCol: {
-    flex: 1,
+  inputGroup: {
+    gap: 6,
   },
   inputLabel: {
     fontSize: 12,
     fontWeight: '600',
     color: '#5F6368',
-    marginBottom: 6,
   },
-  stepperContainer: {
+  qtyControlRow: {
     flexDirection: 'row',
+    gap: 10,
     alignItems: 'center',
-    justifyContent: 'space-between',
-    backgroundColor: '#FAF9F6',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#E8E4DA',
-    padding: 4,
-    height: 48,
   },
-  stepperBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 10,
-    backgroundColor: '#E8F5E9',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  qtyNumber: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1A1C1E',
-  },
-  gradeDropdownBtn: {
+  dropdownBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -379,12 +683,38 @@ const styles = StyleSheet.create({
     borderColor: '#E8E4DA',
     paddingHorizontal: 14,
     height: 48,
+    flex: 1,
   },
-  gradeText: {
+  qtyDropdownBar: {
+    flex: 1,
+  },
+  dropdownLeftRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  dropdownBarText: {
     fontSize: 14,
     fontWeight: '700',
     color: '#1A1C1E',
+    marginLeft: 6,
   },
+  stepperBox: {
+    flexDirection: 'row',
+    gap: 6,
+  },
+  stepperBtn: {
+    width: 44,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#E8F5E9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#C8E6C9',
+  },
+
+  /* Bento Grid */
   bentoGrid: {
     flexDirection: 'row',
     gap: 12,
@@ -449,6 +779,8 @@ const styles = StyleSheet.create({
     color: '#5F6368',
     marginTop: 2,
   },
+
+  /* Match Card */
   matchCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 22,
@@ -568,5 +900,178 @@ const styles = StyleSheet.create({
   },
   actionWrapper: {
     marginTop: 6,
+  },
+
+  /* Modals */
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 20,
+    gap: 16,
+    maxHeight: '80%',
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  modalHeaderTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  modalTitleText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1A1C1E',
+  },
+  closeBtn: {
+    padding: 6,
+  },
+  modalSubtext: {
+    fontSize: 13,
+    color: '#5F6368',
+  },
+  presetsGrid: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  presetItemCard: {
+    flex: 1,
+    backgroundColor: '#FAF9F6',
+    borderRadius: 16,
+    padding: 12,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E8E4DA',
+  },
+  presetThumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginBottom: 6,
+  },
+  presetItemName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1A1C1E',
+  },
+  presetItemRate: {
+    fontSize: 11,
+    color: '#1E5A2A',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  customCropContainer: {
+    marginTop: 6,
+    gap: 8,
+  },
+  customLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#5F6368',
+  },
+  customInputRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  customInput: {
+    flex: 1,
+    height: 46,
+    backgroundColor: '#FAF9F6',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8E4DA',
+    paddingHorizontal: 14,
+    fontSize: 14,
+    color: '#1A1C1E',
+  },
+  addCustomBtn: {
+    backgroundColor: '#1E5A2A',
+    borderRadius: 12,
+    paddingHorizontal: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  addCustomBtnText: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+    fontSize: 14,
+  },
+
+  /* Options list */
+  optionsList: {
+    gap: 10,
+  },
+  optionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    backgroundColor: '#FAF9F6',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E8E4DA',
+  },
+  optionRowActive: {
+    backgroundColor: '#E8F5E9',
+    borderColor: '#1E5A2A',
+  },
+  optionLabel: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#1A1C1E',
+  },
+  optionLabelActive: {
+    color: '#1E5A2A',
+    fontWeight: '800',
+  },
+
+  /* Grade Options */
+  gradeOptionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: 14,
+    backgroundColor: '#FAF9F6',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E8E4DA',
+  },
+  gradeOptionCardActive: {
+    backgroundColor: '#FFF3E0',
+    borderColor: '#EF7D1A',
+  },
+  gradeOptionLeft: {
+    flex: 1,
+  },
+  gradeOptionTitle: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#1A1C1E',
+    marginBottom: 2,
+  },
+  gradeOptionTitleActive: {
+    color: '#EF7D1A',
+  },
+  gradeOptionDesc: {
+    fontSize: 12,
+    color: '#5F6368',
+  },
+  checkBadge: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#EF7D1A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 10,
   },
 });

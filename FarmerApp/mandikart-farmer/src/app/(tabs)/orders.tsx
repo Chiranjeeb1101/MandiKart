@@ -48,7 +48,12 @@ export default function OrdersScreen() {
             <Text style={styles.headerSubtitle}>Track your sales, pickups and deliveries</Text>
           </View>
 
-          <Pressable style={styles.filterBtn}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.filterBtn,
+              pressed && { transform: [{ scale: 0.90 }], opacity: 0.85 },
+            ]}
+          >
             <SlidersHorizontal size={18} color="#5F6368" />
           </Pressable>
         </View>
@@ -57,7 +62,11 @@ export default function OrdersScreen() {
         <View style={styles.summaryStrip}>
           <Pressable
             onPress={() => setSelectedTab('Active')}
-            style={[styles.summaryBox, selectedTab === 'Active' && styles.summaryBoxActive]}
+            style={({ pressed }) => [
+              styles.summaryBox,
+              selectedTab === 'Active' && styles.summaryBoxActive,
+              pressed && { transform: [{ scale: 0.94 }], opacity: 0.88 },
+            ]}
           >
             <Text style={[styles.summaryCount, { color: '#1E5A2A' }]}>2</Text>
             <Text style={styles.summaryLabel}>ACTIVE</Text>
@@ -65,7 +74,11 @@ export default function OrdersScreen() {
 
           <Pressable
             onPress={() => setSelectedTab('Pending')}
-            style={[styles.summaryBox, selectedTab === 'Pending' && styles.summaryBoxActive]}
+            style={({ pressed }) => [
+              styles.summaryBox,
+              selectedTab === 'Pending' && styles.summaryBoxActive,
+              pressed && { transform: [{ scale: 0.94 }], opacity: 0.88 },
+            ]}
           >
             <Text style={[styles.summaryCount, { color: '#EF7D1A' }]}>1</Text>
             <Text style={styles.summaryLabel}>PENDING</Text>
@@ -73,7 +86,11 @@ export default function OrdersScreen() {
 
           <Pressable
             onPress={() => setSelectedTab('Completed')}
-            style={[styles.summaryBox, selectedTab === 'Completed' && styles.summaryBoxActive]}
+            style={({ pressed }) => [
+              styles.summaryBox,
+              selectedTab === 'Completed' && styles.summaryBoxActive,
+              pressed && { transform: [{ scale: 0.94 }], opacity: 0.88 },
+            ]}
           >
             <Text style={[styles.summaryCount, { color: '#5D6D7E' }]}>12</Text>
             <Text style={styles.summaryLabel}>COMPLETED</Text>
@@ -86,7 +103,11 @@ export default function OrdersScreen() {
             <Pressable
               key={tab}
               onPress={() => setSelectedTab(tab)}
-              style={[styles.filterPill, selectedTab === tab && styles.filterPillActive]}
+              style={({ pressed }) => [
+                styles.filterPill,
+                selectedTab === tab && styles.filterPillActive,
+                pressed && { opacity: 0.8, transform: [{ scale: 0.95 }] },
+              ]}
             >
               <Text
                 style={[
