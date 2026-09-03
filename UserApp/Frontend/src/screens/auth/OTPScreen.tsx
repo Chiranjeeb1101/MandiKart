@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
   KeyboardAvoidingView, Platform, StatusBar,
@@ -22,6 +22,14 @@ export default function OTPScreen({ navigation, route }: Props) {
   const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(30);
   const inputs = useRef<(TextInput | null)[]>([]);
+
+  useEffect(() => {
+    if (timer <= 0) return;
+    const interval = setInterval(() => {
+      setTimer((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timer]);
 
   const handleChange = (val: string, idx: number) => {
     const newOtp = [...otp];
