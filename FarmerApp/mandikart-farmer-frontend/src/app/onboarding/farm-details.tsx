@@ -17,6 +17,9 @@ import {
   Pressable,
   TextInput,
   Dimensions,
+  ActivityIndicator,
+  Modal,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -29,17 +32,26 @@ import {
   Check,
   ArrowRight,
   ShieldCheck,
+  X,
+  Search,
+  Camera,
+  Upload,
 } from 'lucide-react-native';
 import { MKBackground, MKButton, MKHeader } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
+import {
+  getCurrentFarmerLocation,
+  searchVillageCitySuggestions,
+  VillageCitySuggestion,
+} from '@/services/locationService';
+import { pickImageFromGallery } from '@/services/imagePickerService';
+import { FarmMapView } from '@/components/FarmMapView';
+import { CelebrationModal } from '@/components/CelebrationModal';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 const HERO_LANDSCAPE_URI =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuAyitG1xHjUeo25NCa6DDi94QFNt27vCURHeh9yKp9spBBGWmv17NeA8sqx9TjvMCAjisWRTFpQocVVqSK2q2MSooODZPmu3IvMHisHI07SfQjdcIyr9EPOLOaQb_5XicVXzEfhZTJLZtQn25nuHaoN6WGQvX46cyJGa0MGHb_c9xrbYpkTUxlUKucGs4ULOkjxijPWQbuIr_OCKQOxlZmNb2OyVJjzmQbSqPIygzfOZeUtD7TdSPo0xBOhiyqbMtWNa9mUmzk7X-B0MIE';
-
-const MAP_PREVIEW_URI =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuBLvnl7gsUW_MCoB86sEZRv_OEYp0rdF1t6TW0PNIqVjBm_aP2CUGx9Qp9gdG1ximKx0cq2En63MF5nuGoqUrOraX0FgsUIYtUj7HxvjeXR2w6IQyBHdBlllpG14KDFOxMEjw_ANF_ZoBWdf5LwN2uPDEg4vvQirwWNFbCLcNGkBAO7DAdGdRHREzDQo6eL2HDx03d55yYKw0SypjlNYfbKOzTpCx7KgMQFF22Lw6j2oWrtMbxrXm5lqA';
 
 const VEGGIE_BASKET_URI =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuAEsoOdmex3qtM0FjWgMDqCkVgzuRtFPoR_fKQ5HxW1Poj6zald8zwgJrtyR76k7D7tquV6ZfHLUpr0qHuP_TEMvlaESWEO8V3CY-LWBDAfR7192ruOhrkYLVk8iMruBK_nsicsfK8_KvrL7C6-At1J39Nq4pksJxKgwKH-MZS5KCq1Eas50IEcfIaAcn_mv-k3t8gJKNNW1UsjtV_wH26sHx6pYGy0rAvoAMz4xHCHE_Nxt7EdK3n0NA';
@@ -48,6 +60,7 @@ interface CropOption {
   id: string;
   name: string;
   emoji: string;
+  imageUri?: string;
 }
 
 const CROPS_LIST: CropOption[] = [
@@ -65,11 +78,114 @@ export default function FarmDetailsScreen() {
   const router = useRouter();
   const { user, setUser, setIsAuthenticated } = useAuthStore();
 
-  const [farmLocation, setFarmLocation] = useState('Nashik, Maharashtra');
+  const initialLoc = user?.village
+    ? `${user.village}, ${user.city || user.district || ''}`
+    : user?.district
+    ? `${user.district}, ${user.state || ''}`
+    : 'Bhubaneswar, Odisha';
+
+  const [farmLocation, setFarmLocation] = useState(initialLoc);
+  const [latitude, setLatitude] = useState(20.2961);
+  const [longitude, setLongitude] = useState(85.8245);
+  const [isLocating, setIsLocating] = useState(false);
+  const [locationSearchQuery, setLocationSearchQuery] = useState('');
+  const [suggestions, setSuggestions] = useState<VillageCitySuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
   const [farmSize, setFarmSize] = useState('5.5');
   const [farmUnit, setFarmUnit] = useState<'Acres' | 'Hectares'>('Acres');
   const [selectedCrops, setSelectedCrops] = useState<string[]>(['onion', 'wheat', 'tomato']);
   const [ownershipType, setOwnershipType] = useState<'Owned' | 'Leased'>('Owned');
+
+  // Dynamic Crops state
+  const [cropsList, setCropsList] = useState<CropOption[]>(CROPS_LIST);
+  const [customCropModalVisible, setCustomCropModalVisible] = useState(false);
+  const [newCropName, setNewCropName] = useState('');
+  const [newCropEmoji, setNewCropEmoji] = useState('🌱');
+  const [customCropImageUri, setCustomCropImageUri] = useState<string | undefined>();
+  const [celebrationVisible, setCelebrationVisible] = useState(false);
+
+  async function handleAutoDetectGPS() {
+    setIsLocating(true);
+    const loc = await getCurrentFarmerLocation();
+    setIsLocating(false);
+    if (loc) {
+      const locDisplay = loc.village
+        ? `${loc.village}, ${loc.city || loc.district}`
+        : `${loc.city || loc.district}, ${loc.state}`;
+      setFarmLocation(locDisplay);
+      if (loc.latitude && loc.longitude) {
+        setLatitude(loc.latitude);
+        setLongitude(loc.longitude);
+      }
+      setShowSuggestions(false);
+      if (user) {
+        setUser({
+          ...user,
+          village: loc.village,
+          city: loc.city,
+          district: loc.district,
+          state: loc.state,
+        });
+      }
+      Alert.alert('GPS Location Fetched', `Location set to: ${loc.formattedAddress}`);
+    }
+  }
+
+  function handleSearchLocationText(text: string) {
+    setLocationSearchQuery(text);
+    if (text.trim().length >= 2) {
+      const matches = searchVillageCitySuggestions(text);
+      setSuggestions(matches);
+      setShowSuggestions(matches.length > 0);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }
+
+  function handleSelectLocationSuggestion(s: VillageCitySuggestion) {
+    const locStr = `${s.name}, ${s.district} (${s.state})`;
+    setFarmLocation(locStr);
+    setLocationSearchQuery('');
+    setShowSuggestions(false);
+    if (user) {
+      setUser({
+        ...user,
+        village: s.type === 'Village' ? s.name : user.village,
+        city: s.type === 'City' ? s.name : user.city,
+        district: s.district,
+        state: s.state,
+      });
+    }
+  }
+
+  function handleAddCustomCrop() {
+    if (!newCropName.trim()) {
+      Alert.alert('Missing Name', 'Please enter a crop name');
+      return;
+    }
+    const cropId = newCropName.toLowerCase().replace(/\s+/g, '_');
+    const newCrop: CropOption = {
+      id: cropId,
+      name: newCropName.trim(),
+      emoji: newCropEmoji.trim() || '🌱',
+      imageUri: customCropImageUri,
+    };
+    setCropsList((prev) => [...prev, newCrop]);
+    setSelectedCrops((prev) => [...prev, cropId]);
+    if (user) {
+      const currentCrops = user.crops || [];
+      setUser({
+        ...user,
+        crops: [...currentCrops, newCrop.name],
+      });
+    }
+    setNewCropName('');
+    setCustomCropImageUri(undefined);
+    setCustomCropModalVisible(false);
+    Alert.alert('Crop Added', `${newCrop.name} added to your farm crops!`);
+  }
 
   const toggleCrop = (id: string) => {
     if (selectedCrops.includes(id)) {
@@ -88,7 +204,7 @@ export default function FarmDetailsScreen() {
       });
     }
     setIsAuthenticated(true);
-    router.replace('/(tabs)/home');
+    setCelebrationVisible(true);
   };
 
   return (
@@ -140,28 +256,65 @@ export default function FarmDetailsScreen() {
               </View>
             </View>
 
-            <View style={styles.locationContentRow}>
-              <View style={styles.locationInfoBox}>
-                <Text style={styles.locationTitle}>{farmLocation}</Text>
-                <Text style={styles.locationCountry}>India</Text>
-                <Text style={styles.locationNote}>
-                  Location helps estimate nearby buyers and transport costs accurately.
-                </Text>
-              </View>
-
-              <View style={styles.mapThumbWrapper}>
-                <Image source={{ uri: MAP_PREVIEW_URI }} style={styles.mapImage} />
-              </View>
+            {/* Interactive React Farm Map View */}
+            <View style={{ marginTop: 14, marginBottom: 12 }}>
+              <FarmMapView
+                locationName={farmLocation}
+                latitude={latitude}
+                longitude={longitude}
+                acres={parseFloat(farmSize) || 5.5}
+                onDetectGps={handleAutoDetectGPS}
+                isLocating={isLocating}
+              />
             </View>
 
             <View style={styles.locationActionsRow}>
               <Pressable
-                onPress={() => setFarmLocation('Dindori, Nashik (Current)')}
+                onPress={handleAutoDetectGPS}
                 style={styles.locationBtn}
+                disabled={isLocating}
               >
-                <LocateFixed size={16} color="#1E5A2A" />
-                <Text style={styles.locationBtnText}>Use Current Location</Text>
+                {isLocating ? (
+                  <ActivityIndicator size="small" color="#1E5A2A" />
+                ) : (
+                  <>
+                    <LocateFixed size={16} color="#1E5A2A" />
+                    <Text style={styles.locationBtnText}>Detect Realtime GPS</Text>
+                  </>
+                )}
               </Pressable>
+            </View>
+
+            {/* Realtime Village / City Search & Suggestion */}
+            <View style={styles.villageSearchBox}>
+              <View style={styles.villageSearchInputRow}>
+                <Search size={16} color="#9CA3AF" />
+                <TextInput
+                  style={styles.villageSearchInput}
+                  placeholder="Search village or mandi city..."
+                  value={locationSearchQuery}
+                  onChangeText={handleSearchLocationText}
+                />
+              </View>
+
+              {showSuggestions && suggestions.length > 0 && (
+                <View style={styles.suggestionsList}>
+                  {suggestions.map((item) => (
+                    <Pressable
+                      key={item.id}
+                      style={styles.suggestionRow}
+                      onPress={() => handleSelectLocationSuggestion(item)}
+                    >
+                      <MapPin size={13} color="#1E5A2A" />
+                      <Text style={styles.suggestionTitle}>{item.name}</Text>
+                      <Text style={styles.suggestionTag}>{item.type}</Text>
+                      <Text style={styles.suggestionMeta}>
+                        ({item.district}, {item.state})
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              )}
             </View>
           </View>
 
@@ -222,7 +375,7 @@ export default function FarmDetailsScreen() {
             </View>
 
             <View style={styles.cropsGrid}>
-              {CROPS_LIST.map((crop) => {
+              {cropsList.map((crop) => {
                 const isSelected = selectedCrops.includes(crop.id);
                 return (
                   <Pressable
@@ -235,7 +388,11 @@ export default function FarmDetailsScreen() {
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: isSelected }}
                   >
-                    <Text style={styles.cropEmoji}>{crop.emoji}</Text>
+                    {crop.imageUri ? (
+                      <Image source={{ uri: crop.imageUri }} style={styles.cropCustomImg} />
+                    ) : (
+                      <Text style={styles.cropEmoji}>{crop.emoji}</Text>
+                    )}
                     <Text
                       style={[
                         styles.cropName,
@@ -254,7 +411,10 @@ export default function FarmDetailsScreen() {
               })}
             </View>
 
-            <Pressable style={styles.addCropBtn}>
+            <Pressable
+              style={styles.addCropBtn}
+              onPress={() => setCustomCropModalVisible(true)}
+            >
               <Plus size={16} color="#1E5A2A" />
               <Text style={styles.addCropText}>Add Another Crop</Text>
             </Pressable>
@@ -344,6 +504,119 @@ export default function FarmDetailsScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* Add Custom Crop Modal */}
+      <Modal
+        visible={customCropModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCustomCropModalVisible(false)}
+      >
+        <Pressable
+          style={styles.modalOverlay}
+          onPress={() => setCustomCropModalVisible(false)}
+        >
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Add Custom Crop</Text>
+              <Pressable onPress={() => setCustomCropModalVisible(false)}>
+                <X size={20} color="#666" />
+              </Pressable>
+            </View>
+            <Text style={styles.modalSubtitle}>
+              Enter any vegetable, fruit, grain, or cash crop you grow.
+            </Text>
+
+            <Text style={styles.inputFieldLabel}>Crop Name *</Text>
+            <TextInput
+              style={styles.modalInput}
+              placeholder="e.g. Ginger, Chilli, Mustard, Turmeric"
+              value={newCropName}
+              onChangeText={setNewCropName}
+              autoFocus
+            />
+
+            <Text style={styles.inputFieldLabel}>Emoji Icon</Text>
+            <View style={styles.emojiRow}>
+              {['🌱', '🌿', '🌾', '🌶️', '🧄', '🥜', '🥕', '🥬', '🍌', '🥭'].map((em) => (
+                <Pressable
+                  key={em}
+                  style={[styles.emojiSelectBtn, newCropEmoji === em && styles.emojiSelectBtnActive]}
+                  onPress={() => setNewCropEmoji(em)}
+                >
+                  <Text style={styles.emojiSelectText}>{em}</Text>
+                </Pressable>
+              ))}
+            </View>
+
+            <Text style={styles.inputFieldLabel}>Crop Photo (Optional)</Text>
+            <View style={styles.cropPhotoUploadBox}>
+              {customCropImageUri ? (
+                <View style={styles.cropPhotoPreviewRow}>
+                  <Image source={{ uri: customCropImageUri }} style={styles.cropPhotoThumb} />
+                  <Pressable
+                    style={styles.changePhotoBtn}
+                    onPress={async () => {
+                      const res = await pickImageFromGallery();
+                      if (!res.cancelled && res.uri) {
+                        setCustomCropImageUri(res.uri);
+                      }
+                    }}
+                  >
+                    <Camera size={14} color="#1E5A2A" />
+                    <Text style={styles.changePhotoText}>Change Photo</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.removePhotoBtn}
+                    onPress={() => setCustomCropImageUri(undefined)}
+                  >
+                    <X size={16} color="#EF4444" />
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable
+                  style={styles.uploadPhotoBtn}
+                  onPress={async () => {
+                    const res = await pickImageFromGallery();
+                    if (!res.cancelled && res.uri) {
+                      setCustomCropImageUri(res.uri);
+                    }
+                  }}
+                >
+                  <Upload size={16} color="#1E5A2A" />
+                  <Text style={styles.uploadPhotoText}>Upload Photo of Your Crop</Text>
+                </Pressable>
+              )}
+            </View>
+
+            <View style={styles.modalBtnRow}>
+              <Pressable
+                style={styles.modalCancelBtn}
+                onPress={() => {
+                  setCustomCropModalVisible(false);
+                  setCustomCropImageUri(undefined);
+                }}
+              >
+                <Text style={styles.modalCancelBtnText}>Cancel</Text>
+              </Pressable>
+              <Pressable style={styles.modalAddBtn} onPress={handleAddCustomCrop}>
+                <Text style={styles.modalAddBtnText}>Add to Farm</Text>
+              </Pressable>
+            </View>
+          </View>
+        </Pressable>
+      </Modal>
+
+      {/* ── All Set Celebration Modal ── */}
+      <CelebrationModal
+        visible={celebrationVisible}
+        onContinue={() => {
+          setCelebrationVisible(false);
+          router.replace('/(tabs)/home');
+        }}
+        farmerName={user?.name || 'Farmer'}
+        farmLocation={farmLocation}
+      />
     </MKBackground>
   );
 }
@@ -723,5 +996,229 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#7A7A7A',
     fontWeight: '500',
+  },
+
+  // Village search & Autocomplete
+  villageSearchBox: {
+    marginTop: 12,
+  },
+  villageSearchInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9F8F5',
+    borderWidth: 1,
+    borderColor: '#ECEAE3',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 42,
+    gap: 8,
+  },
+  villageSearchInput: {
+    flex: 1,
+    fontSize: 13,
+    color: '#241913',
+  },
+  suggestionsList: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#ECEAE3',
+    marginTop: 6,
+    overflow: 'hidden',
+  },
+  suggestionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 9,
+    paddingHorizontal: 12,
+    gap: 6,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F4F1EA',
+  },
+  suggestionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#241913',
+  },
+  suggestionTag: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#EF7D1A',
+    backgroundColor: '#FFF3E0',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  suggestionMeta: {
+    fontSize: 11,
+    color: '#6B7280',
+    flex: 1,
+  },
+
+  // Custom Crop Modal
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  modalCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 22,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 5,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#241913',
+  },
+  modalSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 16,
+    lineHeight: 18,
+  },
+  inputFieldLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4B5563',
+    marginBottom: 6,
+    marginTop: 4,
+  },
+  modalInput: {
+    backgroundColor: '#F9F8F5',
+    borderWidth: 1.5,
+    borderColor: '#ECEAE3',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    height: 48,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#241913',
+    marginBottom: 12,
+  },
+  emojiRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 20,
+  },
+  emojiSelectBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  emojiSelectBtnActive: {
+    backgroundColor: '#E8F5E9',
+    borderWidth: 2,
+    borderColor: '#1E5A2A',
+  },
+  emojiSelectText: {
+    fontSize: 18,
+  },
+  modalBtnRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  modalAddBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#1E5A2A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalAddBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  cropCustomImg: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    marginRight: 6,
+  },
+  cropPhotoUploadBox: {
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  uploadPhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#1E5A2A',
+    backgroundColor: '#F4FBF5',
+  },
+  uploadPhotoText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E5A2A',
+  },
+  cropPhotoPreviewRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#F9FAFB',
+    padding: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  cropPhotoThumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 10,
+  },
+  changePhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: '#E8F5E9',
+  },
+  changePhotoText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1E5A2A',
+  },
+  removePhotoBtn: {
+    padding: 8,
   },
 });

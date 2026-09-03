@@ -38,6 +38,7 @@ import {
   Building2,
 } from 'lucide-react-native';
 import { useAuthStore } from '@/store/authStore';
+import { useTranslation } from '@/hooks/useTranslation';
 import { MKLayout } from '@/constants/layout';
 
 // ─── Design Tokens (AgroPremium Tactile) ───────────────────────────────────
@@ -191,6 +192,8 @@ const SOFT_SHADOW = {
 export default function ProduceScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { user } = useAuthStore();
+  const { t } = useTranslation();
   const [items, setItems] = useState<ProduceItem[]>(INITIAL_PRODUCE_LIST);
   const [activeTab, setActiveTab] = useState<FilterTab>('Available');
   const [searchQuery, setSearchQuery] = useState('');
@@ -218,25 +221,21 @@ export default function ProduceScreen() {
       }
 
       // Search query logic
-      const searchMatches =
+      const queryMatches =
+        searchQuery.trim() === '' ||
         item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         item.grade.toLowerCase().includes(searchQuery.toLowerCase());
 
-      return tabMatches && searchMatches;
+      return tabMatches && queryMatches;
     });
   }, [items, activeTab, searchQuery]);
 
   // Compute summary stats dynamically
   const summaryStats = useMemo(() => {
-    const availableTotal = items.reduce((acc, curr) => acc + curr.availableKg, 0);
+    const availableCount = items.filter((i) => i.status === 'Available' || i.status === 'Listed').length;
     const listedCount = items.filter((i) => i.status === 'Listed' || i.status === 'Partially Sold').length;
-    const soldTotal = items.reduce((acc, curr) => acc + (curr.totalKg - curr.availableKg), 0);
-
-    return {
-      available: `${availableTotal.toLocaleString('en-IN')} KG`,
-      listed: `${listedCount}`,
-      sold: `${soldTotal.toLocaleString('en-IN')} KG`,
-    };
+    const soldCount = items.filter((i) => i.status === 'Sold Out' || i.status === 'Partially Sold').length;
+    return { available: availableCount, listed: listedCount, sold: soldCount };
   }, [items]);
 
   function openEditModal(item: ProduceItem) {
@@ -286,19 +285,12 @@ export default function ProduceScreen() {
         <View style={styles.headerLeft}>
           <View style={styles.headerTitleRow}>
             <Sprout size={22} color={C.primary} strokeWidth={2.2} style={{ marginRight: 8 }} />
-            <Text style={styles.headerTitle}>My Produce</Text>
+            <Text style={styles.headerTitle}>{t.myProduce}</Text>
           </View>
-          <Text style={styles.headerSubtitle}>Manage your available and listed crops</Text>
+          <Text style={styles.headerSubtitle}>{t.manageCropsOffers}</Text>
         </View>
         <View style={styles.headerRightCol}>
-          <Pressable
-            style={({ pressed }) => [styles.headerAddBtn, pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] }]}
-            onPress={() => router.push('/(tabs)/sell')}
-          >
-            <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
-            <Text style={styles.headerAddBtnText}>Add</Text>
-          </Pressable>
-          <Image source={{ uri: FARMER_AVATAR_URI }} style={styles.headerAvatar} />
+          <Image source={{ uri: user?.avatarUri || FARMER_AVATAR_URI }} style={styles.headerAvatar} />
         </View>
       </View>
 
@@ -311,15 +303,15 @@ export default function ProduceScreen() {
         {/* ── Summary Strip ── */}
         <View style={styles.summaryStrip}>
           <Pressable style={styles.summaryPill} onPress={() => setActiveTab('Available')}>
-            <Text style={styles.summaryLabel}>AVAILABLE</Text>
+            <Text style={styles.summaryLabel}>{t.available.toUpperCase()}</Text>
             <Text style={styles.summaryValue}>{summaryStats.available}</Text>
           </Pressable>
           <Pressable style={styles.summaryPill} onPress={() => setActiveTab('Listed')}>
-            <Text style={styles.summaryLabel}>LISTED</Text>
+            <Text style={styles.summaryLabel}>{t.listed.toUpperCase()}</Text>
             <Text style={styles.summaryValue}>{summaryStats.listed}</Text>
           </Pressable>
           <Pressable style={styles.summaryPill} onPress={() => setActiveTab('Sold')}>
-            <Text style={styles.summaryLabel}>SOLD</Text>
+            <Text style={styles.summaryLabel}>{t.sold.toUpperCase()}</Text>
             <Text style={styles.summaryValue}>{summaryStats.sold}</Text>
           </Pressable>
         </View>
@@ -508,15 +500,6 @@ export default function ProduceScreen() {
           </View>
         </View>
       </Modal>
-
-      {/* ── Floating Action Button (Always Visible when scrolling) ── */}
-      <Pressable
-        style={({ pressed }) => [styles.fabAddProduce, pressed && { transform: [{ scale: 0.94 }], opacity: 0.95 }]}
-        onPress={() => router.push('/(tabs)/sell')}
-      >
-        <Plus size={20} color="#7f1414ff" strokeWidth={2.8} />
-        <Text style={styles.fabAddProduceText}>Add Produce</Text>
-      </Pressable>
     </View>
   );
 }
@@ -588,8 +571,8 @@ const styles = StyleSheet.create({
   scrollContent: { paddingHorizontal: 20, paddingTop: 12 },
 
   summaryStrip: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  summaryPill: { flex: 1, minWidth: 0, backgroundColor: C.surface, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 6, alignItems: 'center', ...SOFT_SHADOW },
-  summaryLabel: { fontSize: 10, fontWeight: '700', color: C.onSurfaceVariant, letterSpacing: 0.8, marginBottom: 4 },
+  summaryPill: { flex: 1, minWidth: 0, backgroundColor: C.surface, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 4, alignItems: 'center', ...SOFT_SHADOW },
+  summaryLabel: { fontSize: 10, fontWeight: '700', color: C.onSurfaceVariant, letterSpacing: 0.2, marginBottom: 4, textAlign: 'center' },
   summaryValue: { fontSize: 15, fontWeight: '700', color: C.primary, textAlign: 'center', flexShrink: 1 },
 
   // Ultra Visible Add Produce Banner CTA

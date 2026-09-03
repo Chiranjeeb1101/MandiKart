@@ -35,35 +35,65 @@ import {
   ShieldCheck,
   Smartphone,
   Sprout,
+  Upload,
   User,
   WalletCards,
+  Camera,
+  X,
 } from 'lucide-react-native';
 import { MKScreen, MKSection, MKCard, MKRow } from '@/components/ui';
 import { MKColors } from '@/constants/colors';
 import { MKSpacing } from '@/constants/spacing';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
+import { useTranslation } from '@/hooks/useTranslation';
+import { pickImageFromGallery, takePhotoWithCamera } from '@/services/imagePickerService';
 
 const FARMER_PORTRAIT_URI =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuAiELEs4N5nkjJBqO8sPu0g1g5ZqVaG8P5WZgk6rmG80Affw0Nx1q2hYjO-ieRtBbjx7f_i5dfTpYxRRVxw4J3kIlBu7xdBXrJHLWza8iq5QleXJQmP99QBYAZi38XXH3dpbuzO53N7EZLdvrTWCInMlO9Dbgj5S2zqNNq5So6TkmMaGTSKq3HZWrwSXVlNgHxNKajj0VqT8hmT4XOCKcZLlF70H2My-rvbEsL-x9DbBHGfIS7iQr_UjQ';
+  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=300&auto=format&fit=crop';
 
 const languageLabels: Record<string, string> = {
   en: 'English',
   hi: 'हिंदी',
   mr: 'मराठी',
+  or: 'ଓଡ଼ିଆ',
 };
 
 export default function MoreScreen() {
   const router = useRouter();
-  const { farmer, user, isAuthenticated, logout } = useAuthStore();
+  const { farmer, user, setUser, isAuthenticated, logout } = useAuthStore();
   const { language, isOffline } = useAppStore();
+  const { t } = useTranslation();
   const [logoutOpen, setLogoutOpen] = useState(false);
+  const [photoModalVisible, setPhotoModalVisible] = useState(false);
 
   const profile = isAuthenticated ? farmer ?? user : null;
   const name = farmer?.fullName ?? user?.fullName ?? user?.name;
-  const location = [user?.district, user?.state].filter(Boolean).join(', ');
+  const location = [user?.village, user?.district, user?.state].filter(Boolean).join(', ') || [user?.district, user?.state].filter(Boolean).join(', ');
   const isVerified = farmer?.isVerified === true;
   const hasFarmDetails = Boolean(user?.farmSize || user?.farmSizeAcres || user?.crops?.length);
+
+  async function handlePickFromGallery() {
+    setPhotoModalVisible(false);
+    const res = await pickImageFromGallery();
+    if (!res.cancelled && res.uri) {
+      if (user) {
+        setUser({ ...user, avatarUri: res.uri });
+      }
+      Alert.alert('Profile Photo Updated', 'Your new photo has been applied.');
+    }
+  }
+
+  async function handleTakePhoto() {
+    setPhotoModalVisible(false);
+    const res = await takePhotoWithCamera();
+    if (!res.cancelled && res.uri) {
+      if (user) {
+        setUser({ ...user, avatarUri: res.uri });
+      }
+      Alert.alert('Profile Photo Updated', 'Your new photo has been applied.');
+    }
+  }
 
   const completeProfile = useCallback(() => {
     router.push(hasFarmDetails ? '/onboarding/farmer-profile' : '/onboarding/farm-details');
@@ -74,8 +104,8 @@ export default function MoreScreen() {
       {/* ── 1. Header ── */}
       <View style={styles.header}>
         <View style={styles.headerTextCol}>
-          <Text style={styles.screenTitle}>More</Text>
-          <Text style={styles.screenSubtitle}>Manage your account, farm and preferences</Text>
+          <Text style={styles.screenTitle}>{t.moreTitle}</Text>
+          <Text style={styles.screenSubtitle}>{t.moreSubtitle}</Text>
         </View>
         <Pressable
           accessibilityRole="button"
@@ -103,10 +133,18 @@ export default function MoreScreen() {
       <View style={styles.profileSectionWrapper}>
         <MKCard style={styles.stitchProfileCard}>
           <View style={styles.profileTopRow}>
-            <Image
-              source={{ uri: FARMER_PORTRAIT_URI }}
-              style={styles.profileHeroImage}
-            />
+            <Pressable
+              onPress={() => setPhotoModalVisible(true)}
+              style={styles.avatarPickerWrapper}
+            >
+              <Image
+                source={{ uri: user?.avatarUri || FARMER_PORTRAIT_URI }}
+                style={styles.profileHeroImage}
+              />
+              <View style={styles.avatarCameraBadge}>
+                <Camera size={12} color="#FFFFFF" strokeWidth={2.5} />
+              </View>
+            </Pressable>
             <View style={styles.profileInfoCol}>
               <Text numberOfLines={1} style={styles.profileNameText}>
                 {name || 'Ravi Kumar'}
@@ -119,19 +157,19 @@ export default function MoreScreen() {
               </View>
               <View style={styles.profileCompleteBadge}>
                 <CheckCircle2 size={12} color="#1B6D24" fill="#E8F5E9" />
-                <Text style={styles.profileCompleteText}>Profile Complete</Text>
+                <Text style={styles.profileCompleteText}>{t.profileComplete || 'Profile Complete'}</Text>
               </View>
             </View>
           </View>
 
           <Pressable
-            onPress={completeProfile}
+            onPress={() => router.push('/more/profile')}
             style={({ pressed }) => [
               styles.viewProfileRow,
               pressed && { opacity: 0.75 },
             ]}
           >
-            <Text style={styles.viewProfileText}>View Profile</Text>
+            <Text style={styles.viewProfileText}>{t.viewProfile || 'View & Edit Profile'}</Text>
             <ChevronRight size={18} color="#1B6D24" />
           </Pressable>
         </MKCard>
@@ -141,10 +179,16 @@ export default function MoreScreen() {
       <MKSection title="Your Account">
         <MKCard padding="none">
           <MKRow
-            title="Profile"
+            title="Profile Details & Edit"
             icon={<User size={20} color="#964900" strokeWidth={2.1} />}
             iconBgColor="#FFF3E5"
-            onPress={() => router.push('/onboarding/farmer-profile')}
+            onPress={() => router.push('/more/profile')}
+          />
+          <MKRow
+            title="Earnings & Payouts"
+            icon={<WalletCards size={20} color="#1B6D24" strokeWidth={2.1} />}
+            iconBgColor="#E8F5E9"
+            onPress={() => router.push('/earnings')}
           />
           <MKRow
             title="Farm Details"
@@ -339,6 +383,48 @@ export default function MoreScreen() {
             </View>
           </View>
         </View>
+      </Modal>
+
+      {/* Photo Picker Modal */}
+      <Modal
+        visible={photoModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPhotoModalVisible(false)}
+      >
+        <Pressable
+          style={styles.photoModalOverlay}
+          onPress={() => setPhotoModalVisible(false)}
+        >
+          <View style={styles.photoModalCard}>
+            <View style={styles.photoModalHeader}>
+              <Text style={styles.photoModalTitle}>Change Profile Photo</Text>
+              <Pressable onPress={() => setPhotoModalVisible(false)}>
+                <X size={20} color="#666" />
+              </Pressable>
+            </View>
+            <Text style={styles.photoModalSubtitle}>
+              Update your photo across your MandiKart profile.
+            </Text>
+
+            <Pressable style={styles.photoOptionBtn} onPress={handleTakePhoto}>
+              <Camera size={20} color="#1B6D24" strokeWidth={2.2} />
+              <Text style={styles.photoOptionText}>Take Photo with Camera</Text>
+            </Pressable>
+
+            <Pressable style={styles.photoOptionBtn} onPress={handlePickFromGallery}>
+              <Upload size={20} color="#EF7D1A" strokeWidth={2.2} />
+              <Text style={styles.photoOptionText}>Choose from Gallery</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.photoCancelBtn}
+              onPress={() => setPhotoModalVisible(false)}
+            >
+              <Text style={styles.photoCancelBtnText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </Pressable>
       </Modal>
     </MKScreen>
   );
@@ -788,5 +874,86 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 14,
     fontWeight: '800',
+  },
+
+  // Avatar picker and photo modal
+  avatarPickerWrapper: {
+    position: 'relative',
+    marginRight: 14,
+  },
+  avatarCameraBadge: {
+    position: 'absolute',
+    bottom: -2,
+    right: -2,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#1E5A2A',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  photoModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  photoModalCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 22,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 5,
+  },
+  photoModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  photoModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#241913',
+  },
+  photoModalSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 20,
+    lineHeight: 18,
+  },
+  photoOptionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    backgroundColor: '#FAF8F5',
+    borderWidth: 1,
+    borderColor: '#ECEAE3',
+    gap: 12,
+    marginBottom: 12,
+  },
+  photoOptionText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#241913',
+  },
+  photoCancelBtn: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  photoCancelBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#6B7280',
   },
 });

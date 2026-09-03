@@ -17,6 +17,9 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
+  Modal,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -29,9 +32,18 @@ import {
   Check,
   Briefcase,
   MapPin,
+  LocateFixed,
+  Upload,
+  X,
 } from 'lucide-react-native';
 import { MKBackground, MKButton, MKInput, MKHeader } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
+import { pickImageFromGallery, takePhotoWithCamera } from '@/services/imagePickerService';
+import {
+  getCurrentFarmerLocation,
+  searchVillageCitySuggestions,
+  VillageCitySuggestion,
+} from '@/services/locationService';
 
 const HERO_FARMER_SRC = require('@/assets/images/farmer_phone_hero.png');
 
@@ -44,9 +56,87 @@ export default function FarmerProfileScreen() {
 
   const [role, setRole] = useState<'INDIVIDUAL' | 'FPO'>('INDIVIDUAL');
   const [fullName, setFullName] = useState(user?.name || 'Ramesh Patil');
-  const [village, setVillage] = useState('');
+  const [village, setVillage] = useState(user?.village || '');
   const [experienceYears, setExperienceYears] = useState('10');
+  const [avatarUri, setAvatarUri] = useState<string | undefined>(user?.avatarUri);
+  const [photoModalVisible, setPhotoModalVisible] = useState(false);
+
+  // Realtime location states
+  const [isLocating, setIsLocating] = useState(false);
+  const [suggestions, setSuggestions] = useState<VillageCitySuggestion[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
+
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  async function handlePickFromGallery() {
+    setPhotoModalVisible(false);
+    const res = await pickImageFromGallery();
+    if (!res.cancelled && res.uri) {
+      setAvatarUri(res.uri);
+      if (user) {
+        setUser({ ...user, avatarUri: res.uri });
+      }
+    }
+  }
+
+  async function handleTakePhoto() {
+    setPhotoModalVisible(false);
+    const res = await takePhotoWithCamera();
+    if (!res.cancelled && res.uri) {
+      setAvatarUri(res.uri);
+      if (user) {
+        setUser({ ...user, avatarUri: res.uri });
+      }
+    }
+  }
+
+  async function handleAutoDetectLocation() {
+    setIsLocating(true);
+    const loc = await getCurrentFarmerLocation();
+    setIsLocating(false);
+    if (loc) {
+      const locDisplay = loc.village
+        ? `${loc.village}, ${loc.city || loc.district}`
+        : `${loc.city || loc.district}, ${loc.state}`;
+      setVillage(locDisplay);
+      setShowSuggestions(false);
+      if (user) {
+        setUser({
+          ...user,
+          village: loc.village,
+          city: loc.city,
+          district: loc.district,
+          state: loc.state,
+        });
+      }
+      Alert.alert('GPS Location Fetched', `Detected: ${loc.formattedAddress}`);
+    }
+  }
+
+  function handleVillageTextChange(text: string) {
+    setVillage(text);
+    if (text.trim().length >= 2) {
+      const matches = searchVillageCitySuggestions(text);
+      setSuggestions(matches);
+      setShowSuggestions(matches.length > 0);
+    } else {
+      setSuggestions([]);
+      setShowSuggestions(false);
+    }
+  }
+
+  function handleSelectSuggestion(s: VillageCitySuggestion) {
+    setVillage(`${s.name}, ${s.district}`);
+    setShowSuggestions(false);
+    if (user) {
+      setUser({
+        ...user,
+        city: s.name,
+        district: s.district,
+        state: s.state,
+      });
+    }
+  }
 
   const validate = () => {
     const errs: { [key: string]: string } = {};
@@ -183,18 +273,23 @@ export default function FarmerProfileScreen() {
               </View>
 
               {/* Photo Uploader */}
-              <View style={styles.photoContainer}>
+              <Pressable
+                style={styles.photoContainer}
+                onPress={() => setPhotoModalVisible(true)}
+              >
                 <View style={styles.avatarWrapper}>
                   <Image
-                    source={{ uri: AVATAR_PLACEHOLDER_URI }}
+                    source={{ uri: avatarUri || AVATAR_PLACEHOLDER_URI }}
                     style={styles.avatarImage}
                   />
                   <View style={styles.cameraBadge}>
                     <Camera size={14} color="#FFFFFF" strokeWidth={2.5} />
                   </View>
                 </View>
-                <Text style={styles.addPhotoText}>Change Photo</Text>
-              </View>
+                <Text style={styles.addPhotoText}>
+                  {avatarUri ? 'Change Photo' : 'Upload Photo'}
+                </Text>
+              </Pressable>
 
               <View style={styles.inputsContainer}>
                 <MKInput
@@ -206,14 +301,54 @@ export default function FarmerProfileScreen() {
                   leftIcon={<User size={18} color="#9AA0A6" />}
                 />
 
+                <View style={styles.locationInputHeaderRow}>
+                  <Text style={styles.inputCustomLabel}>VILLAGE / CITY *</Text>
+                  <Pressable
+                    style={styles.detectLocationBtn}
+                    onPress={handleAutoDetectLocation}
+                    disabled={isLocating}
+                  >
+                    {isLocating ? (
+                      <ActivityIndicator size="small" color="#1B6D24" />
+                    ) : (
+                      <>
+                        <LocateFixed size={14} color="#1B6D24" />
+                        <Text style={styles.detectLocationBtnText}>Auto-Detect GPS</Text>
+                      </>
+                    )}
+                  </Pressable>
+                </View>
+
                 <MKInput
-                  label="VILLAGE / CITY *"
-                  placeholder="E.g. Dindori, Nashik"
+                  placeholder="Type Village or City name..."
                   value={village}
-                  onChangeText={setVillage}
+                  onChangeText={handleVillageTextChange}
                   error={errors.village}
                   leftIcon={<MapPin size={18} color="#9AA0A6" />}
                 />
+
+                {/* Realtime Village & City Autocomplete Suggestions */}
+                {showSuggestions && suggestions.length > 0 && (
+                  <View style={styles.suggestionsCard}>
+                    {suggestions.map((s) => (
+                      <Pressable
+                        key={s.id}
+                        style={styles.suggestionItem}
+                        onPress={() => handleSelectSuggestion(s)}
+                      >
+                        <MapPin size={14} color="#1B6D24" style={{ marginRight: 8 }} />
+                        <View style={{ flex: 1 }}>
+                          <Text style={styles.suggestionName}>
+                            {s.name} <Text style={styles.suggestionType}>({s.type})</Text>
+                          </Text>
+                          <Text style={styles.suggestionLocation}>
+                            {s.district}, {s.state}
+                          </Text>
+                        </View>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
               </View>
             </View>
 
@@ -294,6 +429,48 @@ export default function FarmerProfileScreen() {
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Photo Picker Modal */}
+      <Modal
+        visible={photoModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setPhotoModalVisible(false)}
+      >
+        <Pressable
+          style={styles.photoModalOverlay}
+          onPress={() => setPhotoModalVisible(false)}
+        >
+          <View style={styles.photoModalCard}>
+            <View style={styles.photoModalHeader}>
+              <Text style={styles.photoModalTitle}>Profile Photo</Text>
+              <Pressable onPress={() => setPhotoModalVisible(false)}>
+                <X size={20} color="#666" />
+              </Pressable>
+            </View>
+            <Text style={styles.photoModalSubtitle}>
+              Upload a clear photo of yourself to build trust with buyers.
+            </Text>
+
+            <Pressable style={styles.photoOptionBtn} onPress={handleTakePhoto}>
+              <Camera size={20} color="#1B6D24" strokeWidth={2.2} />
+              <Text style={styles.photoOptionText}>Take Photo with Camera</Text>
+            </Pressable>
+
+            <Pressable style={styles.photoOptionBtn} onPress={handlePickFromGallery}>
+              <Upload size={20} color="#EF7D1A" strokeWidth={2.2} />
+              <Text style={styles.photoOptionText}>Choose from Gallery</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.photoCancelBtn}
+              onPress={() => setPhotoModalVisible(false)}
+            >
+              <Text style={styles.photoCancelBtnText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
     </MKBackground>
   );
 }
@@ -583,5 +760,135 @@ const styles = StyleSheet.create({
   securityNote: {
     fontSize: 12,
     color: '#7A7A7A',
+  },
+
+  // Location Autocomplete & GPS
+  locationInputHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+    marginTop: 10,
+  },
+  inputCustomLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#4B5563',
+    letterSpacing: 0.5,
+  },
+  detectLocationBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 8,
+    backgroundColor: '#E8F5E9',
+    gap: 4,
+  },
+  detectLocationBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1B6D24',
+  },
+  suggestionsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#ECEAE3',
+    marginTop: -8,
+    marginBottom: 16,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    elevation: 3,
+  },
+  suggestionItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F4F1EA',
+  },
+  suggestionName: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#241913',
+  },
+  suggestionType: {
+    fontSize: 12,
+    color: '#EF7D1A',
+    fontWeight: '600',
+  },
+  suggestionLocation: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+
+  // Photo Modal Styles
+  photoModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  photoModalCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 22,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 16,
+    elevation: 5,
+  },
+  photoModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  photoModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#241913',
+  },
+  photoModalSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 20,
+    lineHeight: 18,
+  },
+  photoOptionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 14,
+    backgroundColor: '#FAF8F5',
+    borderWidth: 1,
+    borderColor: '#ECEAE3',
+    gap: 12,
+    marginBottom: 12,
+  },
+  photoOptionText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#241913',
+  },
+  photoCancelBtn: {
+    paddingVertical: 12,
+    alignItems: 'center',
+    marginTop: 4,
+  },
+  photoCancelBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#6B7280',
   },
 });

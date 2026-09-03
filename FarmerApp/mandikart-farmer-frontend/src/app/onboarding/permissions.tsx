@@ -9,7 +9,7 @@
  * 4. Hardware Permissions (GPS Location, Camera, Push Popups)
  */
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -42,6 +42,14 @@ import { FrontendConsentService } from '@/services/consentService';
 
 export default function PermissionsScreen() {
   const router = useRouter();
+
+  useEffect(() => {
+    FrontendConsentService.checkRequiresConsent().then((requires) => {
+      if (!requires) {
+        router.replace('/auth/signup');
+      }
+    });
+  }, [router]);
 
   const [terms, setTerms] = useState(true);
   const [privacy, setPrivacy] = useState(true);

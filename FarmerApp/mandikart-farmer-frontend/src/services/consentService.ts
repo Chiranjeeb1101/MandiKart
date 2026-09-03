@@ -58,14 +58,16 @@ export class FrontendConsentService {
       }
 
       const token = await appStorage.getItem(SESSION_TOKEN_KEY);
-      const baseUrl = getApiBaseUrl();
+      if (!token) {
+        // Brand new user who hasn't accepted yet
+        return true;
+      }
 
+      const baseUrl = getApiBaseUrl();
       const headers: Record<string, string> = {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`,
       };
-      if (token) {
-        headers['Authorization'] = `Bearer ${token}`;
-      }
 
       const res = await fetch(`${baseUrl}/consent/status`, {
         method: 'GET',
@@ -74,11 +76,15 @@ export class FrontendConsentService {
 
       if (res && res.ok) {
         const json = await res.json();
-        return json.data?.requiresConsent ?? true;
+        const requires = json.data?.requiresConsent;
+        if (requires === false) {
+          await appStorage.setItem(CONSENT_KEY, 'true');
+        }
+        return requires ?? false;
       }
-      return true;
+      return false;
     } catch {
-      return true;
+      return false;
     }
   }
 

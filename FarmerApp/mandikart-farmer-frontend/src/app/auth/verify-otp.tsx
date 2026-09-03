@@ -1,9 +1,8 @@
 /**
- * MandiKart Farmer App — Screen 5: Verify Your Account (Soft Glass Slider / OTP)
+ * MandiKart Farmer App — Screen 5: Verify Your Account (Mobile & Email OTP)
  * 
- * Implements the approved Stitch visual design:
- * Header with basket brand icon, 6-digit OTP boxes with auto-shift, phone number
- * summary with EDIT action, countdown timer, security guarantee, and 3D CONTINUE CTA.
+ * Supports both Mobile OTP and Email OTP verification screens with smooth tab
+ * switching, 6-digit auto-shifting OTP boxes, resend timers, and state persistence.
  */
 
 import React, { useState, useRef, useEffect } from 'react';
@@ -16,89 +15,176 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { Lock, ArrowRight, ShieldCheck, ShoppingBasket } from 'lucide-react-native';
+import {
+  Lock,
+  ArrowRight,
+  ShieldCheck,
+  ShoppingBasket,
+  Smartphone,
+  Mail,
+  Check,
+  Edit3,
+} from 'lucide-react-native';
 import { MKBackground, MKButton, MKHeader } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
+import { useTranslation } from '@/hooks/useTranslation';
+
+type VerificationMode = 'mobile' | 'email';
 
 export default function VerifyOtpScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ phone?: string; name?: string }>();
+  const params = useLocalSearchParams<{ phone?: string; name?: string; email?: string }>();
   const { setPhoneNumber, setIsAuthenticated, user, setUser } = useAuthStore();
+  const { t } = useTranslation();
 
-  const displayPhone = params.phone || '+91 98765 43210';
-  const [otp, setOtp] = useState<string[]>(['', '', '', '', '', '']);
-  const [timer, setTimer] = useState<number>(45);
-  const [canResend, setCanResend] = useState<boolean>(false);
-  const [error, setError] = useState<string>('');
+  const [mode, setMode] = useState<VerificationMode>('mobile');
 
-  const inputRefs = useRef<Array<TextInput | null>>([]);
+  // Mobile state
+  const displayPhone = params.phone || user?.phone || '+91 98765 43210';
+  const [mobileOtp, setMobileOtp] = useState<string[]>(['', '', '', '', '', '']);
+  const [mobileTimer, setMobileTimer] = useState<number>(45);
+  const [mobileCanResend, setMobileCanResend] = useState<boolean>(false);
+  const [mobileError, setMobileError] = useState<string>('');
 
+  const userEnteredEmail = params.email?.trim() || user?.email?.trim() || '';
+  const hasEmail = Boolean(userEnteredEmail);
+
+  // Email state
+  const [displayEmail, setDisplayEmail] = useState<string>(userEnteredEmail);
+  const [isEditingEmail, setIsEditingEmail] = useState<boolean>(false);
+  const [emailOtp, setEmailOtp] = useState<string[]>(['', '', '', '', '', '']);
+  const [emailTimer, setEmailTimer] = useState<number>(60);
+  const [emailCanResend, setEmailCanResend] = useState<boolean>(false);
+  const [emailError, setEmailError] = useState<string>('');
+
+  const mobileInputRefs = useRef<Array<TextInput | null>>([]);
+  const emailInputRefs = useRef<Array<TextInput | null>>([]);
+
+  // Mobile Timer
   useEffect(() => {
     let interval: ReturnType<typeof setInterval>;
-    if (timer > 0) {
+    if (mobileTimer > 0) {
       interval = setInterval(() => {
-        setTimer((prev) => prev - 1);
+        setMobileTimer((prev) => prev - 1);
       }, 1000);
     } else {
-      setCanResend(true);
+      setMobileCanResend(true);
     }
     return () => clearInterval(interval);
-  }, [timer]);
+  }, [mobileTimer]);
 
-  const handleOtpChange = (text: string, index: number) => {
-    const newOtp = [...otp];
+  // Email Timer
+  useEffect(() => {
+    let interval: ReturnType<typeof setInterval>;
+    if (emailTimer > 0) {
+      interval = setInterval(() => {
+        setEmailTimer((prev) => prev - 1);
+      }, 1000);
+    } else {
+      setEmailCanResend(true);
+    }
+    return () => clearInterval(interval);
+  }, [emailTimer]);
+
+  const handleMobileOtpChange = (text: string, index: number) => {
+    const newOtp = [...mobileOtp];
     newOtp[index] = text;
-    setOtp(newOtp);
-    setError('');
+    setMobileOtp(newOtp);
+    setMobileError('');
 
-    // Auto-focus next input
     if (text && index < 5) {
-      inputRefs.current[index + 1]?.focus();
+      mobileInputRefs.current[index + 1]?.focus();
     }
   };
 
-  const handleKeyPress = (e: any, index: number) => {
-    if (e.nativeEvent.key === 'Backspace' && !otp[index] && index > 0) {
-      inputRefs.current[index - 1]?.focus();
+  const handleMobileKeyPress = (e: any, index: number) => {
+    if (e.nativeEvent.key === 'Backspace' && !mobileOtp[index] && index > 0) {
+      mobileInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleEmailOtpChange = (text: string, index: number) => {
+    const newOtp = [...emailOtp];
+    newOtp[index] = text;
+    setEmailOtp(newOtp);
+    setEmailError('');
+
+    if (text && index < 5) {
+      emailInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleEmailKeyPress = (e: any, index: number) => {
+    if (e.nativeEvent.key === 'Backspace' && !emailOtp[index] && index > 0) {
+      emailInputRefs.current[index - 1]?.focus();
     }
   };
 
   const handleResend = () => {
-    if (!canResend) return;
-    setTimer(45);
-    setCanResend(false);
-    setOtp(['', '', '', '', '', '']);
-    inputRefs.current[0]?.focus();
+    if (mode === 'mobile') {
+      if (!mobileCanResend) return;
+      setMobileTimer(45);
+      setMobileCanResend(false);
+      setMobileOtp(['', '', '', '', '', '']);
+      mobileInputRefs.current[0]?.focus();
+      Alert.alert('OTP Sent', `A new verification code was sent to ${displayPhone}`);
+    } else {
+      if (!emailCanResend) return;
+      setEmailTimer(60);
+      setEmailCanResend(false);
+      setEmailOtp(['', '', '', '', '', '']);
+      emailInputRefs.current[0]?.focus();
+      Alert.alert('Email OTP Sent', `A new verification code was sent to ${displayEmail}`);
+    }
   };
 
   const handleVerify = () => {
-    const enteredCode = otp.join('');
-    if (enteredCode.length < 6) {
-      setError('Please enter the complete 6-digit OTP');
-      return;
-    }
+    if (mode === 'mobile') {
+      const enteredCode = mobileOtp.join('');
+      if (enteredCode.length < 6) {
+        setMobileError('Please enter the complete 6-digit Mobile OTP');
+        return;
+      }
 
-    // Success -> authenticate and navigate to profile onboarding
-    setIsAuthenticated(true);
-    setPhoneNumber(displayPhone);
-    if (!user) {
+      setIsAuthenticated(true);
+      setPhoneNumber(displayPhone);
       setUser({
-        id: `farmer_${Date.now()}`,
-        name: params.name || 'Ramesh Patil',
+        ...(user || {}),
+        id: user?.id || `farmer_${Date.now()}`,
+        name: params.name || user?.name || 'Ramesh Patil',
         phone: displayPhone,
-        language: 'en',
-        state: 'Maharashtra',
-        district: 'Nashik',
-        village: 'Dindori',
-        farmSizeAcres: 5,
         isVerified: true,
         role: 'FARMER',
       });
-    }
 
-    router.push('/onboarding/farmer-profile');
+      router.push('/onboarding/farmer-profile');
+    } else {
+      const enteredCode = emailOtp.join('');
+      if (enteredCode.length < 6) {
+        setEmailError('Please enter the complete 6-digit Email OTP');
+        return;
+      }
+
+      setIsAuthenticated(true);
+      setUser({
+        ...(user || {}),
+        id: user?.id || `farmer_${Date.now()}`,
+        name: params.name || user?.name || 'Ramesh Patil',
+        email: displayEmail,
+        isEmailVerified: true,
+        role: 'FARMER',
+      });
+
+      Alert.alert('Email Verified', 'Your email address has been verified successfully.', [
+        {
+          text: 'Continue',
+          onPress: () => router.push('/onboarding/farmer-profile'),
+        },
+      ]);
+    }
   };
 
   return (
@@ -131,79 +217,203 @@ export default function VerifyOtpScreen() {
             </Text>
           </View>
 
-          {/* Verification Card */}
-          <View style={styles.card}>
-            <View style={styles.stepTitleRow}>
-              <View style={styles.stepCircle}>
-                <Text style={styles.stepNumber}>1</Text>
-              </View>
-              <Text style={styles.stepTitle}>Verify Mobile Number</Text>
-            </View>
-
-            {/* Phone Number Display Box */}
-            <View style={styles.phoneBox}>
-              <View>
-                <Text style={styles.phoneLabel}>Phone Number</Text>
-                <Text style={styles.phoneValue}>{displayPhone}</Text>
-              </View>
+          {/* Mode Switcher Tabs (Only shown if user entered an email) */}
+          {hasEmail && (
+            <View style={styles.modeTabsWrapper}>
               <Pressable
-                onPress={() => router.back()}
-                style={styles.editButton}
-                accessibilityRole="button"
+                style={[styles.modeTab, mode === 'mobile' && styles.modeTabActive]}
+                onPress={() => setMode('mobile')}
               >
-                <Text style={styles.editText}>EDIT</Text>
+                <Smartphone
+                  size={16}
+                  color={mode === 'mobile' ? '#1B6D24' : '#6B7280'}
+                  strokeWidth={mode === 'mobile' ? 2.5 : 2}
+                />
+                <Text style={[styles.modeTabText, mode === 'mobile' && styles.modeTabTextActive]}>
+                  Mobile OTP
+                </Text>
+              </Pressable>
+
+              <Pressable
+                style={[styles.modeTab, mode === 'email' && styles.modeTabActive]}
+                onPress={() => setMode('email')}
+              >
+                <Mail
+                  size={16}
+                  color={mode === 'email' ? '#1B6D24' : '#6B7280'}
+                  strokeWidth={mode === 'email' ? 2.5 : 2}
+                />
+                <Text style={[styles.modeTabText, mode === 'email' && styles.modeTabTextActive]}>
+                  Email OTP
+                </Text>
               </Pressable>
             </View>
+          )}
 
-            {/* OTP Section */}
-            <View style={styles.otpSection}>
-              <Text style={styles.otpLabel}>Enter 6-digit OTP</Text>
-              <View style={styles.otpBoxesRow}>
-                {otp.map((digit, index) => (
-                  <TextInput
-                    key={index}
-                    ref={(el) => {
-                      inputRefs.current[index] = el;
-                    }}
-                    style={[
-                      styles.otpBox,
-                      Boolean(digit) && styles.otpBoxFilled,
-                      Boolean(error) && styles.otpBoxError,
-                    ]}
-                    keyboardType="number-pad"
-                    maxLength={1}
-                    value={digit}
-                    onChangeText={(text) => handleOtpChange(text, index)}
-                    onKeyPress={(e) => handleKeyPress(e, index)}
-                  />
-                ))}
-              </View>
+          {/* Verification Card */}
+          <View style={styles.card}>
+            {mode === 'mobile' ? (
+              <>
+                <View style={styles.stepTitleRow}>
+                  <View style={styles.stepCircle}>
+                    <Text style={styles.stepNumber}>1</Text>
+                  </View>
+                  <Text style={styles.stepTitle}>Verify Mobile Number</Text>
+                </View>
 
-              {error ? <Text style={styles.errorText}>{error}</Text> : null}
-
-              {/* Timer & Resend */}
-              <View style={styles.resendRow}>
-                <Text style={styles.timerText}>
-                  {timer > 0
-                    ? `Resend OTP in 00:${timer < 10 ? `0${timer}` : timer}`
-                    : 'Did not receive code?'}
-                </Text>
-                <Pressable
-                  onPress={handleResend}
-                  disabled={!canResend}
-                  style={[styles.resendBtn, !canResend && styles.resendBtnDisabled]}
-                >
-                  <Text
-                    style={[
-                      styles.resendBtnText,
-                      canResend ? styles.resendBtnTextActive : styles.resendBtnTextDisabled,
-                    ]}
+                {/* Phone Number Display Box */}
+                <View style={styles.phoneBox}>
+                  <View>
+                    <Text style={styles.phoneLabel}>Phone Number</Text>
+                    <Text style={styles.phoneValue}>{displayPhone}</Text>
+                  </View>
+                  <Pressable
+                    onPress={() => router.back()}
+                    style={styles.editButton}
+                    accessibilityRole="button"
                   >
-                    RESEND OTP
-                  </Text>
-                </Pressable>
-              </View>
-            </View>
+                    <Text style={styles.editText}>EDIT</Text>
+                  </Pressable>
+                </View>
+
+                {/* OTP Section */}
+                <View style={styles.otpSection}>
+                  <Text style={styles.otpLabel}>Enter 6-digit Mobile OTP</Text>
+                  <View style={styles.otpBoxesRow}>
+                    {mobileOtp.map((digit, index) => (
+                      <TextInput
+                        key={index}
+                        ref={(el) => {
+                          mobileInputRefs.current[index] = el;
+                        }}
+                        style={[
+                          styles.otpBox,
+                          Boolean(digit) && styles.otpBoxFilled,
+                          Boolean(mobileError) && styles.otpBoxError,
+                        ]}
+                        keyboardType="number-pad"
+                        maxLength={1}
+                        value={digit}
+                        onChangeText={(text) => handleMobileOtpChange(text, index)}
+                        onKeyPress={(e) => handleMobileKeyPress(e, index)}
+                      />
+                    ))}
+                  </View>
+
+                  {mobileError ? <Text style={styles.errorText}>{mobileError}</Text> : null}
+
+                  {/* Timer & Resend */}
+                  <View style={styles.resendRow}>
+                    <Text style={styles.timerText}>
+                      {mobileTimer > 0
+                        ? `Resend OTP in 00:${mobileTimer < 10 ? `0${mobileTimer}` : mobileTimer}`
+                        : 'Did not receive code?'}
+                    </Text>
+                    <Pressable
+                      onPress={handleResend}
+                      disabled={!mobileCanResend}
+                      style={[styles.resendBtn, !mobileCanResend && styles.resendBtnDisabled]}
+                    >
+                      <Text
+                        style={[
+                          styles.resendBtnText,
+                          mobileCanResend ? styles.resendBtnTextActive : styles.resendBtnTextDisabled,
+                        ]}
+                      >
+                        RESEND OTP
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.stepTitleRow}>
+                  <View style={[styles.stepCircle, { backgroundColor: '#FF8A00' }]}>
+                    <Mail size={14} color="#FFF" />
+                  </View>
+                  <Text style={styles.stepTitle}>Verify Email Address</Text>
+                </View>
+
+                {/* Email Display Box */}
+                <View style={styles.phoneBox}>
+                  <View style={{ flex: 1, marginRight: 8 }}>
+                    <Text style={styles.phoneLabel}>Email Address</Text>
+                    {isEditingEmail ? (
+                      <TextInput
+                        style={styles.emailEditInput}
+                        value={displayEmail}
+                        onChangeText={setDisplayEmail}
+                        autoCapitalize="none"
+                        keyboardType="email-address"
+                        autoFocus
+                      />
+                    ) : (
+                      <Text numberOfLines={1} style={styles.phoneValue}>
+                        {displayEmail}
+                      </Text>
+                    )}
+                  </View>
+                  <Pressable
+                    onPress={() => setIsEditingEmail(!isEditingEmail)}
+                    style={styles.editButton}
+                    accessibilityRole="button"
+                  >
+                    <Text style={styles.editText}>{isEditingEmail ? 'SAVE' : 'EDIT'}</Text>
+                  </Pressable>
+                </View>
+
+                {/* OTP Section */}
+                <View style={styles.otpSection}>
+                  <Text style={styles.otpLabel}>Enter 6-digit Email Verification Code</Text>
+                  <View style={styles.otpBoxesRow}>
+                    {emailOtp.map((digit, index) => (
+                      <TextInput
+                        key={index}
+                        ref={(el) => {
+                          emailInputRefs.current[index] = el;
+                        }}
+                        style={[
+                          styles.otpBox,
+                          Boolean(digit) && styles.otpBoxFilled,
+                          Boolean(emailError) && styles.otpBoxError,
+                        ]}
+                        keyboardType="number-pad"
+                        maxLength={1}
+                        value={digit}
+                        onChangeText={(text) => handleEmailOtpChange(text, index)}
+                        onKeyPress={(e) => handleEmailKeyPress(e, index)}
+                      />
+                    ))}
+                  </View>
+
+                  {emailError ? <Text style={styles.errorText}>{emailError}</Text> : null}
+
+                  {/* Timer & Resend */}
+                  <View style={styles.resendRow}>
+                    <Text style={styles.timerText}>
+                      {emailTimer > 0
+                        ? `Resend Code in 00:${emailTimer < 10 ? `0${emailTimer}` : emailTimer}`
+                        : 'Did not receive code?'}
+                    </Text>
+                    <Pressable
+                      onPress={handleResend}
+                      disabled={!emailCanResend}
+                      style={[styles.resendBtn, !emailCanResend && styles.resendBtnDisabled]}
+                    >
+                      <Text
+                        style={[
+                          styles.resendBtnText,
+                          emailCanResend ? styles.resendBtnTextActive : styles.resendBtnTextDisabled,
+                        ]}
+                      >
+                        RESEND CODE
+                      </Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </>
+            )}
           </View>
 
           {/* Security Note & Primary Continue CTA */}
@@ -214,11 +424,12 @@ export default function VerifyOtpScreen() {
             </View>
 
             <MKButton
-              title="CONTINUE"
+              title={mode === 'mobile' ? 'VERIFY MOBILE OTP' : 'VERIFY EMAIL OTP'}
               onPress={handleVerify}
               variant="primary"
               size="lg"
-              rightIcon={<ArrowRight size={20} color="#FFFFFF" strokeWidth={2.5} />}
+              fullWidth
+              style={styles.continueBtn}
             />
           </View>
         </ScrollView>
@@ -232,58 +443,81 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 20,
-    paddingBottom: 32,
-    justifyContent: 'space-between',
+    paddingHorizontal: 24,
+    paddingBottom: 40,
   },
   headerBasketBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 12,
-    backgroundColor: '#FFFFFF',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#FDEFE5',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#EFEBE2',
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
   },
   headerBlock: {
-    alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 24,
+    marginTop: 14,
+    marginBottom: 20,
   },
   title: {
-    fontSize: 24,
-    fontWeight: '700',
-    color: '#1A1C1E',
-    marginBottom: 6,
-    textAlign: 'center',
+    fontSize: 26,
+    fontWeight: '800',
+    color: '#241913',
+    letterSpacing: -0.5,
   },
   titleGreen: {
     color: '#1E5A2A',
   },
   subtitle: {
     fontSize: 14,
-    color: '#5F6368',
-    textAlign: 'center',
+    color: '#6B7280',
+    marginTop: 6,
+    lineHeight: 20,
   },
+
+  // Mode Switcher Tabs
+  modeTabsWrapper: {
+    flexDirection: 'row',
+    backgroundColor: '#ECEAE3',
+    borderRadius: 16,
+    padding: 4,
+    marginBottom: 16,
+  },
+  modeTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 10,
+    borderRadius: 12,
+    gap: 8,
+  },
+  modeTabActive: {
+    backgroundColor: '#FFFFFF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  modeTabText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  modeTabTextActive: {
+    color: '#1B6D24',
+  },
+
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 24,
-    padding: 22,
-    shadowColor: '#000000',
-    shadowOffset: { width: 0, height: 8 },
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
-    shadowRadius: 20,
-    elevation: 4,
-    borderWidth: 1,
-    borderColor: '#F0ECE4',
-    marginBottom: 20,
+    shadowRadius: 16,
+    elevation: 3,
+    marginBottom: 24,
   },
   stepTitleRow: {
     flexDirection: 'row',
@@ -291,80 +525,91 @@ const styles = StyleSheet.create({
     marginBottom: 20,
   },
   stepCircle: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: '#FFEADE',
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#1E5A2A',
     alignItems: 'center',
     justifyContent: 'center',
     marginRight: 10,
   },
   stepNumber: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#964900',
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
   },
   stepTitle: {
-    fontSize: 17,
+    fontSize: 16,
     fontWeight: '700',
-    color: '#1A1C1E',
+    color: '#241913',
   },
   phoneBox: {
-    backgroundColor: '#FAF9F6',
-    borderWidth: 1,
-    borderColor: '#E8E4DA',
-    borderRadius: 16,
-    padding: 16,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    backgroundColor: '#FAF8F5',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#ECEAE3',
     marginBottom: 24,
   },
   phoneLabel: {
     fontSize: 12,
-    color: '#5F6368',
-    marginBottom: 2,
+    color: '#8A817C',
+    fontWeight: '500',
+    marginBottom: 4,
   },
   phoneValue: {
     fontSize: 16,
     fontWeight: '700',
-    color: '#1A1C1E',
-    letterSpacing: 0.5,
+    color: '#241913',
+  },
+  emailEditInput: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#241913',
+    paddingVertical: 2,
+    borderBottomWidth: 1,
+    borderBottomColor: '#1B6D24',
   },
   editButton: {
-    paddingVertical: 4,
-    paddingHorizontal: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 8,
+    backgroundColor: '#E8F5E9',
   },
   editText: {
     fontSize: 12,
-    fontWeight: '800',
+    fontWeight: '700',
     color: '#1E5A2A',
-    letterSpacing: 0.5,
   },
   otpSection: {
-    width: '100%',
+    alignItems: 'center',
   },
   otpLabel: {
     fontSize: 14,
+    color: '#4B5563',
     fontWeight: '600',
-    color: '#2B2B2B',
-    marginBottom: 12,
+    marginBottom: 16,
+    alignSelf: 'flex-start',
   },
   otpBoxesRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    width: '100%',
     marginBottom: 12,
   },
   otpBox: {
-    width: 46,
-    height: 54,
-    backgroundColor: '#FAF9F6',
+    width: 44,
+    height: 52,
+    borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#E8E4DA',
-    borderRadius: 14,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#FAF8F5',
     fontSize: 22,
     fontWeight: '700',
-    color: '#1A1C1E',
+    color: '#241913',
     textAlign: 'center',
   },
   otpBoxFilled: {
@@ -372,56 +617,64 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   otpBoxError: {
-    borderColor: '#D32F2F',
+    borderColor: '#EF4444',
+    backgroundColor: '#FEF2F2',
   },
   errorText: {
-    fontSize: 12,
-    color: '#D32F2F',
-    marginBottom: 8,
+    color: '#EF4444',
+    fontSize: 13,
     fontWeight: '500',
+    marginBottom: 12,
+    alignSelf: 'flex-start',
   },
   resendRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    width: '100%',
     marginTop: 8,
   },
   timerText: {
     fontSize: 13,
-    color: '#5F6368',
+    color: '#6B7280',
+    fontWeight: '500',
   },
   resendBtn: {
     paddingVertical: 4,
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
   },
   resendBtnDisabled: {
     opacity: 0.5,
   },
   resendBtnText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '700',
-    letterSpacing: 0.5,
   },
   resendBtnTextActive: {
-    color: '#1E5A2A',
+    color: '#EF7D1A',
   },
   resendBtnTextDisabled: {
-    color: '#9AA0A6',
+    color: '#9CA3AF',
   },
   footerArea: {
-    width: '100%',
-    paddingTop: 8,
+    alignItems: 'center',
   },
   securityRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
     marginBottom: 16,
   },
   securityText: {
     fontSize: 13,
-    color: '#5F6368',
-    fontWeight: '500',
+    color: '#1E5A2A',
+    fontWeight: '600',
+    marginLeft: 6,
+  },
+  continueBtn: {
+    shadowColor: '#1E5A2A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    elevation: 6,
   },
 });

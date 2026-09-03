@@ -53,6 +53,10 @@ export default function RootLayout() {
         <Stack.Screen name="more/help-support" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="more/terms-privacy" options={{ animation: 'fade_from_bottom' }} />
         <Stack.Screen name="more/settings" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="more/profile" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="earnings" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="orders/track-vehicle" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="sell/best-options" options={{ animation: 'slide_from_right' }} />
       </Stack>
 
       {/* Global Legal Consent, 15-Day Cookies & Hardware Permissions Modal */}

@@ -36,6 +36,8 @@ import {
   Navigation,
   RefreshCw,
 } from 'lucide-react-native';
+import { useAuthStore } from '@/store/authStore';
+import { useTranslation } from '@/hooks/useTranslation';
 import { MKLayout } from '@/constants/layout';
 
 // ─── Design Tokens (AgroPremium Tactile) ───────────────────────────────────
@@ -77,10 +79,13 @@ type OrderTab = 'All' | 'Active' | 'Pending' | 'Completed';
 export default function OrdersScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const [selectedTab, setSelectedTab] = useState<OrderTab>('All');
+  const { user } = useAuthStore();
+  const { t } = useTranslation();
+
+  const [selectedTab, setSelectedTab] = useState<OrderTab>('Active');
 
   const topPadding = MKLayout.getTopHeaderPadding(insets);
-  const bottomPadding = MKLayout.getBottomTabClearance(insets);
+  const bottomPadding = MKLayout.getBottomTabClearance(insets, 48);
 
   // Modals state
   const [trackModalVisible, setTrackModalVisible] = useState(false);
@@ -141,6 +146,15 @@ export default function OrdersScreen() {
   const pendingCount = orders.filter((o) => o.type === 'Pending').length;
   const completedCount = orders.filter((o) => o.type === 'Completed').length;
 
+  const getTabLabel = (tab: OrderTab) => {
+    switch (tab) {
+      case 'All': return t.all;
+      case 'Active': return t.active;
+      case 'Pending': return t.pending;
+      case 'Completed': return t.completed;
+    }
+  };
+
   function handleCancelPendingOrder(id: string) {
     Alert.alert('Cancel Request', 'Are you sure you want to cancel this pending sell offer?', [
       { text: 'No', style: 'cancel' },
@@ -171,8 +185,8 @@ export default function OrdersScreen() {
       {/* ── Top Header ── */}
       <View style={[styles.header, { paddingTop: topPadding }]}>
         <View style={styles.headerTextCol}>
-          <Text style={styles.headerTitle}>My Orders</Text>
-          <Text style={styles.headerSubtitle}>Track sales, pickup schedules & payouts</Text>
+          <Text style={styles.headerTitle}>{t.myOrders}</Text>
+          <Text style={styles.headerSubtitle}>{t.trackSalesPickup}</Text>
         </View>
 
         <View style={styles.headerRightButtons}>
@@ -203,7 +217,7 @@ export default function OrdersScreen() {
             onPress={() => setSelectedTab('Active')}
           >
             <Text style={[styles.summaryCount, { color: C.secondary }]}>{activeCount}</Text>
-            <Text style={styles.summaryLabel}>ACTIVE</Text>
+            <Text style={styles.summaryLabel}>{t.active.toUpperCase()}</Text>
           </Pressable>
 
           <Pressable
@@ -211,7 +225,7 @@ export default function OrdersScreen() {
             onPress={() => setSelectedTab('Pending')}
           >
             <Text style={[styles.summaryCount, { color: C.statusPending }]}>{pendingCount}</Text>
-            <Text style={styles.summaryLabel}>PENDING</Text>
+            <Text style={styles.summaryLabel}>{t.pending.toUpperCase()}</Text>
           </Pressable>
 
           <Pressable
@@ -219,7 +233,7 @@ export default function OrdersScreen() {
             onPress={() => setSelectedTab('Completed')}
           >
             <Text style={[styles.summaryCount, { color: '#564336' }]}>{completedCount}</Text>
-            <Text style={styles.summaryLabel}>COMPLETED</Text>
+            <Text style={styles.summaryLabel}>{t.completed.toUpperCase()}</Text>
           </Pressable>
         </View>
 
@@ -232,7 +246,7 @@ export default function OrdersScreen() {
               onPress={() => setSelectedTab(tab)}
             >
               <Text style={[styles.filterPillText, selectedTab === tab && styles.filterPillTextActive]}>
-                {tab}
+                {getTabLabel(tab)}
               </Text>
             </Pressable>
           ))}
@@ -313,7 +327,19 @@ export default function OrdersScreen() {
 
                     {/* Action Buttons */}
                     <View style={styles.actionButtonsRow}>
-                      <Pressable style={styles.trackBtn} onPress={() => setTrackModalVisible(true)}>
+                      <Pressable
+                        style={styles.trackBtn}
+                        onPress={() =>
+                          router.push({
+                            pathname: '/orders/track-vehicle',
+                            params: {
+                              orderId: order.id,
+                              crop: `${order.crop} (${order.quantity})`,
+                              buyer: order.buyer,
+                            },
+                          })
+                        }
+                      >
                         <Navigation size={14} color={C.onSecondary} style={{ marginRight: 6 }} />
                         <Text style={styles.trackBtnText}>Track Vehicle Live</Text>
                       </Pressable>
@@ -503,12 +529,12 @@ const styles = StyleSheet.create({
   summaryBox: { flex: 1, minWidth: 0, backgroundColor: C.surface, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 4, alignItems: 'center', borderWidth: 1.5, borderColor: C.outlineVariant, ...SOFT_SHADOW },
   summaryBoxActive: { borderColor: C.secondary, backgroundColor: C.dataMatch },
   summaryCount: { fontSize: 22, fontWeight: '800', marginBottom: 2, textAlign: 'center', flexShrink: 1 },
-  summaryLabel: { fontSize: 10, fontWeight: '700', color: C.onSurfaceVariant, letterSpacing: 0.8, textAlign: 'center' },
+  summaryLabel: { fontSize: 10, fontWeight: '700', color: C.onSurfaceVariant, letterSpacing: 0.2, textAlign: 'center' },
 
   filterTabsRow: { flexDirection: 'row', backgroundColor: C.surfaceVariant, borderRadius: 24, padding: 4, marginBottom: 16 },
-  filterPill: { flex: 1, paddingVertical: 8, borderRadius: 20, alignItems: 'center' },
+  filterPill: { flex: 1, paddingVertical: 8, paddingHorizontal: 4, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   filterPillActive: { backgroundColor: C.surface, ...SOFT_SHADOW },
-  filterPillText: { fontSize: 12, fontWeight: '600', color: C.onSurfaceVariant },
+  filterPillText: { fontSize: 11.5, fontWeight: '600', color: C.onSurfaceVariant, textAlign: 'center' },
   filterPillTextActive: { color: C.secondary, fontWeight: '800' },
 
   ordersStack: { gap: 14 },

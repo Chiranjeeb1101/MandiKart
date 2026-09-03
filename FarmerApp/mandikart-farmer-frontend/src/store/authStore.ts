@@ -12,9 +12,18 @@ export interface UserProfile {
   id?: string;
   name?: string;
   fullName?: string;
+  firstName?: string;
+  middleName?: string;
+  lastName?: string;
   phone?: string;
+  countryCode?: string;
+  email?: string;
+  isEmailVerified?: boolean;
+  avatarUri?: string;
   district?: string;
   state?: string;
+  city?: string;
+  village?: string;
   experience?: string;
   farmerType?: string;
   role?: string;

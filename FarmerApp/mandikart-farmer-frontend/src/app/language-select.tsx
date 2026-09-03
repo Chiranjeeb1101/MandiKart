@@ -21,6 +21,7 @@ import { Globe, Check, ArrowRight, ShoppingBasket, Leaf } from 'lucide-react-nat
 import { MKBackground, MKButton } from '@/components/ui';
 import { useAppStore, LanguageCode } from '@/store/appStore';
 import { useTranslation } from '@/hooks/useTranslation';
+import { FrontendConsentService } from '@/services/consentService';
 
 interface LanguageOption {
   code: LanguageCode;
@@ -104,9 +105,14 @@ export default function LanguageSelectScreen() {
     setLanguage(code); // Update global store instantly so UI reacts in real-time
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     setLanguage(selectedLang);
-    router.push('/onboarding/permissions');
+    const requiresConsent = await FrontendConsentService.checkRequiresConsent();
+    if (requiresConsent) {
+      router.push('/onboarding/permissions');
+    } else {
+      router.push('/auth/signup');
+    }
   };
 
   return (

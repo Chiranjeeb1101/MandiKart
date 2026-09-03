@@ -17,9 +17,11 @@ import {
   TextInput,
   TextInputProps,
   View,
+  Modal,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { useTranslation } from '@/hooks/useTranslation';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import Svg, { Circle, Path } from 'react-native-svg';
 import {
@@ -40,6 +42,7 @@ import {
   Sprout,
   Tractor,
   User,
+  X,
 } from 'lucide-react-native';
 import { MKBackground } from '@/components/ui';
 import { MKColors } from '@/constants/colors';
@@ -60,12 +63,27 @@ const languageLabels: Record<string, string> = {
   mr: 'Marathi',
 };
 
+const COUNTRY_CODES = [
+  { code: '+91', country: 'India', flag: '🇮🇳' },
+  { code: '+977', country: 'Nepal', flag: '🇳🇵' },
+  { code: '+880', country: 'Bangladesh', flag: '🇧🇩' },
+  { code: '+971', country: 'UAE', flag: '🇦🇪' },
+  { code: '+1', country: 'USA', flag: '🇺🇸' },
+  { code: '+44', country: 'UK', flag: '🇬🇧' },
+];
+
 export default function SignUpScreen() {
   const router = useRouter();
   const { language } = useAppStore();
   const { setPhoneNumber, setUser } = useAuthStore();
+  const { t } = useTranslation();
 
-  const [fullName, setFullName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [middleName, setMiddleName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [countryCode, setCountryCode] = useState('+91');
+  const [countryCodeModalVisible, setCountryCodeModalVisible] = useState(false);
+
   const [mobile, setMobile] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -77,14 +95,26 @@ export default function SignUpScreen() {
   const [errors, setErrors] = useState<Record<string, string>>({});
 
   const selectedLanguage = languageLabels[language] ?? 'English';
+  const selectedCountry = COUNTRY_CODES.find((c) => c.code === countryCode) || COUNTRY_CODES[0];
   const passwordStrength = getPasswordStrength(password);
 
   const validate = () => {
     const nextErrors: Record<string, string> = {};
     const trimmedMobile = mobile.trim();
 
-    if (!fullName.trim()) nextErrors.fullName = 'Please enter your full name';
-    if (!/^[6-9]\d{9}$/.test(trimmedMobile)) nextErrors.mobile = 'Enter a valid 10 digit Indian mobile number';
+    if (!firstName.trim()) nextErrors.firstName = 'Please enter your first name';
+    if (!lastName.trim()) nextErrors.lastName = 'Please enter your last name';
+
+    if (countryCode === '+91') {
+      if (!/^[6-9]\d{9}$/.test(trimmedMobile)) {
+        nextErrors.mobile = 'Enter a valid 10 digit Indian mobile number (e.g. 9876543210)';
+      }
+    } else {
+      if (trimmedMobile.length < 7 || trimmedMobile.length > 12) {
+        nextErrors.mobile = 'Enter a valid mobile number (7-12 digits)';
+      }
+    }
+
     if (email.trim() && !/^\S+@\S+\.\S+$/.test(email.trim())) nextErrors.email = 'Enter a valid email address';
     if (password.length < 6) nextErrors.password = 'Password must be at least 6 characters';
     if (confirmPassword !== password) nextErrors.confirmPassword = 'Passwords do not match';
@@ -97,13 +127,18 @@ export default function SignUpScreen() {
   const handleSignUp = () => {
     if (!validate()) return;
 
-    const normalizedPhone = `+91${mobile.trim()}`;
+    const fullName = [firstName.trim(), middleName.trim(), lastName.trim()].filter(Boolean).join(' ');
+    const normalizedPhone = `${countryCode}${mobile.trim()}`;
     setPhoneNumber(normalizedPhone);
     setUser({
       id: `farmer_${Date.now()}`,
-      name: fullName.trim(),
-      fullName: fullName.trim(),
+      name: fullName,
+      fullName: fullName,
+      firstName: firstName.trim(),
+      middleName: middleName.trim() || undefined,
+      lastName: lastName.trim(),
       phone: normalizedPhone,
+      countryCode,
       email: email.trim() || undefined,
       language,
       isVerified: false,
@@ -112,7 +147,12 @@ export default function SignUpScreen() {
 
     router.push({
       pathname: '/auth/verify-otp',
-      params: { phone: `+91 ${mobile.trim()}`, name: fullName.trim(), method: otpMethod },
+      params: {
+        phone: `${countryCode} ${mobile.trim()}`,
+        name: fullName,
+        email: email.trim() || '',
+        method: otpMethod,
+      },
     });
   };
 
@@ -185,23 +225,55 @@ export default function SignUpScreen() {
 
             <AuthField
               icon={User}
-              placeholder="Full Name"
-              helper="Enter your full name"
-              value={fullName}
-              onChangeText={setFullName}
-              error={errors.fullName}
+              placeholder={t.firstNameLabel || "First Name"}
+              helper="Enter your given name"
+              value={firstName}
+              onChangeText={setFirstName}
+              error={errors.firstName}
               autoCapitalize="words"
             />
             <AuthField
-              icon={Phone}
-              placeholder="Mobile Number"
-              helper="10 digit mobile number"
-              value={mobile}
-              onChangeText={setMobile}
-              error={errors.mobile}
-              keyboardType="phone-pad"
-              maxLength={10}
+              icon={User}
+              placeholder={t.middleNameLabel || "Middle Name (Optional)"}
+              helper="Optional middle or father's name"
+              value={middleName}
+              onChangeText={setMiddleName}
+              autoCapitalize="words"
+              tone="neutral"
             />
+            <AuthField
+              icon={User}
+              placeholder={t.lastNameLabel || "Last Name"}
+              helper="Enter your family name or surname"
+              value={lastName}
+              onChangeText={setLastName}
+              error={errors.lastName}
+              autoCapitalize="words"
+            />
+
+            {/* Mobile Number with Country Code Dropdown */}
+            <View style={styles.phoneInputRow}>
+              <Pressable
+                style={styles.countryCodePickerBtn}
+                onPress={() => setCountryCodeModalVisible(true)}
+              >
+                <Text style={styles.countryCodeFlagText}>{selectedCountry.flag}</Text>
+                <Text style={styles.countryCodeValText}>{selectedCountry.code}</Text>
+                <ChevronDown size={14} color="#6B7280" />
+              </Pressable>
+              <View style={{ flex: 1 }}>
+                <AuthField
+                  icon={Phone}
+                  placeholder={t.mobileNumberLabel || "Mobile Number"}
+                  helper={countryCode === '+91' ? '10-digit mobile number' : 'Valid mobile number'}
+                  value={mobile}
+                  onChangeText={setMobile}
+                  error={errors.mobile}
+                  keyboardType="phone-pad"
+                  maxLength={countryCode === '+91' ? 10 : 12}
+                />
+              </View>
+            </View>
 
             <View style={styles.otpPanel}>
               <Text style={styles.otpTitle}>Verification OTP</Text>
@@ -353,6 +425,48 @@ export default function SignUpScreen() {
           </Animated.View>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* Country Code Modal */}
+      <Modal
+        visible={countryCodeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCountryCodeModalVisible(false)}
+      >
+        <Pressable
+          style={styles.countryModalOverlay}
+          onPress={() => setCountryCodeModalVisible(false)}
+        >
+          <View style={styles.countryModalCard}>
+            <View style={styles.countryModalHeader}>
+              <Text style={styles.countryModalTitle}>Select Country Code</Text>
+              <Pressable onPress={() => setCountryCodeModalVisible(false)}>
+                <X size={20} color="#666" />
+              </Pressable>
+            </View>
+            <ScrollView style={{ maxHeight: 300 }}>
+              {COUNTRY_CODES.map((item) => {
+                const isSelected = item.code === countryCode;
+                return (
+                  <Pressable
+                    key={item.code}
+                    style={[styles.countryItemRow, isSelected && styles.countryItemRowActive]}
+                    onPress={() => {
+                      setCountryCode(item.code);
+                      setCountryCodeModalVisible(false);
+                    }}
+                  >
+                    <Text style={styles.countryItemFlag}>{item.flag}</Text>
+                    <Text style={styles.countryItemName}>{item.country}</Text>
+                    <Text style={styles.countryItemCode}>{item.code}</Text>
+                    {isSelected && <Check size={16} color={MKColors.primaryGreenDark} strokeWidth={2.5} />}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        </Pressable>
+      </Modal>
     </MKBackground>
   );
 }
@@ -943,5 +1057,82 @@ const styles = StyleSheet.create({
     lineHeight: 14,
     textAlign: 'center',
     fontWeight: '500',
+  },
+
+  // Phone row & Country Picker
+  phoneInputRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 8,
+  },
+  countryCodePickerBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 56,
+    paddingHorizontal: 12,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#ECEAE3',
+    gap: 4,
+    marginTop: 0,
+  },
+  countryCodeFlagText: {
+    fontSize: 18,
+  },
+  countryCodeValText: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#241913',
+  },
+  countryModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 24,
+  },
+  countryModalCard: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    padding: 20,
+    ...MKShadows.md,
+  },
+  countryModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  countryModalTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#241913',
+  },
+  countryItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 10,
+    borderRadius: 12,
+    gap: 12,
+  },
+  countryItemRowActive: {
+    backgroundColor: '#E8F5E9',
+  },
+  countryItemFlag: {
+    fontSize: 20,
+  },
+  countryItemName: {
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#241913',
+  },
+  countryItemCode: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#6B7280',
   },
 });
