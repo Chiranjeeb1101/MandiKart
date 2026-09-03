@@ -1,22 +1,25 @@
 /**
- * MandiKart Farmer App — Home Screen (Selling Command Center)
- *
- * Built using the MandiKart production layout primitives (MKScreen, MKSection, MKCard).
- * 100% responsive, robust spacing, content-driven heights, safe area aware.
+ * MandiKart — Home Dashboard Screen
+ * 
+ * Features:
+ * - High contrast greeting with safe status bar breathing room
+ * - Visual "Sell Today" Hero Card with distinct borders and shadows
+ * - "Best Opportunity for You" Decision Card with clean breakdown boxes
+ * - "Today at a Glance" stat counters encapsulated in separated cards
  */
 
 import React from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   Image,
   Pressable,
+  StyleSheet,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
-  MapPin,
   Bell,
+  MapPin,
   Plus,
   Star,
   Flame,
@@ -183,11 +186,11 @@ export default function HomeScreen() {
             onPress={() => router.push('/(tabs)/orders')}
             style={({ pressed }) => [
               styles.metricCard,
-              pressed && { transform: [{ scale: 0.94 }], opacity: 0.9 },
+              pressed && { transform: [{ scale: 0.95 }], opacity: 0.9 },
             ]}
           >
-            <View style={[styles.metricIconCircle, { backgroundColor: '#FFEADE' }]}>
-              <FileText size={18} color="#964900" />
+            <View style={[styles.metricIconCircle, { backgroundColor: '#FFF2E8' }]}>
+              <FileText size={20} color="#D9531E" />
             </View>
             <Text style={styles.metricBigNumber}>2</Text>
             <Text style={styles.metricLabel}>Active Orders</Text>
@@ -198,11 +201,11 @@ export default function HomeScreen() {
             onPress={() => router.push('/(tabs)/orders')}
             style={({ pressed }) => [
               styles.metricCard,
-              pressed && { transform: [{ scale: 0.94 }], opacity: 0.9 },
+              pressed && { transform: [{ scale: 0.95 }], opacity: 0.9 },
             ]}
           >
             <View style={[styles.metricIconCircle, { backgroundColor: '#E8F5E9' }]}>
-              <Truck size={18} color={MKColors.primaryGreen} />
+              <Truck size={20} color="#2E7D32" />
             </View>
             <Text style={styles.metricBigText}>Tomorrow</Text>
             <Text style={styles.metricLabel}>Pickup Schedule</Text>
@@ -214,11 +217,11 @@ export default function HomeScreen() {
             style={({ pressed }) => [
               styles.metricCard,
               styles.metricCardLast,
-              pressed && { transform: [{ scale: 0.94 }], opacity: 0.9 },
+              pressed && { transform: [{ scale: 0.95 }], opacity: 0.9 },
             ]}
           >
             <View style={[styles.metricIconCircle, { backgroundColor: '#E8F5E9' }]}>
-              <Wallet size={18} color={MKColors.primaryGreen} />
+              <Wallet size={20} color="#2E7D32" />
             </View>
             <Text style={styles.metricBigText}>₹48,500</Text>
             <Text style={styles.metricLabel}>Monthly Earning</Text>
@@ -281,9 +284,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#F0ECE4',
-    elevation: 2,
+    borderWidth: 1.2,
+    borderColor: '#E5DFD5',
+    elevation: 3,
+    shadowColor: '#1A1C1E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
     flexShrink: 0,
   },
   notificationBadge: {
@@ -310,14 +317,14 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: '#FFFFFF',
     borderRadius: 22,
-    padding: 20,
-    borderWidth: 1,
-    borderColor: '#F0ECE4',
-    elevation: 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.05,
-    shadowRadius: 16,
+    padding: 18,
+    borderWidth: 1.5,
+    borderColor: '#E2DBD0',
+    elevation: 4,
+    shadowColor: '#1A1C1E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
     minHeight: 148,
     overflow: 'hidden',
     marginBottom: MKSpacing.xl,
@@ -348,10 +355,11 @@ const styles = StyleSheet.create({
   inlineAddBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: MKColors.primaryGreen,
+    backgroundColor: '#1E5A2A',
     borderRadius: 10,
     paddingHorizontal: 14,
     paddingVertical: 9,
+    elevation: 2,
   },
   inlineAddBtnText: {
     fontSize: 13,
@@ -360,8 +368,8 @@ const styles = StyleSheet.create({
     marginLeft: 6,
   },
   heroBasketImage: {
-    width: 110,
-    height: 110,
+    width: 105,
+    height: 105,
     resizeMode: 'contain',
     flexShrink: 0,
   },
@@ -410,55 +418,55 @@ const styles = StyleSheet.create({
     marginLeft: 4,
   },
   cropName: {
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
     color: MKColors.textPrimary,
+    marginBottom: 2,
   },
   cropQty: {
     fontSize: 12,
     color: MKColors.textSecondary,
-    marginTop: 2,
+    fontWeight: '500',
   },
   badgeWrapper: {
     flexShrink: 0,
   },
   netReturnRow: {
-    borderTopWidth: 1,
-    borderTopColor: '#F0ECE4',
     paddingHorizontal: MKSpacing.lg,
     paddingTop: MKSpacing.md,
-    paddingBottom: 4,
-    marginTop: MKSpacing.md,
     width: '100%',
   },
   netReturnLabel: {
     fontSize: 12,
-    color: MKColors.textSecondary,
+    color: '#6B7280',
+    fontWeight: '500',
     marginBottom: 2,
   },
   netReturnValue: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: MKColors.primaryGreen,
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#1E5A2A',
     letterSpacing: -0.5,
   },
   unitText: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '500',
-    color: MKColors.textSecondary,
+    color: '#6B7280',
   },
   breakdownGrid: {
     flexDirection: 'row',
-    borderTopWidth: 1,
-    borderTopColor: '#F0ECE4',
-    paddingHorizontal: MKSpacing.lg,
-    paddingVertical: MKSpacing.md,
-    marginTop: MKSpacing.sm,
-    width: '100%',
+    justifyContent: 'space-between',
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+    backgroundColor: '#FAF9F6',
+    marginHorizontal: MKSpacing.lg,
+    marginTop: MKSpacing.md,
+    borderRadius: 14,
+    borderWidth: 1.2,
+    borderColor: '#E8E3D8',
   },
   breakdownCol: {
-    flex: 1,
-    minWidth: 0,
+    alignItems: 'flex-start',
   },
   breakdownLabel: {
     fontSize: 11,
@@ -468,7 +476,7 @@ const styles = StyleSheet.create({
   breakdownValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: MKColors.textPrimary,
+    color: '#1A1C1E',
   },
   demandRow: {
     flexDirection: 'row',
@@ -483,7 +491,7 @@ const styles = StyleSheet.create({
   decisionActionWrapper: {
     paddingHorizontal: MKSpacing.lg,
     paddingBottom: MKSpacing.lg,
-    marginTop: 4,
+    marginTop: 12,
     width: '100%',
   },
 
@@ -491,48 +499,53 @@ const styles = StyleSheet.create({
   metricsRow: {
     flexDirection: 'row',
     width: '100%',
+    gap: 10,
   },
   metricCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    paddingVertical: 14,
-    paddingHorizontal: 8,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#F0ECE4',
-    elevation: 2,
-    marginRight: MKSpacing.sm,
-    minWidth: 0,
-  },
-  metricCardLast: {
-    marginRight: 0,
-  },
-  metricIconCircle: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    borderRadius: 20,
+    paddingVertical: 18,
+    paddingHorizontal: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    borderWidth: 1.2,
+    borderColor: '#EFE7DC',
+    minHeight: 125,
+    elevation: 4,
+    shadowColor: '#1A1C1E',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    minWidth: 0,
+  },
+  metricCardLast: {},
+  metricIconCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
   },
   metricBigNumber: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: MKColors.textPrimary,
+    fontSize: 24,
+    fontWeight: '900',
+    color: '#1A1C1E',
     marginBottom: 2,
   },
   metricBigText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: MKColors.textPrimary,
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#1A1C1E',
     textAlign: 'center',
     marginBottom: 2,
   },
   metricLabel: {
-    fontSize: 10,
-    color: MKColors.textSecondary,
+    fontSize: 11,
+    color: '#757575',
     textAlign: 'center',
-    fontWeight: '500',
+    fontWeight: '600',
+    lineHeight: 14,
   },
 });

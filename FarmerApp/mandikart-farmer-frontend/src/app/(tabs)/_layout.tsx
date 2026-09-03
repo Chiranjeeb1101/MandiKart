@@ -20,10 +20,10 @@ export default function TabLayout() {
       screenOptions={{
         headerShown: false,
         tabBarShowLabel: true,
-        tabBarStyle: [styles.tabBar, { height: 68 + bottomInset, paddingBottom: bottomInset }],
+        tabBarStyle: [styles.tabBar, { height: 64 + bottomInset, paddingBottom: bottomInset }],
         tabBarItemStyle: styles.tabItem,
-        tabBarActiveTintColor: '#1E5A2A',
-        tabBarInactiveTintColor: '#7A7A7A',
+        tabBarActiveTintColor: '#1B6D24',
+        tabBarInactiveTintColor: '#757575',
         tabBarLabelStyle: styles.tabLabel,
       }}
     >
@@ -33,7 +33,7 @@ export default function TabLayout() {
           title: 'Home',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconWrapper, focused && styles.iconWrapperActive]}>
-              <Home size={22} color={color} strokeWidth={focused ? 2.5 : 2} />
+              <Home size={21} color={focused ? '#1B6D24' : color} strokeWidth={focused ? 2.5 : 2} />
             </View>
           ),
         }}
@@ -44,7 +44,7 @@ export default function TabLayout() {
           title: 'Produce',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconWrapper, focused && styles.iconWrapperActive]}>
-              <Package size={22} color={color} strokeWidth={focused ? 2.5 : 2} />
+              <Package size={21} color={focused ? '#1B6D24' : color} strokeWidth={focused ? 2.5 : 2} />
             </View>
           ),
         }}
@@ -55,7 +55,7 @@ export default function TabLayout() {
           title: 'Sell',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconWrapper, focused && styles.iconWrapperActive]}>
-              <Store size={22} color={color} strokeWidth={focused ? 2.5 : 2} />
+              <Store size={21} color={focused ? '#1B6D24' : color} strokeWidth={focused ? 2.5 : 2} />
             </View>
           ),
         }}
@@ -66,7 +66,7 @@ export default function TabLayout() {
           title: 'Orders',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconWrapper, focused && styles.iconWrapperActive]}>
-              <ClipboardList size={22} color={color} strokeWidth={focused ? 2.5 : 2} />
+              <ClipboardList size={21} color={focused ? '#1B6D24' : color} strokeWidth={focused ? 2.5 : 2} />
             </View>
           ),
         }}
@@ -77,7 +77,7 @@ export default function TabLayout() {
           title: 'More',
           tabBarIcon: ({ color, focused }) => (
             <View style={[styles.iconWrapper, focused && styles.iconWrapperActive]}>
-              <Menu size={22} color={color} strokeWidth={focused ? 2.5 : 2} />
+              <Menu size={21} color={focused ? '#1B6D24' : color} strokeWidth={focused ? 2.5 : 2} />
             </View>
           ),
         }}
@@ -89,16 +89,17 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   tabBar: {
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 0,
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
+    borderTopWidth: 1,
+    borderTopColor: '#EFEAE0',
+    borderTopLeftRadius: 18,
+    borderTopRightRadius: 18,
     marginHorizontal: 0,
     paddingHorizontal: 0,
-    paddingTop: 8,
+    paddingTop: 6,
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: -3 },
-    shadowOpacity: 0.07,
-    shadowRadius: 14,
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
     elevation: 8,
   },
   tabItem: {
@@ -113,7 +114,7 @@ const styles = StyleSheet.create({
   iconWrapper: {
     alignItems: 'center',
     justifyContent: 'center',
-    width: 36,
+    width: 48,
     height: 30,
     borderRadius: 15,
   },

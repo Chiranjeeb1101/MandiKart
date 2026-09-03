@@ -46,6 +46,10 @@ export default function WelcomeScreen() {
     router.push('/language-select');
   };
 
+  const handleSkipToDashboard = () => {
+    router.replace('/(tabs)/home');
+  };
+
   const phrases = [
     t.typingText1,
     t.typingText2,
@@ -58,7 +62,7 @@ export default function WelcomeScreen() {
       <StatusBar barStyle="light-content" translucent backgroundColor="transparent" />
 
       {/* ── 100% Full-Screen Animated GIF Background ── */}
-      <View style={StyleSheet.absoluteFillObject} pointerEvents="none">
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
         <Image
           source={GIF_SOURCE}
           style={styles.fullScreenGif}
@@ -74,7 +78,7 @@ export default function WelcomeScreen() {
             'rgba(4, 18, 8, 0.92)',
           ]}
           locations={[0, 0.35, 0.70, 1]}
-          style={StyleSheet.absoluteFillObject}
+          style={StyleSheet.absoluteFill}
         />
       </View>
 
@@ -124,7 +128,7 @@ export default function WelcomeScreen() {
                 style={styles.getStartedPressable}
               >
                 {/* Dark 3D Extrusion Shadow Base */}
-                <View style={styles.getStarted3DBase}>
+                <View style={styles.getStarted3DBase} pointerEvents="none">
                   {/* Vibrant Cylinder Gradient Surface */}
                   <LinearGradient
                     colors={['#4ADE80', '#22C55E', '#16A34A', '#15803D', '#0F5426']}
@@ -154,6 +158,16 @@ export default function WelcomeScreen() {
                 </View>
               </Pressable>
             </Animated.View>
+
+            {/* Direct Dashboard Access Button */}
+            <Pressable
+              onPress={handleSkipToDashboard}
+              style={({ pressed }) => [styles.skipButton, pressed && { opacity: 0.7 }]}
+            >
+              <Text style={styles.skipButtonText}>
+                Open App Dashboard (Home, Produce, Orders) →
+              </Text>
+            </Pressable>
           </Animated.View>
         </View>
       </View>
@@ -167,7 +181,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#000000',
   },
   fullScreenGif: {
-    ...StyleSheet.absoluteFillObject,
+    ...StyleSheet.absoluteFill,
     width: '100%',
     height: '100%',
   },
@@ -333,6 +347,23 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
+  },
+  skipButton: {
+    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.65)',
+    borderWidth: 1,
+    borderColor: 'rgba(74, 222, 128, 0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  skipButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#86EFAC',
+    letterSpacing: 0.3,
   },
 });
 

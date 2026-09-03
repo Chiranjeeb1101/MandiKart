@@ -27,12 +27,18 @@ import {
   CheckCircle2,
   MapPin,
   ArrowRight,
+  ArrowLeft,
+  ArrowUp,
+  ArrowUpRight,
   ChevronDown,
   Scale,
   Award,
   Check,
   X,
   Sprout,
+  Store,
+  Users,
+  Bell,
 } from 'lucide-react-native';
 import { MKScreen, MKCard, MKButton } from '@/components/ui';
 import { MKColors } from '@/constants/colors';
@@ -187,17 +193,29 @@ export default function SellScreen() {
 
   return (
     <MKScreen>
-      {/* ── Header ── */}
-      <View style={styles.header}>
-        <Text style={styles.headerTitle}>Sell Produce</Text>
-        <Text style={styles.headerSubtitle}>Calculate net return & connect with buyers</Text>
+      {/* ── Header (Image 5) ── */}
+      <View style={styles.topHeader}>
+        <Pressable
+          onPress={() => (router.canGoBack() ? router.back() : router.replace('/(tabs)/home'))}
+          style={styles.headerCircleBtn}
+        >
+          <ArrowLeft size={20} color="#212121" strokeWidth={2.2} />
+        </Pressable>
+        <Text style={styles.topHeaderTitle}>Sell Produce</Text>
+        <Pressable
+          onPress={() => router.push('/more/notifications')}
+          style={styles.headerCircleBtn}
+        >
+          <Bell size={20} color="#212121" strokeWidth={2.2} />
+          <View style={styles.headerBadgeDot} />
+        </Pressable>
       </View>
 
-      {/* ── Section 1: Crop & Quantity Selection Card ── */}
+      {/* ── Section 1: Crop & Quantity Selection Card (Image 5) ── */}
       <MKCard style={styles.cropSelectorCard}>
         <Text style={styles.sectionTitle}>What do you want to sell?</Text>
 
-        {/* Horizontal Crop Scroll including "+ Add Crop" card */}
+        {/* Horizontal Crop Scroll including "+ Add New" card */}
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -231,7 +249,7 @@ export default function SellScreen() {
             );
           })}
 
-          {/* + ADD CROP CARD */}
+          {/* + ADD NEW CARD */}
           <Pressable
             onPress={() => setAddCropModalOpen(true)}
             style={({ pressed }) => [
@@ -240,124 +258,95 @@ export default function SellScreen() {
             ]}
           >
             <View style={styles.addCropCircle}>
-              <Plus size={22} color={MKColors.primaryGreen} strokeWidth={2.8} />
+              <Plus size={20} color="#757575" strokeWidth={2.5} />
             </View>
-            <Text style={styles.addCropCardText}>Add Crop</Text>
+            <Text style={styles.addCropCardText}>Add New</Text>
           </Pressable>
         </ScrollView>
 
-        {/* Quantity & Quality Dropdown Section */}
-        <View style={styles.dropdownsSection}>
-          {/* Quantity Dropdown & Stepper Bar */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Quantity (KG)</Text>
-            <View style={styles.qtyControlRow}>
-              {/* Quantity Dropdown Selector */}
+        {/* Side-by-Side: Quantity & Quality Grade (Image 5) */}
+        <View style={styles.selectorsRow}>
+          {/* Quantity Stepper Pill */}
+          <View style={styles.selectorCol}>
+            <Text style={styles.selectorLabel}>Quantity (KG)</Text>
+            <View style={styles.stepperPill}>
               <Pressable
-                onPress={() => setQtyModalOpen(true)}
+                onPress={handleDecreaseQty}
                 style={({ pressed }) => [
-                  styles.dropdownBar,
-                  styles.qtyDropdownBar,
-                  pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+                  styles.stepperBtn,
+                  pressed && { opacity: 0.6 },
                 ]}
               >
-                <Scale size={18} color={MKColors.primaryGreen} />
-                <Text style={styles.dropdownBarText}>{quantity.toLocaleString()} KG</Text>
-                <ChevronDown size={18} color="#7A7A7A" />
+                <Minus size={15} color="#D9531E" strokeWidth={2.5} />
               </Pressable>
-
-              {/* +/- Stepper Buttons */}
-              <View style={styles.stepperBox}>
-                <Pressable
-                  onPress={handleDecreaseQty}
-                  style={({ pressed }) => [
-                    styles.stepperBtn,
-                    pressed && { transform: [{ scale: 0.88 }], opacity: 0.8 },
-                  ]}
-                >
-                  <Minus size={16} color={MKColors.primaryGreen} strokeWidth={2.5} />
-                </Pressable>
-                <Pressable
-                  onPress={handleIncreaseQty}
-                  style={({ pressed }) => [
-                    styles.stepperBtn,
-                    pressed && { transform: [{ scale: 0.88 }], opacity: 0.8 },
-                  ]}
-                >
-                  <Plus size={16} color={MKColors.primaryGreen} strokeWidth={2.5} />
-                </Pressable>
-              </View>
+              <Text style={styles.stepperText}>{quantity.toLocaleString()}</Text>
+              <Pressable
+                onPress={handleIncreaseQty}
+                style={({ pressed }) => [
+                  styles.stepperBtn,
+                  pressed && { opacity: 0.6 },
+                ]}
+              >
+                <Plus size={15} color="#D9531E" strokeWidth={2.5} />
+              </Pressable>
             </View>
           </View>
 
-          {/* Quality Grade Dropdown Bar */}
-          <View style={styles.inputGroup}>
-            <Text style={styles.inputLabel}>Quality Grade</Text>
+          {/* Quality Grade Dropdown Pill */}
+          <View style={styles.selectorCol}>
+            <Text style={styles.selectorLabel}>Quality Grade</Text>
             <Pressable
               onPress={() => setGradeModalOpen(true)}
               style={({ pressed }) => [
-                styles.dropdownBar,
-                pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+                styles.gradePill,
+                pressed && { opacity: 0.85 },
               ]}
             >
-              <View style={styles.dropdownLeftRow}>
-                <Award size={18} color={MKColors.accentOrange} />
-                <Text style={styles.dropdownBarText}>{grade}</Text>
-              </View>
-              <ChevronDown size={18} color="#7A7A7A" />
+              <Text numberOfLines={1} style={styles.gradeText}>{grade}</Text>
+              <ChevronDown size={18} color="#757575" />
             </Pressable>
           </View>
         </View>
       </MKCard>
 
-      {/* ── Section 2: Market Intelligence Bento Grid (2 Equal Cards) ── */}
+      {/* ── Section 2: Market Intelligence Bento Grid (Image 5) ── */}
       <View style={styles.bentoGrid}>
         {/* Card 1: Mandi Price */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.bentoCard,
-            pressed && { transform: [{ scale: 0.96 }], opacity: 0.92 },
-          ]}
-        >
-          <View style={styles.bentoIconTop}>
-            <TrendingUp size={24} color="#1565C0" opacity={0.3} />
+        <View style={styles.bentoCard}>
+          <View style={styles.bentoHeaderRow}>
+            <Store size={15} color="#374151" style={{ marginRight: 5 }} />
+            <Text style={styles.bentoHeaderText}>Nashik Market</Text>
+            <ArrowUpRight size={14} color="#0284C7" style={{ marginLeft: 2 }} />
           </View>
-          <Text style={styles.bentoLabel}>Nashik Mandi Rate</Text>
-          <View>
-            <Text style={styles.bentoPrice}>
-              {currentCrop.marketRange} <Text style={styles.bentoUnit}>/kg</Text>
-            </Text>
-            <Text style={styles.bentoChange}>+₹2.00 from yesterday</Text>
+          <Text style={styles.bentoPrice}>
+            {currentCrop.marketRange} <Text style={styles.bentoUnit}>/kg</Text>
+          </Text>
+          <View style={styles.bentoChangeRow}>
+            <ArrowUp size={12} color="#16A34A" strokeWidth={3} style={{ marginRight: 2 }} />
+            <Text style={styles.bentoChangeText}>+₹2 from yesterday</Text>
           </View>
-        </Pressable>
+        </View>
 
         {/* Card 2: Buyer Demand */}
-        <Pressable
-          style={({ pressed }) => [
-            styles.bentoCard,
-            styles.bentoCardDemand,
-            pressed && { transform: [{ scale: 0.96 }], opacity: 0.92 },
-          ]}
-        >
-          <View style={styles.bentoIconTop}>
-            <Flame size={24} color={MKColors.accentOrange} opacity={0.3} />
+        <View style={styles.bentoCard}>
+          <View style={styles.bentoHeaderRow}>
+            <Users size={15} color="#374151" style={{ marginRight: 5 }} />
+            <Text style={styles.bentoHeaderText}>Buyer Demand</Text>
+            <Flame size={14} color="#EF4444" fill="#EF4444" style={{ marginLeft: 2 }} />
           </View>
-          <Text style={styles.bentoLabel}>Buyer Demand</Text>
-          <View>
-            <View style={styles.demandHeaderRow}>
-              <Text style={styles.demandText}>High</Text>
-              <Flame size={16} color={MKColors.accentOrange} fill={MKColors.accentOrange} />
-            </View>
-            <Text style={styles.demandCount}>15+ active buyers nearby</Text>
+          <View style={styles.bentoDemandRow}>
+            <Text style={styles.demandHighText}>High</Text>
+            <Flame size={16} color="#EF4444" fill="#EF4444" style={{ marginLeft: 4 }} />
           </View>
-        </Pressable>
+          <Text style={styles.activeBuyersText}>15+ active buyers</Text>
+        </View>
       </View>
 
-      {/* ── Section 3: Top Match & Net Return Calculation Card ── */}
+      {/* ── Section 3: Top Match & Net Return Calculation Card (Image 5) ── */}
       <View style={styles.matchCard}>
         <View style={styles.matchHeaderBanner}>
           <View style={styles.matchBadgeLeft}>
-            <Star size={14} color="#FFFFFF" fill="#FFFFFF" />
+            <Star size={13} color="#15803D" fill="#15803D" style={{ marginRight: 6 }} />
             <Text style={styles.matchBadgeText}>TOP MATCH FOR YOU</Text>
           </View>
           <Text style={styles.matchScorePill}>94% MATCH</Text>
@@ -385,15 +374,9 @@ export default function SellScreen() {
             <View style={styles.buyerDetails}>
               <View style={styles.buyerNameRow}>
                 <Text numberOfLines={1} style={styles.buyerName}>
-                  ABC Foods & Wholesale
+                  ABC Foods
                 </Text>
-                <CheckCircle2 size={16} color={MKColors.primaryGreen} />
-              </View>
-              <View style={styles.buyerLocationRow}>
-                <MapPin size={12} color={MKColors.textSecondary} />
-                <Text numberOfLines={1} style={styles.buyerDistText}>
-                  45 KM away • Pickup Included
-                </Text>
+                <CheckCircle2 size={16} color="#15803D" fill="#DCFCE7" style={{ marginLeft: 6 }} />
               </View>
             </View>
           </View>
@@ -402,13 +385,16 @@ export default function SellScreen() {
 
       {/* ── 4. Primary Action CTA ── */}
       <View style={styles.actionWrapper}>
-        <MKButton
-          title="FIND BEST SELLING OPTIONS"
+        <Pressable
           onPress={handleFindOptions}
-          variant="primary"
-          size="lg"
-          rightIcon={<ArrowRight size={20} color="#FFFFFF" strokeWidth={2.5} />}
-        />
+          style={({ pressed }) => [
+            styles.findOptionsBtn,
+            pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] },
+          ]}
+        >
+          <Text style={styles.findOptionsText}>FIND BEST SELLING OPTIONS</Text>
+          <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.5} style={{ marginLeft: 8 }} />
+        </Pressable>
       </View>
 
       {/* ── MODAL 1: ADD CROP MODAL ── */}
@@ -564,31 +550,62 @@ export default function SellScreen() {
 }
 
 const styles = StyleSheet.create({
-  /* ── Header ── */
-  header: {
-    marginBottom: MKSpacing.lg,
+  /* ── 1. Top Header (Image 5) ── */
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: MKSpacing.md,
     width: '100%',
   },
-  headerTitle: {
-    fontSize: 22,
-    fontWeight: '800',
-    color: MKColors.textPrimary,
-    letterSpacing: -0.4,
+  headerCircleBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.2,
+    borderColor: '#E5DFD5',
+    elevation: 2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
-  headerSubtitle: {
-    fontSize: 13,
-    color: MKColors.textSecondary,
-    marginTop: 2,
+  topHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#212121',
+  },
+  headerBadgeDot: {
+    position: 'absolute',
+    top: 9,
+    right: 10,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#E65100',
   },
 
   /* ── Section 1: Crop Selector ── */
   cropSelectorCard: {
-    marginBottom: MKSpacing.lg,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 16,
+    borderWidth: 1.2,
+    borderColor: '#EFEAE0',
+    marginBottom: MKSpacing.md,
+    elevation: 3,
+    shadowColor: '#1A1C1E',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
   },
   sectionTitle: {
     fontSize: 16,
-    fontWeight: '700',
-    color: MKColors.textPrimary,
+    fontWeight: '800',
+    color: '#212121',
     marginBottom: MKSpacing.sm,
   },
   cropScrollContent: {
@@ -597,16 +614,16 @@ const styles = StyleSheet.create({
   cropSelectBtn: {
     alignItems: 'center',
     padding: 8,
-    borderRadius: 18,
-    borderWidth: 1.5,
-    borderColor: '#F0ECE4',
-    backgroundColor: '#FAF9F6',
+    borderRadius: 16,
+    borderWidth: 1.8,
+    borderColor: 'transparent',
+    backgroundColor: '#FFFFFF',
     minWidth: 80,
-    marginRight: MKSpacing.md,
+    marginRight: MKSpacing.sm,
   },
   cropSelectBtnActive: {
-    borderColor: MKColors.accentOrange,
-    backgroundColor: '#FFF3E0',
+    borderColor: '#E65100',
+    backgroundColor: '#FFF8F2',
   },
   cropImageWrapper: {
     width: 56,
@@ -622,186 +639,188 @@ const styles = StyleSheet.create({
   cropSelectName: {
     fontSize: 12,
     fontWeight: '600',
-    color: MKColors.textSecondary,
+    color: '#6B7280',
   },
   cropSelectNameActive: {
-    color: MKColors.accentOrange,
+    color: '#E65100',
     fontWeight: '800',
   },
 
-  /* + Add Crop Card */
+  /* + Add New Card */
   addCropCardBtn: {
     alignItems: 'center',
     justifyContent: 'center',
     padding: 8,
-    borderRadius: 18,
+    borderRadius: 16,
     borderWidth: 1.5,
-    borderColor: MKColors.primaryGreen,
+    borderColor: '#D1D5DB',
     borderStyle: 'dashed',
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#FAF9F6',
     minWidth: 80,
-    height: 94,
+    height: 96,
   },
   addCropCircle: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: '#FFFFFF',
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
-    elevation: 2,
   },
   addCropCardText: {
     fontSize: 12,
-    fontWeight: '800',
-    color: MKColors.primaryGreen,
+    fontWeight: '700',
+    color: '#6B7280',
   },
 
-  /* Dropdowns */
-  dropdownsSection: {
+  /* Side-by-Side: Quantity & Grade (Image 5) */
+  selectorsRow: {
+    flexDirection: 'row',
+    gap: 12,
     marginTop: MKSpacing.md,
     width: '100%',
   },
-  inputGroup: {
-    marginBottom: MKSpacing.md,
-    width: '100%',
+  selectorCol: {
+    flex: 1,
+    minWidth: 0,
   },
-  inputLabel: {
+  selectorLabel: {
     fontSize: 12,
-    fontWeight: '600',
-    color: MKColors.textSecondary,
+    fontWeight: '700',
+    color: '#374151',
     marginBottom: 6,
   },
-  qtyControlRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    width: '100%',
-  },
-  dropdownBar: {
+  stepperPill: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#FAF9F6',
     borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#E8E4DA',
-    paddingHorizontal: 14,
+    borderWidth: 1.2,
+    borderColor: '#E5DFD5',
+    paddingHorizontal: 8,
     height: 48,
-    flex: 1,
-    minWidth: 0,
-  },
-  qtyDropdownBar: {
-    marginRight: MKSpacing.sm,
-  },
-  dropdownLeftRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    minWidth: 0,
-  },
-  dropdownBarText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: MKColors.textPrimary,
-    marginLeft: 6,
-  },
-  stepperBox: {
-    flexDirection: 'row',
-    flexShrink: 0,
   },
   stepperBtn: {
-    width: 44,
-    height: 48,
-    borderRadius: 14,
-    backgroundColor: '#E8F5E9',
+    width: 32,
+    height: 32,
+    borderRadius: 8,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#C8E6C9',
-    marginLeft: 6,
+  },
+  stepperText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#212121',
+  },
+  gradePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#FAF9F6',
+    borderRadius: 14,
+    borderWidth: 1.2,
+    borderColor: '#E5DFD5',
+    paddingHorizontal: 12,
+    height: 48,
+  },
+  gradeText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#212121',
+    flex: 1,
   },
 
-  /* Bento Grid */
+  /* ── Section 2: Bento Grid (Image 5) ── */
   bentoGrid: {
     flexDirection: 'row',
     width: '100%',
-    marginBottom: MKSpacing.lg,
+    gap: 12,
+    marginBottom: MKSpacing.md,
   },
   bentoCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
-    padding: 16,
+    padding: 14,
     justifyContent: 'space-between',
-    minHeight: 125,
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: '#F0ECE4',
-    marginRight: MKSpacing.sm,
+    minHeight: 115,
+    elevation: 3,
+    shadowColor: '#1A1C1E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    borderWidth: 1.2,
+    borderColor: '#EFEAE0',
     minWidth: 0,
   },
-  bentoCardDemand: {
-    borderColor: '#FFE0B2',
-    marginRight: 0,
+  bentoHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
   },
-  bentoIconTop: {
-    alignSelf: 'flex-end',
-    marginBottom: 4,
-  },
-  bentoLabel: {
+  bentoHeaderText: {
     fontSize: 12,
-    fontWeight: '600',
-    color: MKColors.textSecondary,
-    marginBottom: 6,
+    fontWeight: '700',
+    color: '#374151',
+    flex: 1,
   },
   bentoPrice: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: MKColors.textPrimary,
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#1A1C1E',
+    marginBottom: 2,
   },
   bentoUnit: {
     fontSize: 12,
     fontWeight: '500',
-    color: MKColors.textSecondary,
+    color: '#6B7280',
   },
-  bentoChange: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: MKColors.primaryGreen,
-    marginTop: 2,
-  },
-  demandHeaderRow: {
+  bentoChangeRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
-  demandText: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: MKColors.accentOrange,
-    marginRight: 4,
-  },
-  demandCount: {
+  bentoChangeText: {
     fontSize: 11,
-    color: MKColors.textSecondary,
-    marginTop: 2,
+    fontWeight: '700',
+    color: '#16A34A',
+  },
+  bentoDemandRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 2,
+  },
+  demandHighText: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#DC2626',
+  },
+  activeBuyersText: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '500',
   },
 
-  /* Match Card */
+  /* ── Section 3: Match Card (Image 5) ── */
   matchCard: {
     width: '100%',
     backgroundColor: '#FFFFFF',
     borderRadius: 22,
     overflow: 'hidden',
     elevation: 3,
-    borderWidth: 1,
-    borderColor: '#C8E6C9',
-    marginBottom: MKSpacing.lg,
+    shadowColor: '#1A1C1E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    borderWidth: 1.2,
+    borderColor: '#EFEAE0',
+    marginBottom: MKSpacing.md,
   },
   matchHeaderBanner: {
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#DCFCE7',
     paddingHorizontal: 16,
-    paddingVertical: 8,
+    paddingVertical: 10,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -814,15 +833,14 @@ const styles = StyleSheet.create({
   matchBadgeText: {
     fontSize: 11,
     fontWeight: '800',
-    color: MKColors.primaryGreen,
+    color: '#15803D',
     letterSpacing: 0.5,
-    marginLeft: 6,
   },
   matchScorePill: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '800',
-    color: MKColors.primaryGreen,
-    backgroundColor: '#C8E6C9',
+    color: '#15803D',
+    backgroundColor: '#BBF7D0',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
@@ -836,7 +854,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     width: '100%',
-    marginBottom: MKSpacing.md,
+    marginBottom: 12,
   },
   netReturnCol: {
     flex: 1,
@@ -844,19 +862,20 @@ const styles = StyleSheet.create({
   },
   netReturnTitle: {
     fontSize: 12,
-    color: MKColors.textSecondary,
+    color: '#6B7280',
     marginBottom: 2,
+    fontWeight: '500',
   },
   netReturnAmount: {
-    fontSize: 24,
-    fontWeight: '800',
-    color: MKColors.primaryGreen,
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#16A34A',
     letterSpacing: -0.5,
   },
   netReturnUnit: {
     fontSize: 13,
     fontWeight: '500',
-    color: MKColors.textSecondary,
+    color: '#6B7280',
   },
   matchCalculationRight: {
     alignItems: 'flex-end',
@@ -864,30 +883,30 @@ const styles = StyleSheet.create({
   },
   grossPriceText: {
     fontSize: 12,
-    color: MKColors.textPrimary,
-    fontWeight: '600',
+    color: '#212121',
+    fontWeight: '700',
   },
   deductionText: {
     fontSize: 12,
-    color: MKColors.error,
+    color: '#B91C1C',
     fontWeight: '600',
     marginTop: 2,
   },
   buyerMiniCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FAF9F6',
+    backgroundColor: '#FFF7ED',
     borderRadius: 14,
-    padding: 12,
+    padding: 10,
     borderWidth: 1,
-    borderColor: '#E8E4DA',
+    borderColor: '#FFEDD5',
     width: '100%',
   },
   buyerThumb: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    marginRight: 12,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    marginRight: 10,
     flexShrink: 0,
   },
   buyerDetails: {
@@ -899,24 +918,35 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   buyerName: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: MKColors.textPrimary,
-    marginRight: 6,
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#212121',
   },
-  buyerLocationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 2,
-  },
-  buyerDistText: {
-    fontSize: 11,
-    color: MKColors.textSecondary,
-    marginLeft: 4,
-  },
+
+  /* ── 4. Primary Action CTA ── */
   actionWrapper: {
     width: '100%',
     marginBottom: MKSpacing.md,
+  },
+  findOptionsBtn: {
+    width: '100%',
+    backgroundColor: '#1E6B2C',
+    borderRadius: 14,
+    paddingVertical: 15,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 4,
+    shadowColor: '#1E6B2C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+  },
+  findOptionsText: {
+    fontSize: 14,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
   },
 
   /* Modals */

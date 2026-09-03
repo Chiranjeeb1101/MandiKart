@@ -1,0 +1,22 @@
+{
+  "name": "@mandikart/shared-core",
+  "version": "1.0.0",
+  "description": "MandiKart Canonical Shared Core Services, State Machine Engine & Auth Middleware",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "lint": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@mandikart/shared-config": "*",
+    "@mandikart/shared-types": "*",
+    "@supabase/supabase-js": "^2.49.1",
+    "express": "^4.21.2"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.13.10",
+    "typescript": "^5.8.2"
+  }
+}

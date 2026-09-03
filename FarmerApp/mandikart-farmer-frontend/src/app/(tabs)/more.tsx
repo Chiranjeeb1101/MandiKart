@@ -9,6 +9,7 @@
 import React, { useCallback, useState } from 'react';
 import {
   Alert,
+  Image,
   Modal,
   Pressable,
   StyleSheet,
@@ -20,6 +21,7 @@ import Animated, { FadeInUp } from 'react-native-reanimated';
 import {
   Bell,
   CheckCircle2,
+  ChevronRight,
   CircleHelp,
   FileCheck,
   FileText,
@@ -42,6 +44,9 @@ import { MKColors } from '@/constants/colors';
 import { MKSpacing } from '@/constants/spacing';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
+
+const FARMER_PORTRAIT_URI =
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuAiELEs4N5nkjJBqO8sPu0g1g5ZqVaG8P5WZgk6rmG80Affw0Nx1q2hYjO-ieRtBbjx7f_i5dfTpYxRRVxw4J3kIlBu7xdBXrJHLWza8iq5QleXJQmP99QBYAZi38XXH3dpbuzO53N7EZLdvrTWCInMlO9Dbgj5S2zqNNq5So6TkmMaGTSKq3HZWrwSXVlNgHxNKajj0VqT8hmT4XOCKcZLlF70H2My-rvbEsL-x9DbBHGfIS7iQr_UjQ';
 
 const languageLabels: Record<string, string> = {
   en: 'English',
@@ -95,73 +100,42 @@ export default function MoreScreen() {
         </View>
       )}
 
-      {/* ── 2. Profile Card ── */}
+      {/* ── 2. Profile Hero Card (Stitch) ── */}
       <View style={styles.profileSectionWrapper}>
-        {profile && name ? (
-          <MKCard padding="lg">
-            <View style={styles.profileTop}>
-              <View style={styles.avatar}>
-                <User size={27} color={MKColors.primaryGreenDark} strokeWidth={2.1} />
-              </View>
-              <View style={styles.profileText}>
-                <Text numberOfLines={1} style={styles.profileName}>
-                  {name}
-                </Text>
-                {isVerified ? (
-                  <View style={styles.verifiedLine}>
-                    <CheckCircle2 size={14} color={MKColors.primaryGreen} fill={MKColors.primaryGreen} />
-                    <Text style={styles.verifiedText}>Verified Farmer</Text>
-                  </View>
-                ) : (
-                  <Text style={styles.pendingText}>Account verification pending</Text>
-                )}
-                {location ? (
-                  <View style={styles.locationLine}>
-                    <MapPin size={13} color={MKColors.textSecondary} />
-                    <Text numberOfLines={1} style={styles.locationText}>
-                      {location}
-                    </Text>
-                  </View>
-                ) : null}
-              </View>
-              <Pressable
-                accessibilityRole="button"
-                accessibilityLabel="Edit profile"
-                style={({ pressed }) => [
-                  styles.editButton,
-                  pressed && { transform: [{ scale: 0.90 }], opacity: 0.8 },
-                ]}
-                onPress={completeProfile}
-              >
-                <Pencil size={17} color={MKColors.primaryGreenDark} />
-              </Pressable>
-            </View>
-            <View style={styles.profileMeta}>
-              <Text style={styles.metaLabel}>Farmer account</Text>
-              <View style={styles.metaStatus}>
-                <CheckCircle2 size={12} color={MKColors.primaryGreen} />
-                <Text style={styles.metaStatusText}>
-                  {isVerified ? 'Verified' : 'Pending verification'}
+        <MKCard style={styles.stitchProfileCard}>
+          <View style={styles.profileTopRow}>
+            <Image
+              source={{ uri: FARMER_PORTRAIT_URI }}
+              style={styles.profileHeroImage}
+            />
+            <View style={styles.profileInfoCol}>
+              <Text numberOfLines={1} style={styles.profileNameText}>
+                {name || 'Ravi Kumar'}
+              </Text>
+              <View style={styles.profileLocationRow}>
+                <MapPin size={13} color="#6B7280" />
+                <Text numberOfLines={1} style={styles.profileLocationText}>
+                  {location || 'Nashik, Maharashtra'}
                 </Text>
               </View>
-            </View>
-          </MKCard>
-        ) : (
-          <MKCard padding="md" style={styles.incompleteCard}>
-            <View style={styles.incompleteRow}>
-              <View style={styles.incompleteIcon}>
-                <Sprout size={22} color={MKColors.primaryGreenDark} />
+              <View style={styles.profileCompleteBadge}>
+                <CheckCircle2 size={12} color="#1B6D24" fill="#E8F5E9" />
+                <Text style={styles.profileCompleteText}>Profile Complete</Text>
               </View>
-              <View style={styles.incompleteText}>
-                <Text style={styles.incompleteTitle}>Complete your profile</Text>
-                <Text style={styles.incompleteSub}>Add your farm details to get better selling opportunities.</Text>
-              </View>
-              <Pressable accessibilityRole="button" onPress={completeProfile}>
-                <Text style={styles.completeLink}>Complete</Text>
-              </Pressable>
             </View>
-          </MKCard>
-        )}
+          </View>
+
+          <Pressable
+            onPress={completeProfile}
+            style={({ pressed }) => [
+              styles.viewProfileRow,
+              pressed && { opacity: 0.75 },
+            ]}
+          >
+            <Text style={styles.viewProfileText}>View Profile</Text>
+            <ChevronRight size={18} color="#1B6D24" />
+          </Pressable>
+        </MKCard>
       </View>
 
       {/* ── 3. Section: Your Account ── */}
@@ -169,30 +143,28 @@ export default function MoreScreen() {
         <MKCard padding="none">
           <MKRow
             title="Profile"
-            subtitle="Personal information"
-            icon={<User size={20} color={MKColors.primaryGreenDark} strokeWidth={2.1} />}
-            iconBgColor="#EAF5EB"
+            icon={<User size={20} color="#964900" strokeWidth={2.1} />}
+            iconBgColor="#FFF3E5"
             onPress={() => router.push('/onboarding/farmer-profile')}
           />
           <MKRow
             title="Farm Details"
-            subtitle="Farm, land and location"
-            icon={<Sprout size={20} color={MKColors.primaryGreenDark} strokeWidth={2.1} />}
-            iconBgColor="#EAF5EB"
+            icon={<Sprout size={20} color="#964900" strokeWidth={2.1} />}
+            iconBgColor="#FFF3E5"
             onPress={() => router.push('/onboarding/farm-details')}
           />
           <MKRow
             title="Documents"
-            subtitle="Verification documents"
-            icon={<FileText size={20} color={MKColors.accentOrangeDark} strokeWidth={2.1} />}
+            icon={<FileText size={20} color="#964900" strokeWidth={2.1} />}
             iconBgColor="#FFF3E5"
+            rightText="2 of 3 verified"
             onPress={() => router.push('/more/documents')}
           />
           <MKRow
-            title="Bank & Payment Details"
-            subtitle="Manage payment information"
-            icon={<WalletCards size={20} color={MKColors.primaryGreenDark} strokeWidth={2.1} />}
-            iconBgColor="#EAF5EB"
+            title="Bank & Payment"
+            icon={<WalletCards size={20} color="#964900" strokeWidth={2.1} />}
+            iconBgColor="#FFF3E5"
+            rightText="•••• 4521"
             isLast
             onPress={() => router.push('/more/bank-details')}
           />
@@ -204,24 +176,22 @@ export default function MoreScreen() {
         <MKCard padding="none">
           <MKRow
             title="Notifications"
-            subtitle="Orders, payments and market updates"
-            icon={<Bell size={20} color={MKColors.accentOrangeDark} strokeWidth={2.1} />}
+            icon={<Bell size={20} color="#964900" strokeWidth={2.1} />}
             iconBgColor="#FFF3E5"
-            rightText="On"
+            rightText="3"
             onPress={() => router.push('/more/notifications')}
           />
           <MKRow
             title="Language"
-            subtitle={languageLabels[language] ?? 'English'}
-            icon={<Languages size={20} color={MKColors.primaryGreenDark} strokeWidth={2.1} />}
-            iconBgColor="#EAF5EB"
+            icon={<Languages size={20} color="#964900" strokeWidth={2.1} />}
+            iconBgColor="#FFF3E5"
+            rightText={languageLabels[language] ?? 'English'}
             onPress={() => router.push('/language-select')}
           />
           <MKRow
-            title="App Settings"
-            subtitle="App preferences and controls"
-            icon={<Settings size={20} color={MKColors.primaryGreenDark} strokeWidth={2.1} />}
-            iconBgColor="#EAF5EB"
+            title="Settings"
+            icon={<Settings size={20} color="#964900" strokeWidth={2.1} />}
+            iconBgColor="#FFF3E5"
             isLast
             onPress={() => router.push('/more/settings')}
           />
@@ -230,26 +200,44 @@ export default function MoreScreen() {
 
       {/* ── 5. Section: Help & Support ── */}
       <MKSection title="Help & Support">
+        {/* Stitch Help Callout Card */}
+        <View style={styles.helpCalloutCard}>
+          <View style={styles.helpIconCircle}>
+            <Headphones size={22} color="#1B6D24" />
+          </View>
+          <View style={styles.helpTextCol}>
+            <Text style={styles.helpCardTitle}>
+              Need help? Talk to us about orders, pickup or account
+            </Text>
+            <Pressable
+              onPress={() => router.push('/more/help-support')}
+              style={({ pressed }) => [
+                styles.getHelpBtn,
+                pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] },
+              ]}
+            >
+              <Text style={styles.getHelpBtnText}>Get Help</Text>
+            </Pressable>
+          </View>
+        </View>
+
         <MKCard padding="none">
           <MKRow
             title="Help Center"
-            subtitle="Find answers to common questions"
-            icon={<CircleHelp size={20} color={MKColors.primaryGreenDark} strokeWidth={2.1} />}
-            iconBgColor="#EAF5EB"
+            icon={<CircleHelp size={20} color="#564336" strokeWidth={2.1} />}
+            iconBgColor="#F3DED3"
             onPress={() => router.push('/more/help-support')}
           />
           <MKRow
             title="Contact Support"
-            subtitle="Talk to MandiKart support"
-            icon={<Headphones size={20} color={MKColors.primaryGreenDark} strokeWidth={2.1} />}
-            iconBgColor="#EAF5EB"
+            icon={<Headphones size={20} color="#564336" strokeWidth={2.1} />}
+            iconBgColor="#F3DED3"
             onPress={() => router.push('/more/help-support')}
           />
           <MKRow
             title="Report an Issue"
-            subtitle="Report a problem with the app"
-            icon={<Flag size={20} color={MKColors.accentOrangeDark} strokeWidth={2.1} />}
-            iconBgColor="#FFF3E5"
+            icon={<Flag size={20} color="#564336" strokeWidth={2.1} />}
+            iconBgColor="#F3DED3"
             isLast
             onPress={() => Alert.alert('Report an issue', 'Support reporting will be available here shortly.')}
           />
@@ -415,11 +403,126 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  /* ── Profile Section ── */
+  /* ── Profile Section (Stitch) ── */
   profileSectionWrapper: {
     width: '100%',
     marginBottom: MKSpacing.xl,
   },
+  stitchProfileCard: {
+    padding: 16,
+    borderRadius: 22,
+    borderWidth: 1.2,
+    borderColor: '#EFEAE0',
+    backgroundColor: '#FFFFFF',
+    elevation: 3,
+    shadowColor: '#1A1C1E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+  },
+  profileTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  profileHeroImage: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    marginRight: 14,
+  },
+  profileInfoCol: {
+    flex: 1,
+  },
+  profileNameText: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#212121',
+  },
+  profileLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 2,
+    marginBottom: 4,
+  },
+  profileLocationText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginLeft: 4,
+  },
+  profileCompleteBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    alignSelf: 'flex-start',
+  },
+  profileCompleteText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1B6D24',
+    marginLeft: 4,
+  },
+  viewProfileRow: {
+    borderTopWidth: 1,
+    borderTopColor: '#F0ECE4',
+    paddingTop: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  viewProfileText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1B6D24',
+  },
+
+  /* Stitch Help Callout Card */
+  helpCalloutCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF1EA',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1.2,
+    borderColor: '#FFDAD6',
+    marginBottom: MKSpacing.md,
+  },
+  helpIconCircle: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#E8F5E9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 12,
+  },
+  helpTextCol: {
+    flex: 1,
+  },
+  helpCardTitle: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#564336',
+    lineHeight: 17,
+    marginBottom: 8,
+  },
+  getHelpBtn: {
+    backgroundColor: '#964900',
+    borderRadius: 16,
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    alignSelf: 'flex-start',
+  },
+  getHelpBtnText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.3,
+  },
+
   profileTop: {
     flexDirection: 'row',
     alignItems: 'center',

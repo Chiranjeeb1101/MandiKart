@@ -1,9 +1,13 @@
 /**
  * MandiKart Farmer App — Screen 9: My Produce (Inventory Management)
  *
- * Built using MandiKart production layout primitives (MKScreen, MKSection, MKCard).
- * Standardized segmented tabs (Available / Listed / Sold) with equal flex distribution
- * so labels never collide across screen sizes or languages (Hindi/Marathi).
+ * Matches the official MandiKart design standard (Image 4):
+ * - Tractor header with warm brown title and subtitle
+ * - 3 separate white stat cards (AVAILABLE, LISTED, SOLD)
+ * - Solid dark green centered "+ ADD PRODUCE" banner
+ * - Rounded segmented filter tabs (Available, Listed, Sold)
+ * - Pill search bar with icon
+ * - Rich crop cards with soft peach Expected Price card and clean action footer
  */
 
 import React, { useState } from 'react';
@@ -17,13 +21,14 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
-  Sprout,
+  Tractor,
   Plus,
   Search,
   ArrowRight,
   Sparkles,
+  CheckCircle2,
 } from 'lucide-react-native';
-import { MKScreen, MKCard, MKStatusBadge } from '@/components/ui';
+import { MKScreen, MKCard } from '@/components/ui';
 import { MKColors } from '@/constants/colors';
 import { MKSpacing } from '@/constants/spacing';
 
@@ -50,101 +55,81 @@ export default function ProduceScreen() {
       <View style={styles.header}>
         <View style={styles.headerLeft}>
           <View style={styles.headerTitleRow}>
-            <Sprout size={22} color={MKColors.primaryGreen} strokeWidth={2.5} />
+            <Tractor size={24} color="#8D5018" strokeWidth={2.2} style={{ marginRight: 8 }} />
             <Text style={styles.headerTitle}>My Produce</Text>
           </View>
-          <Text style={styles.headerSubtitle}>Manage your available and sold crops</Text>
+          <Text style={styles.headerSubtitle}>Manage your available and sold produce</Text>
         </View>
 
         <Image source={{ uri: FARMER_AVATAR_URI }} style={styles.avatar} />
       </View>
 
-      {/* ── 2. Summary Strip (3 Equal Columns) ── */}
+      {/* ── 2. Summary Strip (3 Distinct Cards) ── */}
       <View style={styles.summaryStrip}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.summaryBox,
-            pressed && { transform: [{ scale: 0.94 }], opacity: 0.88 },
-          ]}
-        >
+        <View style={styles.summaryBox}>
           <Text style={styles.summaryLabel}>AVAILABLE</Text>
           <Text style={styles.summaryValue}>2,500 KG</Text>
-        </Pressable>
+        </View>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.summaryBox,
-            styles.summaryBoxMiddle,
-            pressed && { transform: [{ scale: 0.94 }], opacity: 0.88 },
-          ]}
-        >
+        <View style={styles.summaryBox}>
           <Text style={styles.summaryLabel}>LISTED</Text>
           <Text style={styles.summaryValue}>4</Text>
-        </Pressable>
+        </View>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.summaryBox,
-            pressed && { transform: [{ scale: 0.94 }], opacity: 0.88 },
-          ]}
-        >
+        <View style={styles.summaryBox}>
           <Text style={styles.summaryLabel}>SOLD</Text>
           <Text style={styles.summaryValue}>1,200 KG</Text>
-        </Pressable>
+        </View>
       </View>
 
-      {/* ── 3. Add Produce Primary Banner ── */}
+      {/* ── 3. Add Produce Primary Banner (Centered Green Card) ── */}
       <Pressable
         onPress={() => router.push('/(tabs)/sell')}
         style={({ pressed }) => [
           styles.addProduceBanner,
-          pressed && { transform: [{ scale: 0.97 }], opacity: 0.92 },
+          pressed && { transform: [{ scale: 0.98 }], opacity: 0.92 },
         ]}
       >
-        <View style={styles.bannerLeftRow}>
-          <View style={styles.plusIconBadge}>
-            <Plus size={22} color={MKColors.primaryGreen} strokeWidth={3} />
+        <View style={styles.bannerCenterContent}>
+          <View style={styles.bannerTitleRow}>
+            <Plus size={20} color="#FFFFFF" strokeWidth={3.5} style={{ marginRight: 6 }} />
+            <Text style={styles.addProduceTitle}>ADD PRODUCE</Text>
           </View>
-          <View style={styles.bannerTextCol}>
-            <Text style={styles.addProduceTitle}>+ ADD PRODUCE</Text>
-            <Text style={styles.addProduceSubtext}>List your crop & find verified buyers</Text>
-          </View>
-        </View>
-
-        <View style={styles.bannerArrowBadge}>
-          <ArrowRight size={18} color="#FFFFFF" strokeWidth={2.5} />
+          <Text style={styles.addProduceSubtext}>List your crop and find buyers</Text>
         </View>
       </Pressable>
 
-      {/* ── 4. Segmented Filter Tabs (Guaranteed Non-Colliding equal flex distribution) ── */}
+      {/* ── 4. Segmented Filter Tabs (Warm Cream Pill Container) ── */}
       <View style={styles.tabsContainer}>
-        {(['Available', 'Listed', 'Sold'] as FilterTab[]).map((tab, idx) => (
-          <Pressable
-            key={tab}
-            onPress={() => setActiveTab(tab)}
-            style={({ pressed }) => [
-              styles.tabBtn,
-              idx > 0 && styles.tabBtnMargin,
-              activeTab === tab && styles.tabBtnActive,
-              pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] },
-            ]}
-          >
-            <Text
-              numberOfLines={1}
-              style={[styles.tabText, activeTab === tab && styles.tabTextActive]}
+        {(['Available', 'Listed', 'Sold'] as FilterTab[]).map((tab) => {
+          const isActive = activeTab === tab;
+          return (
+            <Pressable
+              key={tab}
+              onPress={() => setActiveTab(tab)}
+              style={({ pressed }) => [
+                styles.tabBtn,
+                isActive && styles.tabBtnActive,
+                pressed && { opacity: 0.85 },
+              ]}
             >
-              {tab}
-            </Text>
-          </Pressable>
-        ))}
+              <Text
+                numberOfLines={1}
+                style={[styles.tabText, isActive && styles.tabTextActive]}
+              >
+                {tab}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
-      {/* ── 5. Search Field ── */}
+      {/* ── 5. Search Bar ── */}
       <View style={styles.searchContainer}>
         <Search size={18} color="#7A7A7A" style={styles.searchIcon} />
         <TextInput
           style={styles.searchInput}
-          placeholder="Search your produce..."
+          placeholder="Search your produce"
           placeholderTextColor="#9AA0A6"
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -162,31 +147,29 @@ export default function ProduceScreen() {
                 <Text numberOfLines={1} style={styles.produceName}>
                   Onion • Grade A
                 </Text>
-                <View style={styles.badgeWrapper}>
-                  <MKStatusBadge label="94% Match" type="match" size="sm" />
+                <View style={styles.matchBadge}>
+                  <CheckCircle2 size={13} color="#1E6B2C" />
+                  <Text style={styles.matchBadgeText}>94% Match</Text>
                 </View>
               </View>
               <Text numberOfLines={1} style={styles.produceSpecs}>
-                1,000 KG Available | Harvest: 15 Sep
+                1,000 KG Available | Avail: 15 Sep 2026
               </Text>
-              <View style={styles.badgeWrapper}>
-                <Text style={styles.statusPill}>LISTED</Text>
+              <View style={styles.listedBadgeWrapper}>
+                <Text style={styles.listedBadgeText}>LISTED</Text>
               </View>
             </View>
           </View>
 
-          {/* Expected Price & Buyers Info */}
+          {/* Expected Price & Buyers Info (Soft Peach Box) */}
           <View style={styles.priceRow}>
             <View>
               <Text style={styles.priceLabel}>Expected Price</Text>
               <Text style={styles.priceValue}>
-                ₹24 <Text style={styles.priceUnit}>/kg</Text>
+                ₹24<Text style={styles.priceUnit}>/kg</Text>
               </Text>
             </View>
-            <View style={styles.buyersFoundBadge}>
-              <Sparkles size={14} color={MKColors.primaryGreen} />
-              <Text style={styles.buyersFoundText}>3 buyers found</Text>
-            </View>
+            <Text style={styles.buyersFoundText}>3 buyers found</Text>
           </View>
 
           {/* Action Bottom */}
@@ -199,7 +182,7 @@ export default function ProduceScreen() {
               ]}
             >
               <Text style={styles.viewOptionsText}>VIEW BEST OPTIONS</Text>
-              <ArrowRight size={16} color={MKColors.primaryGreen} strokeWidth={2.5} />
+              <ArrowRight size={15} color="#1E6B2C" strokeWidth={2.5} style={{ marginLeft: 4 }} />
             </Pressable>
 
             <Pressable style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
@@ -217,16 +200,22 @@ export default function ProduceScreen() {
                 Wheat • Grade A
               </Text>
               <Text style={styles.produceSpecs}>500 KG Available</Text>
+            </View>
+          </View>
 
-              <View style={styles.progressContainer}>
-                <View style={styles.progressHeader}>
-                  <Text style={styles.progressLabel}>PARTIALLY SOLD</Text>
-                  <Text style={styles.progressPercent}>60%</Text>
-                </View>
-                <View style={styles.progressBarTrack}>
-                  <View style={[styles.progressBarFill, { width: '60%' }]} />
-                </View>
+          {/* Wheat Progress & Sold Status Box */}
+          <View style={styles.priceRow}>
+            <View style={{ flex: 1, marginRight: 12 }}>
+              <View style={styles.progressHeader}>
+                <Text style={styles.progressLabel}>PARTIALLY SOLD</Text>
+                <Text style={styles.progressPercent}>60% (300 KG)</Text>
               </View>
+              <View style={styles.progressBarTrack}>
+                <View style={[styles.progressBarFill, { width: '60%' }]} />
+              </View>
+            </View>
+            <View style={styles.wheatBadge}>
+              <Text style={styles.wheatBadgeText}>1 Active Truck</Text>
             </View>
           </View>
 
@@ -240,7 +229,7 @@ export default function ProduceScreen() {
               ]}
             >
               <Text style={styles.viewOptionsText}>VIEW ORDER</Text>
-              <ArrowRight size={16} color={MKColors.primaryGreen} strokeWidth={2.5} />
+              <ArrowRight size={15} color="#1E6B2C" strokeWidth={2.5} style={{ marginLeft: 4 }} />
             </Pressable>
 
             <Pressable style={({ pressed }) => [pressed && { opacity: 0.6 }]}>
@@ -254,7 +243,7 @@ export default function ProduceScreen() {
 }
 
 const styles = StyleSheet.create({
-  /* ── Header ── */
+  /* ── 1. Header ── */
   header: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -264,23 +253,23 @@ const styles = StyleSheet.create({
   },
   headerLeft: {
     flex: 1,
-    marginRight: MKSpacing.md,
+    minWidth: 0,
   },
   headerTitleRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    marginBottom: 4,
   },
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: MKColors.textPrimary,
+    color: '#8D5018',
     letterSpacing: -0.4,
-    marginLeft: MKSpacing.sm,
   },
   headerSubtitle: {
     fontSize: 13,
-    color: MKColors.textSecondary,
-    marginTop: 2,
+    color: '#7C6E61',
+    fontWeight: '500',
   },
   avatar: {
     width: 44,
@@ -288,78 +277,73 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     borderWidth: 2,
     borderColor: '#FFFFFF',
-    elevation: 2,
+    marginLeft: MKSpacing.md,
     flexShrink: 0,
   },
 
-  /* ── Summary Strip (3 Equal Columns) ── */
+  /* ── 2. Summary Strip (3 Distinct Cards) ── */
   summaryStrip: {
     flexDirection: 'row',
     width: '100%',
+    gap: 10,
     marginBottom: MKSpacing.lg,
   },
   summaryBox: {
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
     alignItems: 'center',
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: '#F0ECE4',
+    justifyContent: 'center',
+    elevation: 3,
+    shadowColor: '#1A1C1E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 6,
+    borderWidth: 1.2,
+    borderColor: '#EFE7DC',
     minWidth: 0,
-  },
-  summaryBoxMiddle: {
-    marginHorizontal: MKSpacing.sm,
   },
   summaryLabel: {
     fontSize: 10,
-    fontWeight: '700',
-    color: MKColors.textSecondary,
+    fontWeight: '800',
+    color: '#8B5E3C',
     letterSpacing: 0.5,
     marginBottom: 4,
   },
   summaryValue: {
     fontSize: 15,
-    fontWeight: '800',
-    color: MKColors.primaryGreen,
+    fontWeight: '900',
+    color: '#8B4513',
   },
 
-  /* ── Add Produce Banner ── */
+  /* ── 3. Add Produce Primary Banner (Centered) ── */
   addProduceBanner: {
     width: '100%',
-    backgroundColor: MKColors.primaryGreen,
-    borderRadius: 20,
-    padding: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    elevation: 5,
-    borderWidth: 1,
-    borderColor: '#2B7038',
-    marginBottom: MKSpacing.lg,
-  },
-  bannerLeftRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    marginRight: MKSpacing.sm,
-    minWidth: 0,
-  },
-  plusIconBadge: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#1E6B2C',
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    elevation: 3,
-    marginRight: MKSpacing.md,
-    flexShrink: 0,
+    elevation: 4,
+    shadowColor: '#1E6B2C',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    borderWidth: 1,
+    borderColor: '#175522',
+    marginBottom: MKSpacing.lg,
   },
-  bannerTextCol: {
-    flex: 1,
-    minWidth: 0,
+  bannerCenterContent: {
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  bannerTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 3,
   },
   addProduceTitle: {
     fontSize: 16,
@@ -370,207 +354,193 @@ const styles = StyleSheet.create({
   addProduceSubtext: {
     fontSize: 12,
     color: '#E8F5E9',
-    marginTop: 2,
     fontWeight: '500',
   },
-  bannerArrowBadge: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
-    flexShrink: 0,
-  },
 
-  /* ── Segmented Filter Tabs ── */
+  /* ── 4. Segmented Filter Tabs (Warm Cream Container) ── */
   tabsContainer: {
     flexDirection: 'row',
     width: '100%',
-    backgroundColor: '#EAE6DC',
+    backgroundColor: '#F3EDE4',
     borderRadius: 14,
     padding: 4,
+    gap: 4,
     marginBottom: MKSpacing.md,
   },
   tabBtn: {
     flex: 1,
-    paddingVertical: 10,
-    paddingHorizontal: 4,
+    paddingVertical: 9,
+    paddingHorizontal: 6,
     alignItems: 'center',
     justifyContent: 'center',
     borderRadius: 10,
     minWidth: 0,
   },
-  tabBtnMargin: {
-    marginLeft: MKSpacing.xs,
-  },
   tabBtnActive: {
     backgroundColor: '#FFFFFF',
-    elevation: 3,
+    elevation: 2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
   },
   tabText: {
     fontSize: 13,
     fontWeight: '600',
-    color: MKColors.textSecondary,
+    color: '#7C6E61',
     textAlign: 'center',
   },
   tabTextActive: {
-    color: MKColors.primaryGreen,
+    color: '#212121',
     fontWeight: '800',
   },
 
-  /* ── Search Bar ── */
+  /* ── 5. Search Bar (Pill Shape) ── */
   searchContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    width: '100%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E8E4DA',
-    paddingHorizontal: 14,
-    height: 48,
-    elevation: 1,
+    borderRadius: 24,
+    borderWidth: 1.2,
+    borderColor: '#E8E2D8',
+    paddingHorizontal: 16,
+    height: 46,
     marginBottom: MKSpacing.lg,
+    elevation: 1,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 3,
+    width: '100%',
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: 10,
   },
   searchInput: {
     flex: 1,
-    fontSize: 14,
-    color: MKColors.textPrimary,
-    fontWeight: '500',
+    fontSize: 13,
+    color: '#212121',
+    paddingVertical: 0,
   },
 
-  /* ── Produce Cards List ── */
+  /* ── 6. Produce List & Cards ── */
   produceList: {
     width: '100%',
   },
   produceCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    borderWidth: 1.2,
+    borderColor: '#EFEAE0',
+    padding: 16,
     marginBottom: MKSpacing.md,
+    elevation: 3,
+    shadowColor: '#1A1C1E',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
   },
   produceRowTop: {
     flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
     width: '100%',
-    marginBottom: MKSpacing.md,
   },
   produceThumb: {
-    width: 76,
-    height: 76,
+    width: 64,
+    height: 64,
     borderRadius: 14,
-    marginRight: MKSpacing.md,
+    marginRight: 14,
+    backgroundColor: '#FAF9F6',
     flexShrink: 0,
   },
   produceDetails: {
     flex: 1,
-    justifyContent: 'center',
     minWidth: 0,
   },
   produceTitleRow: {
     flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 2,
-    width: '100%',
+    marginBottom: 3,
   },
   produceName: {
-    fontSize: 15,
-    fontWeight: '700',
-    color: MKColors.textPrimary,
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#212121',
     flex: 1,
     marginRight: 6,
   },
+  matchBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  matchBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1E6B2C',
+    marginLeft: 4,
+  },
   produceSpecs: {
     fontSize: 12,
-    color: MKColors.textSecondary,
+    color: '#757575',
+    fontWeight: '500',
     marginBottom: 6,
   },
-  badgeWrapper: {
-    flexShrink: 0,
-  },
-  statusPill: {
+  listedBadgeWrapper: {
     alignSelf: 'flex-start',
+  },
+  listedBadgeText: {
     fontSize: 10,
     fontWeight: '800',
-    color: MKColors.primaryGreen,
+    color: '#2E7D32',
     backgroundColor: '#E8F5E9',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
+    letterSpacing: 0.5,
   },
+
+  /* Price Row (Soft Warm Peach) */
   priceRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#FAF9F6',
+    backgroundColor: '#FFF5ED',
     borderRadius: 12,
-    padding: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
     borderWidth: 1,
-    borderColor: '#E8E4DA',
-    marginBottom: MKSpacing.md,
+    borderColor: '#F8E7D8',
+    marginBottom: 14,
     width: '100%',
   },
   priceLabel: {
-    fontSize: 10,
-    color: '#7A7A7A',
+    fontSize: 11,
+    color: '#8D6E63',
     marginBottom: 1,
   },
   priceValue: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: MKColors.primaryGreen,
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#A0522D',
   },
   priceUnit: {
-    fontSize: 12,
-    color: MKColors.textSecondary,
-    fontWeight: '500',
-  },
-  buyersFoundBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E8F5E9',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#8D6E63',
   },
   buyersFoundText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: MKColors.primaryGreen,
-    marginLeft: 4,
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#5D4037',
   },
-  cardActionRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    borderTopWidth: 1,
-    borderTopColor: '#F0ECE4',
-    paddingTop: 10,
-    width: '100%',
-  },
-  viewOptionsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  viewOptionsText: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: MKColors.primaryGreen,
-    letterSpacing: 0.3,
-    marginRight: 4,
-  },
-  editText: {
-    fontSize: 12,
-    color: MKColors.textSecondary,
-    textDecorationLine: 'underline',
-  },
-  progressContainer: {
-    marginTop: 4,
-    width: '100%',
-  },
+
+  /* Wheat specifics */
   progressHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -584,7 +554,7 @@ const styles = StyleSheet.create({
   progressPercent: {
     fontSize: 10,
     fontWeight: '700',
-    color: MKColors.textSecondary,
+    color: '#757575',
   },
   progressBarTrack: {
     width: '100%',
@@ -597,5 +567,43 @@ const styles = StyleSheet.create({
     height: '100%',
     backgroundColor: MKColors.accentOrange,
     borderRadius: 3,
+  },
+  wheatBadge: {
+    backgroundColor: '#FFF3E0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  wheatBadgeText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#E65100',
+  },
+
+  /* Action Row */
+  cardActionRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#F5EFE6',
+    paddingTop: 10,
+    width: '100%',
+  },
+  viewOptionsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  viewOptionsText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#1E6B2C',
+    letterSpacing: 0.5,
+  },
+  editText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#5D4037',
+    textDecorationLine: 'underline',
   },
 });

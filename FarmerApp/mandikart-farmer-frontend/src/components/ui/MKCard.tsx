@@ -43,21 +43,23 @@ export const MKCard: React.FC<MKCardProps> = ({
     padding: getPadding(),
     ...(variant === 'elevated' || variant === 'interactive'
       ? {
-          shadowColor: '#000000',
-          shadowOffset: { width: 0, height: 6 },
-          shadowOpacity: 0.05,
-          shadowRadius: 16,
-          elevation: 3,
-          borderWidth: 1,
-          borderColor: '#F0ECE4',
+          shadowColor: '#1A1C1E',
+          shadowOffset: { width: 0, height: 4 },
+          shadowOpacity: 0.09,
+          shadowRadius: 12,
+          elevation: 4,
+          borderWidth: 1.2,
+          borderColor: '#E5DFD5',
         }
       : variant === 'outline'
       ? {
           borderWidth: 1.5,
-          borderColor: '#E8E4DA',
+          borderColor: '#DDD6CA',
         }
       : {
-          backgroundColor: '#F5F5F0',
+          backgroundColor: '#FFFFFF',
+          borderWidth: 1,
+          borderColor: '#EAE5DB',
         }),
   };
 

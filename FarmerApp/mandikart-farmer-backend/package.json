@@ -13,6 +13,9 @@
   "author": "MandiKart Team",
   "license": "ISC",
   "dependencies": {
+    "@mandikart/shared-config": "*",
+    "@mandikart/shared-core": "*",
+    "@mandikart/shared-types": "*",
     "@supabase/supabase-js": "^2.49.1",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",

@@ -1,0 +1,28 @@
+{
+  "name": "mandikart-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "description": "MandiKart Multi-Surface Digital Agriculture Marketplace Monorepo",
+  "workspaces": [
+    "packages/*",
+    "FarmerApp/mandikart-farmer-backend",
+    "UserApp/backend",
+    "Logistic/backend",
+    "Admin/backend"
+  ],
+  "scripts": {
+    "build": "npm run build --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "test": "npm run test --workspaces --if-present",
+    "dev:farmer": "npm --workspace=FarmerApp/mandikart-farmer-backend run dev"
+  },
+  "keywords": [
+    "agriculture",
+    "marketplace",
+    "farmer",
+    "monorepo",
+    "supabase"
+  ],
+  "author": "MandiKart Engineering Team",
+  "license": "ISC"
+}

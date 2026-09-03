@@ -175,6 +175,13 @@ export default function LoginScreen() {
               <Text style={styles.footerLink}>Sign Up</Text>
             </Pressable>
           </View>
+
+          {/* Terms & Privacy Link */}
+          <Pressable onPress={() => router.push('/more/terms-privacy')} style={{ marginTop: 14, alignItems: 'center' }}>
+            <Text style={{ fontSize: 12, color: '#1E5A2A', textDecorationLine: 'underline', fontWeight: '600' }}>
+              MandiKart Terms & Privacy Charter ↗
+            </Text>
+          </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
     </MKBackground>

@@ -13,6 +13,7 @@ import {
   Image,
   Pressable,
 } from 'react-native';
+import { useRouter } from 'expo-router';
 import {
   Truck,
   CheckCircle2,
@@ -21,6 +22,8 @@ import {
   Check,
   Building2,
   SlidersHorizontal,
+  Bell,
+  Sprout,
 } from 'lucide-react-native';
 import { MKScreen, MKCard, MKStatusBadge } from '@/components/ui';
 import { MKColors } from '@/constants/colors';
@@ -32,27 +35,42 @@ const ONION_CROP_URI =
 type OrderTab = 'All' | 'Pending' | 'Active' | 'Completed';
 
 export default function OrdersScreen() {
+  const router = useRouter();
   const [selectedTab, setSelectedTab] = useState<OrderTab>('Active');
 
   return (
     <MKScreen>
-      {/* ── 1. Header ── */}
+      {/* ── 1. Header (Stitch) ── */}
       <View style={styles.header}>
         <View style={styles.headerTextCol}>
           <Text style={styles.headerTitle}>My Orders</Text>
           <Text style={styles.headerSubtitle}>Track your sales, pickups and deliveries</Text>
         </View>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.filterBtn,
-            pressed && { transform: [{ scale: 0.90 }], opacity: 0.85 },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="Filter"
-        >
-          <SlidersHorizontal size={18} color={MKColors.textSecondary} />
-        </Pressable>
+        <View style={styles.headerRightButtons}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.circleBtn,
+              pressed && { transform: [{ scale: 0.90 }], opacity: 0.85 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Notifications"
+            onPress={() => router.push('/more/notifications')}
+          >
+            <Bell size={18} color="#564336" strokeWidth={2} />
+          </Pressable>
+
+          <Pressable
+            style={({ pressed }) => [
+              styles.circleBtn,
+              pressed && { transform: [{ scale: 0.90 }], opacity: 0.85 },
+            ]}
+            accessibilityRole="button"
+            accessibilityLabel="Filter"
+          >
+            <SlidersHorizontal size={18} color="#564336" strokeWidth={2} />
+          </Pressable>
+        </View>
       </View>
 
       {/* ── 2. Order Summary Strip (3 Equal Columns) ── */}
@@ -65,7 +83,7 @@ export default function OrdersScreen() {
             pressed && { transform: [{ scale: 0.94 }], opacity: 0.88 },
           ]}
         >
-          <Text style={[styles.summaryCount, { color: MKColors.primaryGreen }]}>2</Text>
+          <Text style={[styles.summaryCount, { color: '#1B6D24' }]}>2</Text>
           <Text style={styles.summaryLabel}>ACTIVE</Text>
         </Pressable>
 
@@ -73,12 +91,11 @@ export default function OrdersScreen() {
           onPress={() => setSelectedTab('Pending')}
           style={({ pressed }) => [
             styles.summaryBox,
-            styles.summaryBoxMiddle,
             selectedTab === 'Pending' && styles.summaryBoxActive,
             pressed && { transform: [{ scale: 0.94 }], opacity: 0.88 },
           ]}
         >
-          <Text style={[styles.summaryCount, { color: MKColors.accentOrange }]}>1</Text>
+          <Text style={[styles.summaryCount, { color: '#F39C12' }]}>1</Text>
           <Text style={styles.summaryLabel}>PENDING</Text>
         </Pressable>
 
@@ -95,15 +112,14 @@ export default function OrdersScreen() {
         </Pressable>
       </View>
 
-      {/* ── 3. Segmented Filter Pills (Equal Flex Distribution) ── */}
+      {/* ── 3. Segmented Filter Pills ── */}
       <View style={styles.filterTabsRow}>
-        {(['All', 'Pending', 'Active', 'Completed'] as OrderTab[]).map((tab, idx) => (
+        {(['All', 'Pending', 'Active', 'Completed'] as OrderTab[]).map((tab) => (
           <Pressable
             key={tab}
             onPress={() => setSelectedTab(tab)}
             style={({ pressed }) => [
               styles.filterPill,
-              idx > 0 && styles.filterPillMargin,
               selectedTab === tab && styles.filterPillActive,
               pressed && { opacity: 0.8, transform: [{ scale: 0.95 }] },
             ]}
@@ -121,108 +137,168 @@ export default function OrdersScreen() {
         ))}
       </View>
 
-      {/* ── 4. Orders List ── */}
+      {/* ── 4. Orders List (Stitch) ── */}
       <View style={styles.ordersList}>
         {/* Active Order Card */}
         {(selectedTab === 'All' || selectedTab === 'Active') && (
           <MKCard style={styles.orderCard}>
-            <View style={styles.orderTopHeader}>
-              <View style={styles.orderTopHeaderLeft}>
-                <View style={styles.badgeRow}>
-                  <MKStatusBadge
-                    label="ACTIVE ORDER"
-                    type="success"
-                    icon={<Truck size={12} color={MKColors.primaryGreen} />}
-                    size="sm"
-                  />
-                </View>
-                <Text style={styles.orderNumber}>Order #MK1024</Text>
-                <View style={styles.buyerRow}>
-                  <Text style={styles.buyerName}>ABC Foods</Text>
-                  <Text style={styles.dotSeparator}>•</Text>
-                  <CheckCircle2 size={13} color={MKColors.primaryGreen} />
-                  <Text style={styles.verifiedText}>Verified Buyer</Text>
-                </View>
+            {/* Top Row: Badge left, Value right */}
+            <View style={styles.orderCardTopRow}>
+              <View style={styles.activeBadgePill}>
+                <Truck size={13} color="#1B6D24" style={{ marginRight: 4 }} />
+                <Text style={styles.activeBadgeText}>ACTIVE ORDER</Text>
               </View>
 
-              <Image source={{ uri: ONION_CROP_URI }} style={styles.cropThumb} />
+              <View style={styles.orderValueCol}>
+                <Text style={styles.orderValueAmount}>₹24,000</Text>
+                <Text style={styles.orderValueLabel}>Order Value</Text>
+              </View>
             </View>
 
-            {/* Item Details */}
+            {/* Order Title & Buyer */}
+            <View style={styles.orderTitleSection}>
+              <Text style={styles.orderNumber}>Order #MK1024</Text>
+              <View style={styles.buyerRow}>
+                <Text style={styles.buyerName}>ABC Foods</Text>
+                <CheckCircle2 size={14} color="#1B6D24" fill="#DCFCE7" style={{ marginLeft: 4 }} />
+              </View>
+            </View>
+
+            {/* Item Details Box (Peach card with round thumbnail) */}
             <View style={styles.itemDetailsBox}>
-              <Text style={styles.itemTitle}>Onion (Grade A)</Text>
-              <Text style={styles.itemSubtext}>1,000 KG @ ₹24.00/KG</Text>
-              <Text style={styles.itemTotal}>Total Amount: ₹24,000</Text>
+              <Image source={{ uri: ONION_CROP_URI }} style={styles.cropThumb} />
+              <View style={styles.itemTextCol}>
+                <Text style={styles.itemTitle}>Onion • Grade A</Text>
+                <Text style={styles.itemSubtext}>1,000 KG</Text>
+              </View>
             </View>
 
-            {/* Timeline */}
+            {/* Logistics Status Stepper */}
             <View style={styles.timelineBox}>
-              <Text style={styles.timelineTitle}>LOGISTICS STATUS</Text>
-              <View style={styles.timelineSteps}>
-                <View style={styles.stepItem}>
-                  <View style={[styles.stepDot, styles.stepDotDone]}>
-                    <Check size={10} color="#FFFFFF" strokeWidth={3} />
+              <View style={styles.pickupScheduledHeader}>
+                <View style={styles.greenLiveDot} />
+                <Text style={styles.pickupScheduledTitle}>
+                  Pickup Scheduled (15 September, 10:00 AM)
+                </Text>
+              </View>
+
+              {/* Vertical 4-Step Stepper */}
+              <View style={styles.stepperContainer}>
+                {/* Step 1: Done */}
+                <View style={styles.stepRow}>
+                  <View style={styles.stepIndicatorCol}>
+                    <View style={styles.stepCircleDone}>
+                      <Check size={11} color="#FFFFFF" strokeWidth={3} />
+                    </View>
+                    <View style={styles.stepConnectorLineDone} />
                   </View>
-                  <Text style={styles.stepLabelDone}>Order Accepted</Text>
+                  <Text style={styles.stepLabelDone}>Order Confirmed</Text>
                 </View>
-                <View style={[styles.stepLine, styles.stepLineDone]} />
-                <View style={styles.stepItem}>
-                  <View style={[styles.stepDot, styles.stepDotActive]}>
-                    <Truck size={10} color="#FFFFFF" />
+
+                {/* Step 2: Done */}
+                <View style={styles.stepRow}>
+                  <View style={styles.stepIndicatorCol}>
+                    <View style={styles.stepCircleDone}>
+                      <Check size={11} color="#FFFFFF" strokeWidth={3} />
+                    </View>
+                    <View style={styles.stepConnectorLineDone} />
                   </View>
-                  <Text style={styles.stepLabelActive}>Pickup Scheduled</Text>
+                  <Text style={styles.stepLabelDone}>Pickup Scheduled</Text>
                 </View>
-                <View style={styles.stepLine} />
-                <View style={styles.stepItem}>
-                  <View style={styles.stepDot} />
-                  <Text style={styles.stepLabel}>Delivered & Escrow</Text>
+
+                {/* Step 3: Current (Orange Ring) */}
+                <View style={styles.stepRow}>
+                  <View style={styles.stepIndicatorCol}>
+                    <View style={styles.stepCircleCurrent}>
+                      <View style={styles.stepDotInner} />
+                    </View>
+                    <View style={styles.stepConnectorLinePending} />
+                  </View>
+                  <Text style={styles.stepLabelCurrent}>Pickup Today</Text>
+                </View>
+
+                {/* Step 4: Pending */}
+                <View style={styles.stepRow}>
+                  <View style={styles.stepIndicatorCol}>
+                    <View style={styles.stepCirclePending} />
+                  </View>
+                  <Text style={styles.stepLabelPending}>Delivered</Text>
                 </View>
               </View>
 
-              <View style={styles.pickupDetailBanner}>
-                <Calendar size={14} color={MKColors.primaryGreen} />
-                <Text style={styles.pickupDetailText}>
-                  Pickup: Tomorrow, 10:00 AM by MandiKart Logistics
-                </Text>
+              {/* Pickup Details Box */}
+              <View style={styles.pickupDetailsCard}>
+                <View style={styles.pickupHeaderRow}>
+                  <Calendar size={14} color="#564336" style={{ marginRight: 6 }} />
+                  <Text style={styles.pickupHeaderText}>Pickup Details</Text>
+                </View>
+                <View style={styles.pickupInfoGrid}>
+                  <View style={styles.pickupInfoCol}>
+                    <Text style={styles.pickupInfoLabel}>Date</Text>
+                    <Text style={styles.pickupInfoVal}>15 Sept 2026</Text>
+                  </View>
+                  <View style={styles.pickupInfoCol}>
+                    <Text style={styles.pickupInfoLabel}>Time</Text>
+                    <Text style={styles.pickupInfoVal}>10:00 AM - 12:00 PM</Text>
+                  </View>
+                </View>
+                <View style={{ marginTop: 8 }}>
+                  <Text style={styles.pickupInfoLabel}>Location</Text>
+                  <Text style={styles.pickupInfoVal}>Nashik, Maharashtra</Text>
+                </View>
               </View>
             </View>
           </MKCard>
         )}
 
-        {/* Pending Request Card */}
+        {/* Pending Request Card (Stitch) */}
         {(selectedTab === 'All' || selectedTab === 'Pending') && (
           <MKCard style={styles.orderCard}>
-            <View style={styles.orderTopHeader}>
-              <View style={styles.orderTopHeaderLeft}>
-                <View style={styles.badgeRow}>
-                  <MKStatusBadge
-                    label="BUYER REQUEST"
-                    type="warning"
-                    icon={<Clock size={12} color={MKColors.accentOrange} />}
-                    size="sm"
-                  />
-                </View>
-                <Text style={styles.orderNumber}>Request #REQ809</Text>
-                <View style={styles.buyerRow}>
-                  <Building2 size={14} color={MKColors.textSecondary} />
-                  <Text style={styles.buyerNameText}>FreshPro Processing Ltd</Text>
-                </View>
+            <View style={styles.orderCardTopRow}>
+              <View style={styles.pendingBadgePill}>
+                <Clock size={12} color="#D9531E" style={{ marginRight: 4 }} />
+                <Text style={styles.pendingBadgeText}>PENDING REQUEST</Text>
+              </View>
+
+              <View style={styles.orderValueCol}>
+                <Text style={styles.orderValueAmount}>
+                  ₹24<Text style={{ fontSize: 13, fontWeight: '500', color: '#757575' }}>/kg</Text>
+                </Text>
+                <Text style={styles.orderValueLabel}>Proposed Price</Text>
               </View>
             </View>
 
-            <View style={styles.itemDetailsBox}>
-              <Text style={styles.itemTitle}>Tomato (Grade B)</Text>
-              <Text style={styles.itemSubtext}>500 KG Offer @ ₹30.00/KG</Text>
+            <View style={styles.orderTitleSection}>
+              <Text style={styles.buyerNameLarge}>ABC Foods</Text>
             </View>
 
-            <View style={styles.pendingActionRow}>
-              <Pressable style={styles.declineBtn}>
-                <Text style={styles.declineBtnText}>Decline</Text>
-              </Pressable>
+            {/* Crop Info */}
+            <View style={styles.pendingCropRow}>
+              <View style={styles.sproutCircle}>
+                <Sprout size={18} color="#964900" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.itemTitle}>Onion • 1,000 KG • Grade A</Text>
+                <Text style={styles.itemSubtext}>Est. Net: ₹21,500</Text>
+              </View>
+            </View>
 
-              <Pressable style={styles.acceptBtn}>
-                <Text style={styles.acceptBtnText}>Accept Offer (₹15,000)</Text>
-              </Pressable>
+            {/* Waiting Status Banner */}
+            <View style={styles.waitingBanner}>
+              <Clock size={14} color="#D9531E" style={{ marginRight: 6 }} />
+              <Text style={styles.waitingBannerText}>Waiting for Buyer Response</Text>
+            </View>
+          </MKCard>
+        )}
+
+        {/* Completed Order Card (Stitch) */}
+        {(selectedTab === 'All' || selectedTab === 'Completed') && (
+          <MKCard style={styles.orderCard}>
+            <View style={styles.completedHeaderRow}>
+              <Text style={styles.orderNumber}>Order #MK1008</Text>
+              <View style={styles.completedBadgePill}>
+                <Text style={styles.completedBadgeText}>COMPLETED</Text>
+              </View>
             </View>
           </MKCard>
         )}
@@ -247,95 +323,104 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: MKColors.textPrimary,
+    color: '#964900',
     letterSpacing: -0.4,
   },
   headerSubtitle: {
-    fontSize: 13,
-    color: MKColors.textSecondary,
+    fontSize: 12,
+    color: '#6B7280',
     marginTop: 2,
   },
-  filterBtn: {
+  headerRightButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  circleBtn: {
     width: 40,
     height: 40,
     borderRadius: 20,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
-    borderColor: '#E8E4DA',
-    elevation: 1,
-    flexShrink: 0,
+    borderWidth: 1.2,
+    borderColor: '#EFEAE0',
+    elevation: 2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
 
   /* ── Summary Strip (3 Equal Columns) ── */
   summaryStrip: {
     flexDirection: 'row',
     width: '100%',
+    gap: 10,
     marginBottom: MKSpacing.lg,
   },
   summaryBox: {
     flex: 1,
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 12,
+    paddingVertical: 14,
+    paddingHorizontal: 8,
     alignItems: 'center',
-    elevation: 2,
-    borderWidth: 1,
-    borderColor: '#F0ECE4',
+    justifyContent: 'center',
+    elevation: 3,
+    shadowColor: '#1A1C1E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    borderWidth: 1.2,
+    borderColor: '#EFEAE0',
     minWidth: 0,
   },
-  summaryBoxMiddle: {
-    marginHorizontal: MKSpacing.sm,
-  },
   summaryBoxActive: {
-    borderColor: MKColors.primaryGreen,
-    backgroundColor: '#E8F5E9',
+    borderColor: '#A0F399',
+    backgroundColor: '#FFFFFF',
   },
   summaryCount: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 24,
+    fontWeight: '900',
     marginBottom: 2,
   },
   summaryLabel: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: MKColors.textSecondary,
-    letterSpacing: 0.5,
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#6B7280',
+    letterSpacing: 0.8,
   },
 
   /* ── Filter Pills ── */
   filterTabsRow: {
     flexDirection: 'row',
     width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 24,
+    padding: 4,
+    borderWidth: 1.2,
+    borderColor: '#EFEAE0',
     marginBottom: MKSpacing.lg,
+    elevation: 2,
   },
   filterPill: {
     flex: 1,
-    paddingVertical: 9,
-    paddingHorizontal: 4,
-    borderRadius: 12,
-    backgroundColor: '#FAF9F6',
-    borderWidth: 1,
-    borderColor: '#E8E4DA',
+    paddingVertical: 8,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
-    minWidth: 0,
-  },
-  filterPillMargin: {
-    marginLeft: MKSpacing.xs,
   },
   filterPillActive: {
-    backgroundColor: MKColors.primaryGreen,
-    borderColor: MKColors.primaryGreen,
+    backgroundColor: '#E8F5E9',
   },
   filterPillText: {
     fontSize: 12,
     fontWeight: '600',
-    color: MKColors.textSecondary,
+    color: '#6B7280',
   },
   filterPillTextActive: {
-    color: '#FFFFFF',
+    color: '#1B6D24',
     fontWeight: '800',
   },
 
@@ -345,26 +430,61 @@ const styles = StyleSheet.create({
   },
   orderCard: {
     marginBottom: MKSpacing.md,
+    borderRadius: 22,
+    borderWidth: 1.2,
+    borderColor: '#EFEAE0',
+    backgroundColor: '#FFFFFF',
+    padding: 16,
+    elevation: 3,
+    shadowColor: '#1A1C1E',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
   },
-  orderTopHeader: {
+
+  /* Active Order Header */
+  orderCardTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     width: '100%',
-    marginBottom: MKSpacing.md,
+    marginBottom: 8,
   },
-  orderTopHeaderLeft: {
-    flex: 1,
-    marginRight: MKSpacing.sm,
-    minWidth: 0,
+  activeBadgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
   },
-  badgeRow: {
-    marginBottom: 4,
+  activeBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#1B6D24',
+    letterSpacing: 0.5,
+  },
+  orderValueCol: {
+    alignItems: 'flex-end',
+  },
+  orderValueAmount: {
+    fontSize: 20,
+    fontWeight: '900',
+    color: '#212121',
+  },
+  orderValueLabel: {
+    fontSize: 11,
+    color: '#757575',
+    fontWeight: '500',
+  },
+
+  orderTitleSection: {
+    marginBottom: 12,
   },
   orderNumber: {
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: '800',
-    color: MKColors.textPrimary,
+    color: '#212121',
   },
   buyerRow: {
     flexDirection: 'row',
@@ -374,171 +494,243 @@ const styles = StyleSheet.create({
   buyerName: {
     fontSize: 13,
     fontWeight: '600',
-    color: MKColors.textSecondary,
+    color: '#6B7280',
   },
-  buyerNameText: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: MKColors.textSecondary,
-    marginLeft: 4,
+  buyerNameLarge: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#212121',
   },
-  dotSeparator: {
-    marginHorizontal: 4,
-    color: MKColors.textMuted,
-  },
-  verifiedText: {
-    fontSize: 11,
-    color: MKColors.primaryGreen,
-    fontWeight: '700',
-    marginLeft: 3,
-  },
-  cropThumb: {
-    width: 52,
-    height: 52,
-    borderRadius: 12,
-    flexShrink: 0,
-  },
+
+  /* Item Box */
   itemDetailsBox: {
-    backgroundColor: '#FAF9F6',
-    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF5ED',
+    borderRadius: 14,
     padding: 12,
     borderWidth: 1,
-    borderColor: '#E8E4DA',
+    borderColor: '#F8E7D8',
     width: '100%',
-    marginBottom: MKSpacing.md,
+    marginBottom: 16,
+  },
+  cropThumb: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    marginRight: 12,
+  },
+  itemTextCol: {
+    flex: 1,
   },
   itemTitle: {
     fontSize: 14,
-    fontWeight: '700',
-    color: MKColors.textPrimary,
+    fontWeight: '800',
+    color: '#212121',
   },
   itemSubtext: {
     fontSize: 12,
-    color: MKColors.textSecondary,
+    color: '#757575',
     marginTop: 2,
-  },
-  itemTotal: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: MKColors.primaryGreen,
-    marginTop: 6,
   },
 
   /* Timeline */
   timelineBox: {
-    borderTopWidth: 1,
-    borderTopColor: '#F0ECE4',
-    paddingTop: MKSpacing.md,
     width: '100%',
   },
-  timelineTitle: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: MKColors.textMuted,
-    letterSpacing: 0.6,
-    marginBottom: MKSpacing.md,
-  },
-  timelineSteps: {
+  pickupScheduledHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    width: '100%',
-    marginBottom: MKSpacing.md,
+    marginBottom: 12,
   },
-  stepItem: {
-    alignItems: 'center',
-    flex: 1,
+  greenLiveDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#1B6D24',
+    marginRight: 6,
   },
-  stepDot: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: '#E8E4DA',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 4,
-  },
-  stepDotDone: {
-    backgroundColor: MKColors.primaryGreen,
-  },
-  stepDotActive: {
-    backgroundColor: MKColors.accentOrange,
-  },
-  stepLine: {
-    height: 2,
-    flex: 1,
-    backgroundColor: '#E8E4DA',
-    marginTop: -16,
-  },
-  stepLineDone: {
-    backgroundColor: MKColors.primaryGreen,
-  },
-  stepLabel: {
-    fontSize: 10,
-    color: MKColors.textMuted,
-    textAlign: 'center',
-  },
-  stepLabelDone: {
-    fontSize: 10,
-    color: MKColors.primaryGreen,
-    fontWeight: '700',
-    textAlign: 'center',
-  },
-  stepLabelActive: {
-    fontSize: 10,
-    color: MKColors.accentOrange,
-    fontWeight: '800',
-    textAlign: 'center',
-  },
-  pickupDetailBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#E8F5E9',
-    borderRadius: 10,
-    padding: 10,
-    width: '100%',
-  },
-  pickupDetailText: {
+  pickupScheduledTitle: {
     fontSize: 12,
-    fontWeight: '600',
-    color: MKColors.primaryGreen,
-    marginLeft: 6,
-    flex: 1,
+    fontWeight: '700',
+    color: '#1B6D24',
   },
 
-  /* Pending Action Row */
-  pendingActionRow: {
-    flexDirection: 'row',
-    width: '100%',
-    marginTop: MKSpacing.xs,
+  /* Stepper */
+  stepperContainer: {
+    paddingLeft: 4,
+    marginBottom: 16,
   },
-  declineBtn: {
-    flex: 1,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: '#FAF9F6',
-    borderWidth: 1,
-    borderColor: '#E8E4DA',
+  stepRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+  },
+  stepIndicatorCol: {
+    alignItems: 'center',
+    width: 22,
+    marginRight: 10,
+  },
+  stepCircleDone: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#1B6D24',
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: MKSpacing.sm,
   },
-  declineBtnText: {
+  stepCircleCurrent: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 2,
+    borderColor: '#D9531E',
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  stepDotInner: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#D9531E',
+  },
+  stepCirclePending: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    borderWidth: 1.5,
+    borderColor: '#CBD5E1',
+    backgroundColor: '#FFFFFF',
+  },
+  stepConnectorLineDone: {
+    width: 2,
+    height: 20,
+    backgroundColor: '#1B6D24',
+  },
+  stepConnectorLinePending: {
+    width: 2,
+    height: 20,
+    backgroundColor: '#E2E8F0',
+  },
+  stepLabelDone: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#374151',
+    paddingTop: 1,
+  },
+  stepLabelCurrent: {
     fontSize: 13,
     fontWeight: '700',
-    color: MKColors.textSecondary,
+    color: '#D9531E',
+    paddingTop: 1,
   },
-  acceptBtn: {
-    flex: 2,
-    height: 44,
-    borderRadius: 12,
-    backgroundColor: MKColors.primaryGreen,
+  stepLabelPending: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#9CA3AF',
+    paddingTop: 1,
+  },
+
+  /* Pickup Details Box */
+  pickupDetailsCard: {
+    backgroundColor: '#FFF8F5',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#FFEDD5',
+    width: '100%',
+  },
+  pickupHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  pickupHeaderText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#374151',
+  },
+  pickupInfoGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  pickupInfoCol: {
+    flex: 1,
+  },
+  pickupInfoLabel: {
+    fontSize: 11,
+    color: '#757575',
+    fontWeight: '500',
+  },
+  pickupInfoVal: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#212121',
+    marginTop: 2,
+  },
+
+  /* Pending Request Styles */
+  pendingBadgePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF3E0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  pendingBadgeText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#D9531E',
+    letterSpacing: 0.5,
+  },
+  pendingCropRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  sproutCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#FFF3E0',
     alignItems: 'center',
     justifyContent: 'center',
+    marginRight: 10,
   },
-  acceptBtnText: {
-    fontSize: 13,
+  waitingBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#FFEFE5',
+    borderRadius: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    width: '100%',
+  },
+  waitingBannerText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#D9531E',
+  },
+
+  /* Completed Order */
+  completedHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    width: '100%',
+  },
+  completedBadgePill: {
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  completedBadgeText: {
+    fontSize: 10,
     fontWeight: '800',
-    color: '#FFFFFF',
+    color: '#6B7280',
+    letterSpacing: 0.5,
   },
 });

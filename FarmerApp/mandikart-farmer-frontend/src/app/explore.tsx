@@ -1,5 +1,4 @@
 import { Image } from 'expo-image';
-import { Ionicons } from '@expo/vector-icons';
 import { Platform, Pressable, ScrollView, StyleSheet } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -48,7 +47,7 @@ export default function TabTwoScreen() {
             <Pressable style={({ pressed }) => pressed && styles.pressed}>
               <ThemedView type="backgroundElement" style={styles.linkButton}>
                 <ThemedText type="link">Expo documentation</ThemedText>
-                <Ionicons name="link" size={12} color={theme.text} />
+                <ThemedText style={{ fontSize: 12, color: theme.text }}>↗</ThemedText>
               </ThemedView>
             </Pressable>
           </ExternalLink>

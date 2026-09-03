@@ -1,0 +1,6 @@
+packages:
+  - "FarmerApp/mandikart-farmer-backend"
+  - "UserApp/backend"
+  - "Admin/backend"
+  - "Logistic/backend"
+  - "packages/*"

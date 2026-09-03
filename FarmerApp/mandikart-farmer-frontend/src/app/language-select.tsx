@@ -12,9 +12,9 @@ import {
   StyleSheet,
   Pressable,
   ScrollView,
-  SafeAreaView,
   StatusBar,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import { Globe, Check, ArrowRight, ShoppingBasket, Leaf } from 'lucide-react-native';
@@ -106,7 +106,7 @@ export default function LanguageSelectScreen() {
 
   const handleContinue = () => {
     setLanguage(selectedLang);
-    router.push('/auth/signup');
+    router.push('/onboarding/permissions');
   };
 
   return (
@@ -223,6 +223,12 @@ export default function LanguageSelectScreen() {
               <Text style={styles.footerNote}>
                 {t.languageNote}
               </Text>
+
+              <Pressable onPress={() => router.push('/more/terms-privacy')}>
+                <Text style={{ fontSize: 12, color: '#16a34a', textAlign: 'center', marginTop: 10, textDecorationLine: 'underline', fontWeight: '600' }}>
+                  MandiKart Terms & Privacy Charter ↗
+                </Text>
+              </Pressable>
 
               {/* Step indicator */}
               <View style={styles.paginationDots}>
