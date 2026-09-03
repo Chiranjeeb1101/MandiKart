@@ -1,34 +1,90 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  KeyboardAvoidingView, Platform, StatusBar,
+  KeyboardAvoidingView, Platform, StatusBar, Animated,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
 import { AuthStackParamList } from '../../navigation/types';
-import { Colors, Spacing, BorderRadius } from '../../theme';
+import { Colors, Spacing, BorderRadius, Shadows } from '../../theme';
 import PrimaryButton from '../../components/PrimaryButton';
 import { useAuth } from '../../context/AuthContext';
 import AuthBackground from '../../components/AuthBackground';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'OTP'>;
 
-const OTP_LENGTH = 6;
+const OTP_LENGTH = 4;
 
 export default function OTPScreen({ navigation, route }: Props) {
-  const { phone, mode } = route.params;
+  const { phone = '9876543210', mode } = route.params || {};
   const { signIn } = useAuth();
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
+  const [focusedIdx, setFocusedIdx] = useState<number | null>(0);
   const [loading, setLoading] = useState(false);
   const [timer, setTimer] = useState(30);
   const inputs = useRef<(TextInput | null)[]>([]);
 
+  // Entrance & Scale animations
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
+  const boxScales = useRef(Array(OTP_LENGTH).fill(0).map(() => new Animated.Value(1))).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
+
+  // Countdown timer
+  useEffect(() => {
+    if (timer <= 0) return;
+    const interval = setInterval(() => {
+      setTimer((prev) => prev - 1);
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [timer]);
+
+  const animateBoxPop = (idx: number) => {
+    Animated.sequence([
+      Animated.timing(boxScales[idx], {
+        toValue: 1.15,
+        duration: 120,
+        useNativeDriver: true,
+      }),
+      Animated.spring(boxScales[idx], {
+        toValue: 1,
+        friction: 4,
+        tension: 40,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  };
+
   const handleChange = (val: string, idx: number) => {
     const newOtp = [...otp];
-    newOtp[idx] = val.slice(-1);
+    const char = val.slice(-1);
+    newOtp[idx] = char;
     setOtp(newOtp);
-    if (val && idx < OTP_LENGTH - 1) {
-      inputs.current[idx + 1]?.focus();
+
+    if (char) {
+      animateBoxPop(idx);
+      if (idx < OTP_LENGTH - 1) {
+        inputs.current[idx + 1]?.focus();
+      }
+    }
+
+    // Auto verify when 4 digits are completed
+    if (newOtp.filter(Boolean).length === OTP_LENGTH) {
+      verifyOtp(newOtp);
     }
   };
 
@@ -38,19 +94,24 @@ export default function OTPScreen({ navigation, route }: Props) {
     }
   };
 
-  const handleVerify = () => {
-    if (otp.join('').length < OTP_LENGTH) return;
+  const verifyOtp = (currentOtp: string[]) => {
+    if (currentOtp.join('').length < OTP_LENGTH) return;
     setLoading(true);
-    // TODO: Verify OTP with real API
     setTimeout(() => {
       setLoading(false);
       if (mode === 'forgot') {
         navigation.navigate('Login');
       } else {
-        // Sign in — RootNavigator will switch to Main automatically
         signIn();
       }
-    }, 1500);
+    }, 1200);
+  };
+
+  const handleResend = () => {
+    if (timer > 0) return;
+    setTimer(30);
+    setOtp(Array(OTP_LENGTH).fill(''));
+    inputs.current[0]?.focus();
   };
 
   return (
@@ -58,84 +119,268 @@ export default function OTPScreen({ navigation, route }: Props) {
       <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
 
-        <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color={Colors.textPrimary} />
-        </TouchableOpacity>
-
-      <View style={styles.content}>
-        <View style={styles.iconCircle}>
-          <Ionicons name="phone-portrait-outline" size={32} color={Colors.primary} />
-        </View>
-        <Text style={styles.title}>OTP Verification</Text>
-        <Text style={styles.subtitle}>
-          Enter the 6-digit code sent to{'\n'}
-          <Text style={styles.phone}>+91 {phone}</Text>
-        </Text>
-
-        <View style={styles.otpRow}>
-          {otp.map((val, idx) => (
-            <TextInput
-              key={idx}
-              ref={(r) => { inputs.current[idx] = r; }}
-              style={[styles.otpBox, val ? styles.otpBoxFilled : null]}
-              value={val}
-              onChangeText={(v) => handleChange(v, idx)}
-              onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, idx)}
-              keyboardType="number-pad"
-              maxLength={1}
-              textAlign="center"
-              autoFocus={idx === 0}
-            />
-          ))}
+        {/* Top Navigation */}
+        <View style={styles.topHeader}>
+          <TouchableOpacity onPress={() => navigation.goBack()} style={styles.backBtn}>
+            <Ionicons name="arrow-back" size={22} color={Colors.textPrimary} />
+          </TouchableOpacity>
         </View>
 
-        <PrimaryButton
-          title="Verify OTP"
-          onPress={handleVerify}
-          loading={loading}
-          disabled={otp.join('').length < OTP_LENGTH}
-          style={styles.btn}
-        />
+        <Animated.View style={[styles.content, { opacity: fadeAnim, transform: [{ translateY: slideAnim }] }]}>
+          {/* Badge Icon */}
+          <View style={styles.iconCircle}>
+            <View style={styles.iconInner}>
+              <Ionicons name="shield-checkmark" size={34} color={Colors.primary} />
+            </View>
+          </View>
 
-        <View style={styles.resendRow}>
-          <Text style={styles.resendText}>Didn't receive code? </Text>
-          {timer > 0 ? (
-            <Text style={styles.timerText}>Resend in {timer}s</Text>
-          ) : (
-            <TouchableOpacity onPress={() => setTimer(30)}>
-              <Text style={styles.resendLink}>Resend OTP</Text>
+          {/* Heading */}
+          <Text style={styles.title}>Verification Code</Text>
+          <Text style={styles.subtitle}>
+            We sent a 4-digit verification code to
+          </Text>
+
+          {/* Phone Badge with Edit */}
+          <View style={styles.phoneBadge}>
+            <Ionicons name="call-outline" size={15} color={Colors.primary} style={{ marginRight: 6 }} />
+            <Text style={styles.phoneText}>+91 {phone}</Text>
+            <TouchableOpacity style={styles.editBtn} onPress={() => navigation.goBack()}>
+              <Ionicons name="pencil" size={13} color={Colors.primary} />
             </TouchableOpacity>
-          )}
-        </View>
-      </View>
+          </View>
+
+          {/* 4 OTP Input Boxes */}
+          <View style={styles.otpRow}>
+            {otp.map((val, idx) => {
+              const isFocused = focusedIdx === idx;
+              const isFilled = Boolean(val);
+
+              return (
+                <Animated.View
+                  key={idx}
+                  style={[
+                    styles.boxWrapper,
+                    { transform: [{ scale: boxScales[idx] }] },
+                  ]}
+                >
+                  <TextInput
+                    ref={(r) => { inputs.current[idx] = r; }}
+                    style={[
+                      styles.otpBox,
+                      isFilled && styles.otpBoxFilled,
+                      isFocused && styles.otpBoxFocused,
+                    ]}
+                    value={val}
+                    onChangeText={(v) => handleChange(v, idx)}
+                    onKeyPress={({ nativeEvent }) => handleKeyPress(nativeEvent.key, idx)}
+                    onFocus={() => setFocusedIdx(idx)}
+                    onBlur={() => setFocusedIdx(null)}
+                    keyboardType="number-pad"
+                    maxLength={1}
+                    textAlign="center"
+                    autoFocus={idx === 0}
+                    editable={!loading}
+                    selectTextOnFocus
+                  />
+                </Animated.View>
+              );
+            })}
+          </View>
+
+          {/* Demo Code Helper
+          <View style={styles.demoPill}>
+            <Ionicons name="bulb-outline" size={14} color="#059669" style={{ marginRight: 6 }} />
+            <Text style={styles.demoPillText}>Demo Code: Enter any 4 digits (e.g. 1 2 3 4)</Text>
+          </View> */}
+
+          {/* Primary Action Button */}
+          <PrimaryButton
+            title="Verify & Proceed"
+            onPress={() => verifyOtp(otp)}
+            loading={loading}
+            disabled={otp.join('').length < OTP_LENGTH}
+            style={styles.btn}
+          />
+
+          {/* Resend Section */}
+          <View style={styles.resendRow}>
+            <Text style={styles.resendText}>Didn't receive the code? </Text>
+            {timer > 0 ? (
+              <View style={styles.timerBadge}>
+                <Ionicons name="time-outline" size={14} color={Colors.textSecondary} style={{ marginRight: 4 }} />
+                <Text style={styles.timerText}>Resend in {timer}s</Text>
+              </View>
+            ) : (
+              <TouchableOpacity onPress={handleResend} style={styles.resendBtn}>
+                <Text style={styles.resendLink}>Resend OTP</Text>
+                <Ionicons name="refresh" size={14} color={Colors.primary} style={{ marginLeft: 3 }} />
+              </TouchableOpacity>
+            )}
+          </View>
+        </Animated.View>
       </KeyboardAvoidingView>
     </AuthBackground>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: 'transparent', paddingHorizontal: Spacing.lg, paddingTop: 56 },
-  backBtn: { marginBottom: Spacing.xl },
-  content: { alignItems: 'center', gap: Spacing.md },
+  container: {
+    flex: 1,
+    paddingHorizontal: Spacing.lg,
+    paddingTop: Platform.OS === 'ios' ? 60 : 48,
+  },
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Spacing.md,
+  },
+  backBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadows.small,
+  },
+  content: {
+    alignItems: 'center',
+    paddingHorizontal: Spacing.xs,
+  },
   iconCircle: {
-    width: 72, height: 72, borderRadius: 36,
-    backgroundColor: Colors.primaryLight, alignItems: 'center', justifyContent: 'center',
-    marginBottom: Spacing.sm,
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#E8F5E9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+    ...Shadows.small,
   },
-  title: { fontSize: 24, fontWeight: '700', color: Colors.textPrimary },
-  subtitle: { fontSize: 14, color: Colors.textSecondary, textAlign: 'center', lineHeight: 22 },
-  phone: { fontWeight: '600', color: Colors.textPrimary },
-  otpRow: { flexDirection: 'row', gap: 10, marginVertical: Spacing.lg },
+  iconInner: {
+    width: 62,
+    height: 62,
+    borderRadius: 31,
+    backgroundColor: Colors.white,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 24,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    marginBottom: 6,
+    letterSpacing: -0.3,
+  },
+  subtitle: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    textAlign: 'center',
+  },
+  phoneBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.white,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
+    borderRadius: BorderRadius.full,
+    marginTop: Spacing.xs,
+    marginBottom: Spacing.lg,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    ...Shadows.small,
+  },
+  phoneText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+    marginRight: 6,
+  },
+  editBtn: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: Colors.primaryLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  otpRow: {
+    flexDirection: 'row',
+    gap: 12,
+    justifyContent: 'center',
+    marginBottom: Spacing.md,
+  },
+  boxWrapper: {
+    width: 58,
+    height: 64,
+  },
   otpBox: {
-    width: 48, height: 56, borderWidth: 2, borderColor: Colors.border,
-    borderRadius: BorderRadius.md, fontSize: 22, fontWeight: '700', color: Colors.textPrimary,
-    backgroundColor: Colors.gray50,
+    width: '100%',
+    height: '100%',
+    borderWidth: 2,
+    borderColor: Colors.border,
+    borderRadius: 16,
+    fontSize: 24,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+    backgroundColor: Colors.white,
+    textAlign: 'center',
+    ...Shadows.small,
   },
-  otpBoxFilled: { borderColor: Colors.primary, backgroundColor: Colors.primaryLight },
-  btn: { width: '100%' },
-  resendRow: { flexDirection: 'row' },
-  resendText: { fontSize: 14, color: Colors.textSecondary },
-  timerText: { fontSize: 14, color: Colors.textDisabled },
-  resendLink: { fontSize: 14, color: Colors.primary, fontWeight: '600' },
+  otpBoxFilled: {
+    borderColor: Colors.primary,
+    backgroundColor: '#F0FDF4',
+    color: Colors.primary,
+  },
+  otpBoxFocused: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.white,
+    ...Shadows.medium,
+  },
+  demoPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
+    borderWidth: 1,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: BorderRadius.full,
+    marginBottom: Spacing.lg,
+  },
+  demoPillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#047857',
+  },
+  btn: {
+    width: '100%',
+    marginBottom: Spacing.lg,
+  },
+  resendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  resendText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+  },
+  timerBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  timerText: {
+    fontSize: 14,
+    color: Colors.textSecondary,
+    fontWeight: '600',
+  },
+  resendBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  resendLink: {
+    fontSize: 14,
+    color: Colors.primary,
+    fontWeight: '700',
+  },
 });
-
