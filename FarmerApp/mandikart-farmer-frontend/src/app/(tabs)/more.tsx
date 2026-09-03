@@ -17,7 +17,6 @@ import {
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, { FadeInUp } from 'react-native-reanimated';
 import {
   Bell,
   CheckCircle2,
@@ -278,19 +277,21 @@ export default function MoreScreen() {
       </MKSection>
 
       {/* ── 7. Logout Button ── */}
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Log out"
-        android_ripple={{ color: '#F4D9D6' }}
-        style={({ pressed }) => [
-          styles.logoutButton,
-          pressed && { transform: [{ scale: 0.97 }], opacity: 0.88 },
-        ]}
-        onPress={() => setLogoutOpen(true)}
-      >
-        <LogOut size={19} color="#B84B4B" />
-        <Text style={styles.logoutText}>Log Out</Text>
-      </Pressable>
+      <View style={{ width: '100%', marginTop: MKSpacing.lg, marginBottom: MKSpacing.md, paddingHorizontal: MKSpacing.md }}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Log out"
+          android_ripple={{ color: '#FCA5A5' }}
+          style={({ pressed }) => [
+            styles.logoutButton,
+            pressed && { transform: [{ scale: 0.97 }], opacity: 0.9 },
+          ]}
+          onPress={() => setLogoutOpen(true)}
+        >
+          <LogOut size={20} color="#DC2626" strokeWidth={2.2} />
+          <Text style={styles.logoutText}>Log Out of Account</Text>
+        </Pressable>
+      </View>
 
       {/* ── 8. Footer Brand Mark ── */}
       <View style={styles.footer}>
@@ -310,7 +311,7 @@ export default function MoreScreen() {
         onRequestClose={() => setLogoutOpen(false)}
       >
         <View style={styles.modalBackdrop}>
-          <Animated.View entering={FadeInUp.duration(220)} style={styles.modalCard}>
+          <View style={styles.modalCard}>
             <View style={styles.modalIcon}>
               <LogOut size={22} color="#B84B4B" />
             </View>
@@ -336,7 +337,7 @@ export default function MoreScreen() {
                 <Text style={styles.confirmText}>Log Out</Text>
               </Pressable>
             </View>
-          </Animated.View>
+          </View>
         </View>
       </Modal>
     </MKScreen>
@@ -656,21 +657,26 @@ const styles = StyleSheet.create({
   /* ── Logout Button ── */
   logoutButton: {
     width: '100%',
-    height: 52,
-    borderRadius: 17,
-    marginTop: MKSpacing.md,
+    height: 56,
+    borderRadius: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFF7F6',
-    borderWidth: 1,
-    borderColor: '#F8E5E3',
+    gap: 10,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 2.5,
+    borderColor: '#DC2626',
+    elevation: 3,
+    shadowColor: '#DC2626',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
   },
   logoutText: {
-    color: '#B84B4B',
-    fontSize: 15,
+    color: '#DC2626',
+    fontSize: 16,
     fontWeight: '800',
-    marginLeft: 9,
+    letterSpacing: 0.3,
   },
 
   /* ── Footer ── */

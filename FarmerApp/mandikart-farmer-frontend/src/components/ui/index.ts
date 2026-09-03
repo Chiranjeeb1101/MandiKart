@@ -1,4 +1,5 @@
 export * from './MKBackground';
+export * from './MKOrganicGlow';
 export * from './MKButton';
 export * from './MKCard';
 export * from './MKInput';

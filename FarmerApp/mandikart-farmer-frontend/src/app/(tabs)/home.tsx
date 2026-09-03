@@ -1,22 +1,42 @@
 /**
- * MandiKart — Home Dashboard Screen
- * 
- * Features:
- * - High contrast greeting with safe status bar breathing room
- * - Visual "Sell Today" Hero Card with distinct borders and shadows
- * - "Best Opportunity for You" Decision Card with clean breakdown boxes
- * - "Today at a Glance" stat counters encapsulated in separated cards
+ * MandiKart — Home Screen (Selling Command Center)
+ *
+ * Exact implementation matching design screenshot and specifications:
+ * 1. Background:
+ *    - Soft golden amber wash radiating smoothly from top-left
+ *    - Gentle pale leaf-green mist on the right edge
+ *    - Clean, light #F8FAF7 canvas base
+ * 2. Header:
+ *    - Single row: Avatar + "Namaste, Ravi 👋" + "📍 Nashik, Maharashtra" on left; Bell with badge '3' on right
+ * 3. Hero Card:
+ *    - "What do you want to sell today?", "Find best buyers and get better returns"
+ *    - Deep rich forest green "+ Add Produce" button (#1B6D24)
+ *    - Woven basket of fresh vegetables
+ * 4. "Today at a Glance" (Precision 3-Card Design):
+ *    - Card 1: Circular soft peach badge (#FFF4EB), orange doc icon (#FF6B00), bold count 2, "Active Orders"
+ *    - Card 2: Circular soft herbal green badge (#EDF7EE), delivery truck icon (#16A34A), bold text Tomorrow, "Pickup Schedule"
+ *    - Card 3: Circular soft herbal green badge (#EDF7EE), wallet icon (#16A34A), bold amount ₹48,500, "Monthly Earning"
+ *    - Clean white floating cards with soft ambient drop shadows
+ * 5. Best Opportunity for You:
+ *    - "★ Recommended" (orange badge) and "94% Match" (soft green badge)
+ *    - Fresh Red Onion image, "Onion • Grade A", "1,000 KG", "₹22.00 /kg", "Estimated Net Return"
+ *    - 3-metric breakdown: Selling Price (₹24.00 /kg), Transport Cost (₹2.00 /kg), Demand (High 🔥)
+ *    - Outline Button: "View Best Options ➔" (2px green border, green bold text, green right arrow)
  */
 
-import React from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   Image,
   Pressable,
   StyleSheet,
+  ScrollView,
+  Modal,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
   Bell,
   MapPin,
@@ -27,11 +47,32 @@ import {
   FileText,
   Truck,
   Wallet,
+  X,
+  TrendingUp,
 } from 'lucide-react-native';
-import { MKScreen, MKSection, MKCard, MKButton, MKStatusBadge } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
-import { MKColors } from '@/constants/colors';
-import { MKSpacing } from '@/constants/spacing';
+
+// ─── Design Tokens ───────────────────────────────────────────────────────────
+const C = {
+  canvasBg: '#F8FAF7',
+  surface: '#FFFFFF',
+  primaryOrange: '#EF7D1A',
+  secondaryGreen: '#1B6D24',
+  onSecondary: '#FFFFFF',
+  textTitle: '#241913',
+  textSub: '#564336',
+  outlineVariant: '#DDC1B0',
+  dataMatchBg: '#E8F5E9',
+  dataMatchText: '#1B6D24',
+  badgeOrange: '#C85A00',
+  statusWaiting: '#F39C12',
+
+  // Exact Precision 3-Card Design Tokens
+  iconOrangeBg: '#FFF4EB',    // Circular soft peach badge
+  iconOrangeColor: '#FF6B00', // Orange document icon
+  iconGreenBg: '#EDF7EE',     // Circular soft herbal green badge
+  iconGreenColor: '#16A34A',  // Delivery truck / wallet icon
+};
 
 const FARMER_AVATAR_URI =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuDinV_e5owfh89gPtLCA76lilmicdcRz2kVnA2Yc9o1WkX48o_T_n3jQJM14Pd5TzCDO4wlsbaGX0MQobV3MiwbDMh_K5EKRmgf0eI8pRMYw_B6wqagFKWaxqrUJIgxjDZUOYpKdhuUafcuBaY-IYqkRsWsqFJBVqY9DNpM28aWfm0Bx3cC4BIZ7XuRvUVz2QESdXpE_HWcoRfFdn7bX6n8eMifz13XnCsxdFX-ybqll4FE_idueiq4kQ';
@@ -42,441 +83,703 @@ const VEGGIE_BASKET_URI =
 const ONION_PHOTO_URI =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuC10xdTnKHpvZre-LhDKBTaZdjrNRAMZKasKH7sJK1nrX10RGhhP2dGCyuePJimnKwCfuueO0HuC0216Hy6PAuxsQXjsHtSvKxV7SDDJosrU95YRzT4oVRjJqioCNfX15LiH_iPMrU7YeT2od9_cv81dzfyjd6LRPtPRGTt1AbXyWGTo6qD1K7KloqXwfi7HTDD6X5PP72m_RLR77_lBfwoQWyjBj1HvTxGZsl55rQEEpNHyiMzAeHoHQ';
 
+const TOMATO_PHOTO_URI =
+  'https://lh3.googleusercontent.com/aida-public/AB6AXuAQ3ecH_gXE_S9dnNXqZtMNZsTsKwUugK5npqrXQo96EGz87CNfJWQR-HFQcD_gqEoawXV7pG5-hAyd6KZco66Pdavo3jYBsP6NadIKCnghQ8lYLYXnuyMeQuBB2LxBykis0pTs786s14moakUB0ZH0QgH7VlNElFN4Ns5uWVxgvecQv248hBqi_2ENXcSCSj6gx8CL7fz5xwRqaIpshL2s-Xue0Qb10lRmnHBlDimQ82nr7RG_vmqfBw';
+
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
 
-  const farmerName = user?.name ? user.name.split(' ')[0] : 'Ramesh';
-  const locationName = user?.district
-    ? `${user.district}, ${user.state}`
-    : 'Nashik, Maharashtra';
+  const [showAllOpportunities, setShowAllOpportunities] = useState(false);
+  const [pickupModalVisible, setPickupModalVisible] = useState(false);
+  const [earningsModalVisible, setEarningsModalVisible] = useState(false);
+  const [locationModalVisible, setLocationModalVisible] = useState(false);
+  const [selectedDistrict, setSelectedDistrict] = useState(user?.district || 'Nashik');
+
+  const farmerName = user?.name ? user.name.split(' ')[0] : 'Ravi';
+  const locationName = `${selectedDistrict}, Maharashtra`;
 
   return (
-    <MKScreen>
-      {/* ── 1. Top App Bar ── */}
-      <View style={styles.topAppBar}>
-        <View style={styles.farmerProfileHeader}>
-          <Image source={{ uri: FARMER_AVATAR_URI }} style={styles.avatarImage} />
-          <View style={styles.greetingContainer}>
-            <Text numberOfLines={1} style={styles.greetingTitle}>
-              Namaste, {farmerName} 👋
-            </Text>
-            <View style={styles.locationRow}>
-              <MapPin size={14} color={MKColors.primaryGreen} strokeWidth={2.2} />
-              <Text numberOfLines={1} style={styles.locationText}>
-                {locationName}
-              </Text>
-            </View>
+    <View style={styles.root}>
+      {/* ── 1. Organic Watercolor Background Wash ── */}
+      {/* Soft golden amber wash radiating smoothly from top-left */}
+      <LinearGradient
+        colors={['#FFE7CE', 'rgba(255, 241, 230, 0.7)', 'transparent']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 0.75, y: 0.4 }}
+        style={styles.gradientTopWarm}
+      />
+      {/* Gentle pale leaf-green mist on the right edge */}
+      <LinearGradient
+        colors={['#DCEFDE', 'rgba(235, 247, 238, 0.65)', 'transparent']}
+        start={{ x: 1, y: 0.1 }}
+        end={{ x: 0.35, y: 0.55 }}
+        style={styles.gradientTopGreen}
+      />
+
+      {/* ── Top Bar (Single Row: Avatar+Greeting left, Bell right) ── */}
+      <View style={styles.topBar}>
+        <View style={styles.topBarLeft}>
+          <Pressable onPress={() => router.push('/(tabs)/more')}>
+            <Image source={{ uri: FARMER_AVATAR_URI }} style={styles.avatar} />
+          </Pressable>
+          <View style={styles.greetingCol}>
+            <Text style={styles.greetingText}>Namaste, {farmerName} 👋</Text>
+            <Pressable
+              style={styles.locationRow}
+              onPress={() => setLocationModalVisible(true)}
+            >
+              <MapPin size={13} color={C.secondaryGreen} fill={C.secondaryGreen} style={{ marginRight: 3 }} />
+              <Text style={styles.locationText}>{locationName}</Text>
+            </Pressable>
           </View>
         </View>
 
-        <Pressable
-          style={({ pressed }) => [
-            styles.notificationBtn,
-            pressed && { transform: [{ scale: 0.90 }], opacity: 0.85 },
-          ]}
-          accessibilityRole="button"
-          accessibilityLabel="Notifications"
-          onPress={() => router.push('/more/notifications')}
-        >
-          <Bell size={20} color={MKColors.textPrimary} strokeWidth={2} />
-          <View style={styles.notificationBadge}>
-            <Text style={styles.notificationBadgeText}>3</Text>
+        <View style={styles.bellWrapper}>
+          <Pressable
+            style={({ pressed }) => [styles.bellButton, pressed && { opacity: 0.8 }]}
+            onPress={() => router.push('/more/notifications')}
+          >
+            <Bell size={21} color={C.textTitle} strokeWidth={1.8} />
+          </Pressable>
+          <View style={styles.bellBadge}>
+            <Text style={styles.bellBadgeText}>3</Text>
           </View>
-        </Pressable>
+        </View>
       </View>
 
-      {/* ── 2. Sell Today Hero Card ── */}
-      <Pressable
-        onPress={() => router.push('/(tabs)/produce')}
-        style={({ pressed }) => [
-          styles.heroSellCard,
-          pressed && { transform: [{ scale: 0.97 }], opacity: 0.92 },
-        ]}
+      {/* ── Scrollable Body ── */}
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
       >
-        <View style={styles.heroSellContent}>
-          <Text style={styles.heroSellTitle}>What do you want{'\n'}to sell today?</Text>
-          <Text style={styles.heroSellSubtitle}>
-            Find verified buyers and maximize your net returns
-          </Text>
-          <View pointerEvents="none" style={styles.addProduceBtnWrapper}>
-            <View style={styles.inlineAddBtn}>
-              <Plus size={16} color="#FFFFFF" strokeWidth={2.5} />
-              <Text style={styles.inlineAddBtnText}>Add Produce</Text>
-            </View>
+        {/* ═══ SECTION 1: HERO CARD ("What do you want to sell today?") ═══ */}
+        <View style={styles.heroCard}>
+          <View style={styles.heroTextCol}>
+            <Text style={styles.heroTitle}>What do you want to sell today?</Text>
+            <Text style={styles.heroSubtitle}>Find best buyers and get better returns</Text>
+            <Pressable
+              style={({ pressed }) => [styles.addProduceBtn, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
+              onPress={() => router.push('/(tabs)/sell')}
+            >
+              <Plus size={18} color={C.onSecondary} strokeWidth={2.5} />
+              <Text style={styles.addProduceBtnText}>Add Produce</Text>
+            </Pressable>
+          </View>
+          <View style={styles.heroImageCol}>
+            <Image source={{ uri: VEGGIE_BASKET_URI }} style={styles.heroImage} />
           </View>
         </View>
-        <Image source={{ uri: VEGGIE_BASKET_URI }} style={styles.heroBasketImage} />
-      </Pressable>
 
-      {/* ── 3. Section: Best Opportunity For You ── */}
-      <MKSection
-        title="Best Opportunity for You"
-        actionText="View all"
-        onActionPress={() => router.push('/(tabs)/sell')}
-      >
-        <MKCard padding="none" onPress={() => router.push('/(tabs)/sell')}>
-          {/* Crop Header */}
-          <View style={styles.cropHeaderRow}>
-            <View style={styles.cropInfoRow}>
-              <Image source={{ uri: ONION_PHOTO_URI }} style={styles.cropImage} />
-              <View style={styles.cropDetails}>
-                <View style={styles.recommendedBadge}>
-                  <Star size={12} color="#FFFFFF" fill="#FFFFFF" />
-                  <Text style={styles.recommendedText}>Recommended</Text>
-                </View>
-                <Text numberOfLines={1} style={styles.cropName}>
-                  Onion • Grade A
-                </Text>
-                <Text numberOfLines={1} style={styles.cropQty}>
-                  1,000 KG Available
-                </Text>
+        {/* ═══ SECTION 2: TODAY AT A GLANCE (Precision 3-Card Design) ═══ */}
+        <View style={styles.glanceSection}>
+          <Text style={styles.sectionHeaderTitle}>Today at a Glance</Text>
+          <View style={styles.glanceCardsRow}>
+            {/* Card 1: Active Orders */}
+            <Pressable
+              style={({ pressed }) => [styles.glanceCard, pressed && { transform: [{ scale: 0.97 }] }]}
+              onPress={() => router.push('/(tabs)/orders')}
+            >
+              <View style={[styles.glanceIconCircle, { backgroundColor: C.iconOrangeBg }]}>
+                <FileText size={22} color={C.iconOrangeColor} strokeWidth={2} />
               </View>
+              <Text style={styles.glanceValueLarge}>2</Text>
+              <Text numberOfLines={1} style={styles.glanceLabel}>Active Orders</Text>
+            </Pressable>
+
+            {/* Card 2: Pickup Schedule */}
+            <Pressable
+              style={({ pressed }) => [styles.glanceCard, pressed && { transform: [{ scale: 0.97 }] }]}
+              onPress={() => setPickupModalVisible(true)}
+            >
+              <View style={[styles.glanceIconCircle, { backgroundColor: C.iconGreenBg }]}>
+                <Truck size={22} color={C.iconGreenColor} strokeWidth={2} />
+              </View>
+              <Text style={styles.glanceValueMd}>Tomorrow</Text>
+              <Text numberOfLines={1} style={styles.glanceLabel}>Pickup Schedule</Text>
+            </Pressable>
+
+            {/* Card 3: Monthly Earning */}
+            <Pressable
+              style={({ pressed }) => [styles.glanceCard, pressed && { transform: [{ scale: 0.97 }] }]}
+              onPress={() => setEarningsModalVisible(true)}
+            >
+              <View style={[styles.glanceIconCircle, { backgroundColor: C.iconGreenBg }]}>
+                <Wallet size={22} color={C.iconGreenColor} strokeWidth={2} />
+              </View>
+              <Text style={styles.glanceValueMd}>₹48,500</Text>
+              <Text numberOfLines={1} style={styles.glanceLabel}>Monthly Earning</Text>
+            </Pressable>
+          </View>
+        </View>
+
+        {/* ═══ SECTION 3: BEST OPPORTUNITY FOR YOU ═══ */}
+        <View style={styles.sectionTitleRow}>
+          <Text style={styles.sectionHeaderTitle}>Best Opportunity for You</Text>
+          <Pressable onPress={() => setShowAllOpportunities(!showAllOpportunities)}>
+            <Text style={styles.viewAllLink}>{showAllOpportunities ? 'Show less' : 'View all'}</Text>
+          </Pressable>
+        </View>
+
+        <View style={styles.opportunityCard}>
+          {/* Top Badges */}
+          <View style={styles.opportunityBadgesRow}>
+            <View style={styles.recommendedBadge}>
+              <Star size={11} color="#FFFFFF" fill="#FFFFFF" strokeWidth={0} style={{ marginRight: 4 }} />
+              <Text style={styles.recommendedBadgeText}>Recommended</Text>
             </View>
-            <View style={styles.badgeWrapper}>
-              <MKStatusBadge label="94% Match" type="match" />
+            <View style={styles.matchBadge}>
+              <Text style={styles.matchBadgeText}>94% Match</Text>
             </View>
           </View>
 
-          {/* Net Return */}
-          <View style={styles.netReturnRow}>
-            <Text style={styles.netReturnLabel}>Estimated Net Return</Text>
-            <Text style={styles.netReturnValue}>
-              ₹22.00 <Text style={styles.unitText}>/kg</Text>
-            </Text>
+          {/* Crop Info Row */}
+          <View style={styles.opportunityMainRow}>
+            <Image source={{ uri: ONION_PHOTO_URI }} style={styles.onionThumb} />
+            <View style={styles.opportunityTextCol}>
+              <Text style={styles.cropTitle}>Onion • Grade A</Text>
+              <Text style={styles.cropQty}>1,000 KG</Text>
+              <View style={styles.netReturnRow}>
+                <Text style={styles.netReturnPrice}>₹22.00</Text>
+                <Text style={styles.netReturnUnit}> /kg</Text>
+              </View>
+              <Text style={styles.netReturnSub}>Estimated Net Return</Text>
+            </View>
           </View>
 
-          {/* Breakdown Grid */}
-          <View style={styles.breakdownGrid}>
-            <View style={styles.breakdownCol}>
-              <Text style={styles.breakdownLabel}>Selling Price</Text>
-              <Text style={styles.breakdownValue}>₹24.00 /kg</Text>
+          {/* Divider */}
+          <View style={styles.cardDivider} />
+
+          {/* 3 Metric Columns */}
+          <View style={styles.metricGrid}>
+            <View style={styles.metricCol}>
+              <Text style={styles.metricLabel}>Selling Price</Text>
+              <Text style={styles.metricValue}>₹24.00 /kg</Text>
             </View>
-            <View style={styles.breakdownCol}>
-              <Text style={styles.breakdownLabel}>Transport Cost</Text>
-              <Text style={styles.breakdownValue}>₹2.00 /kg</Text>
+            <View style={styles.metricCol}>
+              <Text style={styles.metricLabel}>Transport Cost</Text>
+              <Text style={styles.metricValue}>₹2.00 /kg</Text>
             </View>
-            <View style={styles.breakdownCol}>
-              <Text style={styles.breakdownLabel}>Market Demand</Text>
+            <View style={styles.metricCol}>
+              <Text style={styles.metricLabel}>Demand</Text>
               <View style={styles.demandRow}>
-                <Text style={styles.demandValue}>High</Text>
-                <Flame size={14} color={MKColors.accentOrange} fill={MKColors.accentOrange} />
+                <Text style={styles.demandValue}>High </Text>
+                <Flame size={13} color="#D9531E" fill="#D9531E" strokeWidth={0} />
               </View>
             </View>
           </View>
 
-          {/* Action Button */}
-          <View pointerEvents="none" style={styles.decisionActionWrapper}>
-            <MKButton
-              title="View Best Options"
-              onPress={() => {}}
-              variant="secondary"
-              size="md"
-              rightIcon={<ArrowRight size={18} color={MKColors.primaryGreen} strokeWidth={2.2} />}
-            />
-          </View>
-        </MKCard>
-      </MKSection>
-
-      {/* ── 4. Section: Today at a Glance ── */}
-      <MKSection title="Today at a Glance">
-        <View style={styles.metricsRow}>
-          {/* Active Orders */}
+          {/* View Best Options Outline Button */}
           <Pressable
-            onPress={() => router.push('/(tabs)/orders')}
-            style={({ pressed }) => [
-              styles.metricCard,
-              pressed && { transform: [{ scale: 0.95 }], opacity: 0.9 },
-            ]}
+            style={({ pressed }) => [styles.viewBestOptionsBtn, pressed && { backgroundColor: '#F0F9F1' }]}
+            onPress={() => router.push('/(tabs)/sell')}
           >
-            <View style={[styles.metricIconCircle, { backgroundColor: '#FFF2E8' }]}>
-              <FileText size={20} color="#D9531E" />
-            </View>
-            <Text style={styles.metricBigNumber}>2</Text>
-            <Text style={styles.metricLabel}>Active Orders</Text>
-          </Pressable>
-
-          {/* Pickup Schedule */}
-          <Pressable
-            onPress={() => router.push('/(tabs)/orders')}
-            style={({ pressed }) => [
-              styles.metricCard,
-              pressed && { transform: [{ scale: 0.95 }], opacity: 0.9 },
-            ]}
-          >
-            <View style={[styles.metricIconCircle, { backgroundColor: '#E8F5E9' }]}>
-              <Truck size={20} color="#2E7D32" />
-            </View>
-            <Text style={styles.metricBigText}>Tomorrow</Text>
-            <Text style={styles.metricLabel}>Pickup Schedule</Text>
-          </Pressable>
-
-          {/* Monthly Earning */}
-          <Pressable
-            onPress={() => router.push('/more/bank-details')}
-            style={({ pressed }) => [
-              styles.metricCard,
-              styles.metricCardLast,
-              pressed && { transform: [{ scale: 0.95 }], opacity: 0.9 },
-            ]}
-          >
-            <View style={[styles.metricIconCircle, { backgroundColor: '#E8F5E9' }]}>
-              <Wallet size={20} color="#2E7D32" />
-            </View>
-            <Text style={styles.metricBigText}>₹48,500</Text>
-            <Text style={styles.metricLabel}>Monthly Earning</Text>
+            <Text style={styles.viewBestOptionsBtnText}>View Best Options</Text>
+            <ArrowRight size={17} color={C.secondaryGreen} strokeWidth={2.4} style={{ marginLeft: 6 }} />
           </Pressable>
         </View>
-      </MKSection>
-    </MKScreen>
+
+        {/* Toggled Tomato Opportunity */}
+        {showAllOpportunities && (
+          <View style={[styles.opportunityCard, { marginTop: 6 }]}>
+            <View style={styles.opportunityBadgesRow}>
+              <View style={[styles.recommendedBadge, { backgroundColor: '#2980B9' }]}>
+                <TrendingUp size={11} color="#FFFFFF" style={{ marginRight: 4 }} />
+                <Text style={styles.recommendedBadgeText}>High Demand</Text>
+              </View>
+              <View style={[styles.matchBadge, { backgroundColor: '#EBF5FB' }]}>
+                <Text style={[styles.matchBadgeText, { color: '#2980B9' }]}>88% Match</Text>
+              </View>
+            </View>
+
+            <View style={styles.opportunityMainRow}>
+              <Image source={{ uri: TOMATO_PHOTO_URI }} style={styles.onionThumb} />
+              <View style={styles.opportunityTextCol}>
+                <Text style={styles.cropTitle}>Red Tomatoes • Grade A</Text>
+                <Text style={styles.cropQty}>800 KG</Text>
+                <View style={styles.netReturnRow}>
+                  <Text style={[styles.netReturnPrice, { color: '#2980B9' }]}>₹31.50</Text>
+                  <Text style={styles.netReturnUnit}> /kg</Text>
+                </View>
+                <Text style={styles.netReturnSub}>Estimated Net Return</Text>
+              </View>
+            </View>
+
+            <View style={styles.cardDivider} />
+
+            <View style={styles.metricGrid}>
+              <View style={styles.metricCol}>
+                <Text style={styles.metricLabel}>Selling Price</Text>
+                <Text style={styles.metricValue}>₹34.00 /kg</Text>
+              </View>
+              <View style={styles.metricCol}>
+                <Text style={styles.metricLabel}>Transport Cost</Text>
+                <Text style={styles.metricValue}>₹2.50 /kg</Text>
+              </View>
+              <View style={styles.metricCol}>
+                <Text style={styles.metricLabel}>Demand</Text>
+                <View style={styles.demandRow}>
+                  <Text style={[styles.demandValue, { color: '#E74C3C' }]}>Very High </Text>
+                  <Flame size={13} color="#E74C3C" fill="#E74C3C" strokeWidth={0} />
+                </View>
+              </View>
+            </View>
+
+            <Pressable
+              style={({ pressed }) => [styles.viewBestOptionsBtn, { borderColor: '#2980B9' }, pressed && { backgroundColor: '#EBF5FB' }]}
+              onPress={() => router.push('/(tabs)/sell')}
+            >
+              <Text style={[styles.viewBestOptionsBtnText, { color: '#2980B9' }]}>View Tomato Options</Text>
+              <ArrowRight size={17} color="#2980B9" strokeWidth={2.4} style={{ marginLeft: 6 }} />
+            </Pressable>
+          </View>
+        )}
+
+        <View style={{ height: 32 }} />
+      </ScrollView>
+
+      {/* ── Modals ── */}
+      <Modal visible={pickupModalVisible} transparent animationType="slide">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <Truck size={22} color={C.secondaryGreen} style={{ marginRight: 8 }} />
+                <Text style={styles.modalTitle}>Pickup Schedule</Text>
+              </View>
+              <Pressable onPress={() => setPickupModalVisible(false)}>
+                <X size={20} color={C.textSub} />
+              </Pressable>
+            </View>
+            <View style={{ gap: 10 }}>
+              <Text style={{ fontSize: 15, fontWeight: '700', color: C.textTitle }}>
+                Tomorrow, 10:00 AM - 12:00 PM
+              </Text>
+              <Text style={{ fontSize: 13, color: C.textSub }}>
+                Truck #MH-15-EG-4921 assigned by ABC Foods
+              </Text>
+              <Pressable
+                style={styles.modalPrimaryBtn}
+                onPress={() => {
+                  setPickupModalVisible(false);
+                  router.push('/(tabs)/orders');
+                }}
+              >
+                <Text style={styles.modalPrimaryBtnText}>Track Order</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={earningsModalVisible} transparent animationType="slide">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Monthly Earnings</Text>
+              <Pressable onPress={() => setEarningsModalVisible(false)}>
+                <X size={20} color={C.textSub} />
+              </Pressable>
+            </View>
+            <Text style={{ fontSize: 28, fontWeight: '800', color: C.secondaryGreen, textAlign: 'center' }}>
+              ₹48,500
+            </Text>
+            <Text style={{ fontSize: 13, color: C.textSub, textAlign: 'center', marginVertical: 8 }}>
+              Total payouts received in September 2026
+            </Text>
+            <Pressable
+              style={styles.modalPrimaryBtn}
+              onPress={() => {
+                setEarningsModalVisible(false);
+                Alert.alert('Statement Saved', 'Earning statement downloaded.');
+              }}
+            >
+              <Text style={styles.modalPrimaryBtnText}>Download Statement</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      <Modal visible={locationModalVisible} transparent animationType="fade">
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Select Region</Text>
+              <Pressable onPress={() => setLocationModalVisible(false)}>
+                <X size={20} color={C.textSub} />
+              </Pressable>
+            </View>
+            {['Nashik', 'Pune', 'Ahmednagar', 'Solapur'].map((dist) => (
+              <Pressable
+                key={dist}
+                style={[
+                  styles.districtItem,
+                  selectedDistrict === dist && { backgroundColor: C.dataMatchBg },
+                ]}
+                onPress={() => {
+                  setSelectedDistrict(dist);
+                  setLocationModalVisible(false);
+                }}
+              >
+                <Text
+                  style={[
+                    styles.districtText,
+                    selectedDistrict === dist && { fontWeight: '700', color: C.secondaryGreen },
+                  ]}
+                >
+                  {dist}, Maharashtra
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+        </View>
+      </Modal>
+    </View>
   );
 }
 
+// ─── Styles ──────────────────────────────────────────────────────────────────
+
+const SOFT_SHADOW = {
+  shadowColor: '#000000',
+  shadowOffset: { width: 0, height: 4 },
+  shadowOpacity: 0.05,
+  shadowRadius: 12,
+  elevation: 3,
+};
+
 const styles = StyleSheet.create({
-  /* ── Top Bar ── */
-  topAppBar: {
+  root: {
+    flex: 1,
+    backgroundColor: C.canvasBg,
+  },
+
+  // 1. Organic Watercolor Background Washes
+  gradientTopWarm: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '85%',
+    height: 320,
+  },
+  gradientTopGreen: {
+    position: 'absolute',
+    top: 0,
+    right: 0,
+    width: '80%',
+    height: 360,
+  },
+
+  // Top Bar (Single Row: Avatar + Greeting, Bell)
+  topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: MKSpacing.xl,
-    width: '100%',
+    paddingHorizontal: 16,
+    paddingTop: 52,
+    paddingBottom: 10,
+    zIndex: 10,
   },
-  farmerProfileHeader: {
+  topBarLeft: {
     flexDirection: 'row',
     alignItems: 'center',
-    flex: 1,
-    marginRight: MKSpacing.md,
+    gap: 12,
   },
-  avatarImage: {
+  avatar: {
     width: 48,
     height: 48,
     borderRadius: 24,
     borderWidth: 2,
     borderColor: '#FFFFFF',
-    marginRight: MKSpacing.md,
-    flexShrink: 0,
+    ...SOFT_SHADOW,
   },
-  greetingContainer: {
-    flex: 1,
-    minWidth: 0,
+  greetingCol: {
+    justifyContent: 'center',
   },
-  greetingTitle: {
+  greetingText: {
     fontSize: 18,
     fontWeight: '800',
-    color: MKColors.textPrimary,
-    letterSpacing: -0.3,
+    color: C.textTitle,
+    letterSpacing: -0.2,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 3,
+    marginTop: 2,
   },
   locationText: {
     fontSize: 12,
-    color: MKColors.textSecondary,
-    fontWeight: '500',
-    marginLeft: 4,
+    fontWeight: '600',
+    color: C.textSub,
   },
-  notificationBtn: {
+  bellWrapper: {
+    position: 'relative',
+  },
+  bellButton: {
     width: 42,
     height: 42,
     borderRadius: 21,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: C.surface,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.2,
-    borderColor: '#E5DFD5',
-    elevation: 3,
-    shadowColor: '#1A1C1E',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    flexShrink: 0,
+    ...SOFT_SHADOW,
   },
-  notificationBadge: {
+  bellBadge: {
     position: 'absolute',
-    top: 2,
-    right: 2,
+    top: -2,
+    right: -2,
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: MKColors.accentOrange,
+    backgroundColor: '#D9531E',
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
   },
-  notificationBadgeText: {
+  bellBadgeText: {
     fontSize: 10,
     fontWeight: '800',
     color: '#FFFFFF',
   },
 
-  /* ── Hero Sell Card ── */
-  heroSellCard: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 18,
-    borderWidth: 1.5,
-    borderColor: '#E2DBD0',
-    elevation: 4,
-    shadowColor: '#1A1C1E',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    minHeight: 148,
-    overflow: 'hidden',
-    marginBottom: MKSpacing.xl,
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  heroSellContent: {
-    flex: 1,
-    paddingRight: 8,
-    minWidth: 0,
-  },
-  heroSellTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: MKColors.textPrimary,
-    marginBottom: 4,
-    lineHeight: 21,
-  },
-  heroSellSubtitle: {
-    fontSize: 12,
-    color: MKColors.textSecondary,
-    marginBottom: 14,
-    lineHeight: 16,
-  },
-  addProduceBtnWrapper: {
-    alignSelf: 'flex-start',
-  },
-  inlineAddBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1E5A2A',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 9,
-    elevation: 2,
-  },
-  inlineAddBtnText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    marginLeft: 6,
-  },
-  heroBasketImage: {
-    width: 105,
-    height: 105,
-    resizeMode: 'contain',
-    flexShrink: 0,
+  scrollContent: {
+    paddingHorizontal: 16,
+    paddingTop: 4,
   },
 
-  /* ── Decision Card ── */
-  cropHeaderRow: {
+  // ── Hero Card ──
+  heroCard: {
+    backgroundColor: C.surface,
+    borderRadius: 20,
+    padding: 18,
+    position: 'relative',
+    marginBottom: 20,
+    overflow: 'hidden',
+    ...SOFT_SHADOW,
+  },
+  heroTextCol: {
+    width: '68%',
+    zIndex: 2,
+  },
+  heroTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: C.textTitle,
+    lineHeight: 24,
+    marginBottom: 4,
+  },
+  heroSubtitle: {
+    fontSize: 12.5,
+    color: C.textSub,
+    marginBottom: 14,
+    lineHeight: 17,
+  },
+  // Rich Forest Green "+ Add Produce" Button (#1B6D24) — Ultra Visible
+  addProduceBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#1B6D24',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    gap: 8,
+    alignSelf: 'flex-start',
+    shadowColor: '#1B6D24',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  addProduceBtnText: {
+    fontSize: 14.5,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
+  },
+  heroImageCol: {
+    position: 'absolute',
+    bottom: -6,
+    right: -6,
+    width: 115,
+    height: 115,
+    alignItems: 'flex-end',
+    justifyContent: 'flex-end',
+    zIndex: 1,
+  },
+  heroImage: {
+    width: 115,
+    height: 115,
+    resizeMode: 'contain',
+  },
+
+  // ── 2. "Today at a Glance" (Precision 3-Card Design) ──
+  glanceSection: {
+    marginBottom: 20,
+  },
+  sectionHeaderTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: C.textTitle,
+    letterSpacing: -0.3,
+    marginBottom: 12,
+  },
+  glanceCardsRow: {
+    flexDirection: 'row',
+    gap: 10,
+  },
+  glanceCard: {
+    flex: 1,
+    backgroundColor: C.surface,
+    borderRadius: 16,
+    paddingVertical: 18,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...SOFT_SHADOW,
+  },
+  glanceIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  glanceValueLarge: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: C.textTitle,
+    textAlign: 'center',
+    marginBottom: 3,
+  },
+  glanceValueMd: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: C.textTitle,
+    textAlign: 'center',
+    marginBottom: 3,
+  },
+  glanceLabel: {
+    fontSize: 11.5,
+    fontWeight: '500',
+    color: C.textSub,
+    textAlign: 'center',
+  },
+
+  // ── Best Opportunity Section ──
+  sectionTitleRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    padding: MKSpacing.lg,
-    paddingBottom: 0,
-    width: '100%',
+    alignItems: 'center',
+    marginBottom: 10,
   },
-  cropInfoRow: {
+  viewAllLink: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: C.secondaryGreen,
+  },
+  opportunityCard: {
+    backgroundColor: C.surface,
+    borderRadius: 20,
+    padding: 16,
+    marginBottom: 20,
+    ...SOFT_SHADOW,
+  },
+  opportunityBadgesRow: {
     flexDirection: 'row',
-    flex: 1,
-    marginRight: MKSpacing.sm,
-    minWidth: 0,
-  },
-  cropImage: {
-    width: 60,
-    height: 60,
-    borderRadius: 14,
-    marginRight: MKSpacing.md,
-    flexShrink: 0,
-  },
-  cropDetails: {
-    flex: 1,
-    justifyContent: 'center',
-    minWidth: 0,
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
   },
   recommendedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: MKColors.accentOrange,
+    backgroundColor: C.badgeOrange,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
     borderRadius: 6,
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    alignSelf: 'flex-start',
-    marginBottom: 4,
   },
-  recommendedText: {
-    fontSize: 10,
+  recommendedBadgeText: {
+    fontSize: 11,
     fontWeight: '700',
     color: '#FFFFFF',
-    marginLeft: 4,
   },
-  cropName: {
-    fontSize: 16,
+  matchBadge: {
+    backgroundColor: C.dataMatchBg,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  matchBadgeText: {
+    fontSize: 11,
     fontWeight: '800',
-    color: MKColors.textPrimary,
-    marginBottom: 2,
+    color: C.dataMatchText,
+  },
+  opportunityMainRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    marginBottom: 12,
+  },
+  onionThumb: {
+    width: 92,
+    height: 92,
+    borderRadius: 14,
+  },
+  opportunityTextCol: {
+    flex: 1,
+  },
+  cropTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: C.textTitle,
   },
   cropQty: {
     fontSize: 12,
-    color: MKColors.textSecondary,
-    fontWeight: '500',
-  },
-  badgeWrapper: {
-    flexShrink: 0,
+    color: C.textSub,
+    marginTop: 2,
+    marginBottom: 6,
   },
   netReturnRow: {
-    paddingHorizontal: MKSpacing.lg,
-    paddingTop: MKSpacing.md,
-    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'baseline',
   },
-  netReturnLabel: {
-    fontSize: 12,
-    color: '#6B7280',
-    fontWeight: '500',
-    marginBottom: 2,
+  netReturnPrice: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: C.textTitle,
   },
-  netReturnValue: {
-    fontSize: 26,
-    fontWeight: '900',
-    color: '#1E5A2A',
-    letterSpacing: -0.5,
+  netReturnUnit: {
+    fontSize: 13,
+    color: C.textSub,
   },
-  unitText: {
-    fontSize: 15,
-    fontWeight: '500',
-    color: '#6B7280',
+  netReturnSub: {
+    fontSize: 11,
+    color: C.textSub,
+    marginTop: 1,
   },
-  breakdownGrid: {
+  cardDivider: {
+    height: 1,
+    backgroundColor: C.outlineVariant,
+    opacity: 0.35,
+    marginVertical: 12,
+  },
+  metricGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: 14,
-    paddingVertical: 12,
-    backgroundColor: '#FAF9F6',
-    marginHorizontal: MKSpacing.lg,
-    marginTop: MKSpacing.md,
-    borderRadius: 14,
-    borderWidth: 1.2,
-    borderColor: '#E8E3D8',
   },
-  breakdownCol: {
-    alignItems: 'flex-start',
+  metricCol: {
+    flex: 1,
   },
-  breakdownLabel: {
+  metricLabel: {
     fontSize: 11,
-    color: '#7A7A7A',
+    color: C.textSub,
     marginBottom: 3,
   },
-  breakdownValue: {
+  metricValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#1A1C1E',
+    color: C.textTitle,
   },
   demandRow: {
     flexDirection: 'row',
@@ -485,67 +788,34 @@ const styles = StyleSheet.create({
   demandValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: MKColors.accentOrange,
-    marginRight: 3,
-  },
-  decisionActionWrapper: {
-    paddingHorizontal: MKSpacing.lg,
-    paddingBottom: MKSpacing.lg,
-    marginTop: 12,
-    width: '100%',
+    color: '#D9531E',
   },
 
-  /* ── Today at a Glance ── */
-  metricsRow: {
+  // View Best Options: 2px green border, white bg
+  viewBestOptionsBtn: {
     flexDirection: 'row',
-    width: '100%',
-    gap: 10,
-  },
-  metricCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingVertical: 18,
-    paddingHorizontal: 6,
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1.2,
-    borderColor: '#EFE7DC',
-    minHeight: 125,
-    elevation: 4,
-    shadowColor: '#1A1C1E',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
-    minWidth: 0,
+    borderWidth: 2,
+    borderColor: C.secondaryGreen,
+    borderRadius: 12,
+    paddingVertical: 12,
+    marginTop: 14,
+    backgroundColor: C.surface,
   },
-  metricCardLast: {},
-  metricIconCircle: {
-    width: 42,
-    height: 42,
-    borderRadius: 21,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 8,
+  viewBestOptionsBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: C.secondaryGreen,
   },
-  metricBigNumber: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#1A1C1E',
-    marginBottom: 2,
-  },
-  metricBigText: {
-    fontSize: 15,
-    fontWeight: '900',
-    color: '#1A1C1E',
-    textAlign: 'center',
-    marginBottom: 2,
-  },
-  metricLabel: {
-    fontSize: 11,
-    color: '#757575',
-    textAlign: 'center',
-    fontWeight: '600',
-    lineHeight: 14,
-  },
+
+  // Modal styles
+  modalBackdrop: { flex: 1, backgroundColor: 'rgba(0,0,0,0.45)', justifyContent: 'center', alignItems: 'center', padding: 20 },
+  modalCard: { width: '100%', backgroundColor: C.surface, borderRadius: 20, padding: 20, ...SOFT_SHADOW },
+  modalHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 },
+  modalTitle: { fontSize: 18, fontWeight: '700', color: C.textTitle },
+  modalPrimaryBtn: { backgroundColor: C.secondaryGreen, borderRadius: 12, paddingVertical: 12, alignItems: 'center', marginTop: 10 },
+  modalPrimaryBtnText: { fontSize: 14, fontWeight: '700', color: C.onSecondary },
+  districtItem: { paddingVertical: 12, paddingHorizontal: 14, borderRadius: 10, marginBottom: 4 },
+  districtText: { fontSize: 14, color: C.textTitle },
 });

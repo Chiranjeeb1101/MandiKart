@@ -43,7 +43,7 @@ export default function RootLayout() {
         <Stack.Screen name="onboarding/permissions" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="auth/signup" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="auth/login" options={{ animation: 'fade_from_bottom' }} />
-        <Stack.Screen name="auth/verify-otp" options={{ animation: 'flip' }} />
+        <Stack.Screen name="auth/verify-otp" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="onboarding/farmer-profile" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="onboarding/farm-details" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />

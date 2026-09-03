@@ -36,3 +36,9 @@ yarn-error.log*
 
 # Local Knowledge Graph / AI Tool artifacts
 graphify-out/
+
+# Cloned Skill Repositories
+graphify/
+gsd-2/
+ponytail/
+ui-ux-pro-max-skill/
