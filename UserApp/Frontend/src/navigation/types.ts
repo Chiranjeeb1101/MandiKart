@@ -62,5 +62,8 @@ export type RootStackParamList = {
   Settings: undefined;
   AddAddress: { addressId?: string };
   OrderDetails: { orderId: string };
-  OrderConfirmation: { orderId: string };
+  OrderTracking: { orderId: string; order?: any };
+  OrderConfirmation: { orderId: string; deliveryOtp?: string };
+  BulkRequirement: undefined;
+  BulkMatchDiscovery: { requirementId: string; requirement?: any };
 };

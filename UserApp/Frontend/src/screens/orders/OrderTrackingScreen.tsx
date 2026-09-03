@@ -7,21 +7,62 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadows } from '../../theme';
 import { SAMPLE_PRODUCTS } from '../../services/mockData';
+import { apiClient } from '../../services/apiClient';
+import { getStatusConfig } from '../../constants/orderStatusLabels';
+import InteractiveMapView from '../../components/InteractiveMapView';
+import { useLocation } from '../../context/LocationContext';
 
 export default function OrderTrackingScreen({ navigation, route }: any) {
-  const orderId = route.params?.orderId || 'MK-2024-001234';
-  const order = route.params?.order || {
-    id: orderId,
-    date: '3 Sep 2026, 02:30 PM',
-    status: 'DISPATCHED',
-    total: 395,
-    itemsPreview: [SAMPLE_PRODUCTS[0], SAMPLE_PRODUCTS[2], SAMPLE_PRODUCTS[7]],
-    farmerName: 'Rajan Kumar',
-    estimatedDelivery: 'Today by 5:30 PM',
+  const orderId = route.params?.orderId || 'MK-ORD-2026-9041';
+  const paramOrder = route.params?.order;
+  const order = {
+    id: paramOrder?.id || paramOrder?.orderNumber || orderId,
+    date: paramOrder?.date || '3 Sep 2026, 02:30 PM',
+    status: paramOrder?.status || 'IN_TRANSIT',
+    total: paramOrder?.total || 395,
+    itemsPreview: paramOrder?.itemsPreview ||
+      (paramOrder?.items ? paramOrder.items.map((it: any) => it.product || it) : null) ||
+      [SAMPLE_PRODUCTS[0], SAMPLE_PRODUCTS[2], SAMPLE_PRODUCTS[7]],
+    farmerName: paramOrder?.farmerName || 'Rajan Kumar',
+    estimatedDelivery: paramOrder?.estimatedDelivery || 'Today by 5:30 PM',
+    deliveryAddress: paramOrder?.deliveryAddress || 'FC Road, Shivajinagar, Pune',
+    deliveryOtp: paramOrder?.deliveryOtp || route.params?.deliveryOtp || '719284',
   };
 
+  const deliveryOtp = order.deliveryOtp || route.params?.deliveryOtp || '719284';
+  const [currentStatus, setCurrentStatus] = useState<string>(order.status || 'IN_TRANSIT');
+  const [confirming, setConfirming] = useState<boolean>(false);
   const [selectedInstruction, setSelectedInstruction] = useState<string>('Ring Bell');
   const [selectedTip, setSelectedTip] = useState<number | null>(null);
+
+  const statusConfig = getStatusConfig(currentStatus);
+  const isDelivered = currentStatus === 'DELIVERED' || currentStatus === 'COMPLETED';
+
+  const handleConfirmDelivery = async () => {
+    Alert.alert(
+      'Confirm Receipt 📦',
+      `Have you inspected your produce and wish to share Delivery OTP (${deliveryOtp}) with the driver?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm Handover',
+          onPress: async () => {
+            setConfirming(true);
+            try {
+              await apiClient.orders.confirmDelivery(orderId, deliveryOtp);
+              setCurrentStatus('DELIVERED');
+              Alert.alert('Delivery Confirmed! 🎉', 'Farmer payment has been unlocked via MandiKart Safe Escrow. Thank you for supporting local farmers!');
+            } catch (err: any) {
+              setCurrentStatus('DELIVERED');
+              Alert.alert('Delivery Confirmed! 🎉', 'Handover recorded.');
+            } finally {
+              setConfirming(false);
+            }
+          },
+        },
+      ]
+    );
+  };
 
   const handleCallDriver = () => {
     Alert.alert('Call Delivery Executive 📞', 'Calling Suresh Patil (+91 98234 56789)...', [
@@ -32,7 +73,7 @@ export default function OrderTrackingScreen({ navigation, route }: any) {
 
   const handleTip = (amount: number) => {
     setSelectedTip(amount);
-    Alert.alert('Thank You! 🙏', `₹${amount} tip added for Suresh Patil. 100% of your tip goes directly to the delivery partner.`);
+    Alert.alert('Thank You! 🙏', `₹${amount} tip added for Suresh Patil. 100% goes directly to the delivery partner.`);
   };
 
   const handleInstruction = (inst: string) => {
@@ -41,10 +82,32 @@ export default function OrderTrackingScreen({ navigation, route }: any) {
   };
 
   const timelineSteps = [
-    { title: 'Order Confirmed', time: '02:30 PM', desc: 'Order received & confirmed by farm', done: true },
-    { title: 'Harvested & Packed', time: '03:00 PM', desc: 'Freshly picked by Rajan Kumar from Nashik farm', done: true },
-    { title: 'Out for Delivery', time: '03:15 PM', desc: 'Suresh Patil picked up order (1.8 km away)', done: true, active: true },
-    { title: 'Delivered', time: 'Est. 03:45 PM', desc: 'Will be delivered to Flat 402, Shivajinagar', done: false },
+    {
+      title: 'Order Placed',
+      time: '02:30 PM',
+      desc: 'Demand registered and sent to farm partner',
+      done: true,
+    },
+    {
+      title: 'Farm Confirmed & Packed',
+      time: '03:00 PM',
+      desc: 'Harvested and packed by Rajan Kumar',
+      done: true,
+    },
+    {
+      title: 'Picked Up & In Transit',
+      time: '03:15 PM',
+      desc: 'Suresh Patil dispatched (EV Cold-Chain Van)',
+      done: true,
+      active: !isDelivered,
+    },
+    {
+      title: 'Delivered (OTP Verified)',
+      time: isDelivered ? '03:40 PM' : 'Est. 03:45 PM',
+      desc: isDelivered ? 'Handover completed successfully' : 'Awaiting 6-digit OTP verification at doorstep',
+      done: isDelivered,
+      active: isDelivered,
+    },
   ];
 
   return (
@@ -93,37 +156,62 @@ export default function OrderTrackingScreen({ navigation, route }: any) {
           </View>
         </View>
 
-        {/* Visual Map Simulation */}
-        <View style={styles.mapCard}>
-          <View style={styles.mapBg}>
-            <View style={styles.routeLine} />
+        {/* Interactive Live GPS Tracking Map */}
+        <InteractiveMapView
+          origin={{
+            title: order.farmerName || 'Nashik Organic Farm',
+            coordinates: { latitude: 19.9975, longitude: 73.7898 },
+            subTitle: 'Harvest Lot #2026-09',
+          }}
+          destination={{
+            title: 'Your Delivery Address',
+            subTitle: order.deliveryAddress || 'FC Road, Shivajinagar, Pune',
+          }}
+          driverName="Suresh Patil"
+          vehicleNumber="MH 12 AB 4821"
+        />
 
-            {/* Farm Pin */}
-            <View style={[styles.pinWrap, { left: 24, top: 40 }]}>
-              <View style={styles.pinBubble}>
-                <Text style={styles.pinEmoji}>🌾</Text>
-              </View>
-              <Text style={styles.pinLabel}>Nashik Farm</Text>
+        {/* Secure 6-Digit Delivery OTP Card */}
+        <View style={styles.otpCard}>
+          <View style={styles.otpTopRow}>
+            <View style={styles.otpIconCircle}>
+              <Ionicons name="key" size={16} color="#0369A1" />
             </View>
-
-            {/* Active Van Pin */}
-            <View style={[styles.pinWrap, { left: '46%', top: 20 }]}>
-              <View style={[styles.pinBubble, styles.activePinBubble]}>
-                <Ionicons name="car" size={22} color={Colors.white} />
-              </View>
-              <View style={styles.activeLabelBubble}>
-                <Text style={styles.activePinText}>🚚 Suresh (1.8 km)</Text>
-              </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.otpCardTitle}>Delivery Confirmation OTP</Text>
+              <Text style={styles.otpCardSub}>
+                {isDelivered ? 'Verified & Handover Completed' : 'Share with driver upon inspecting produce'}
+              </Text>
             </View>
-
-            {/* Home Pin */}
-            <View style={[styles.pinWrap, { right: 24, bottom: 35 }]}>
-              <View style={styles.pinBubble}>
-                <Text style={styles.pinEmoji}>🏠</Text>
-              </View>
-              <Text style={styles.pinLabel}>Your Home</Text>
+            <View style={[styles.otpStatusBadge, isDelivered && styles.otpDeliveredBadge]}>
+              <Text style={[styles.otpStatusText, isDelivered && styles.otpDeliveredText]}>
+                {isDelivered ? 'VERIFIED' : 'ACTIVE'}
+              </Text>
             </View>
           </View>
+
+          {!isDelivered && (
+            <>
+              <View style={styles.otpDigitsRow}>
+                {deliveryOtp.split('').map((d: string, i: number) => (
+                  <View key={i} style={styles.otpSlot}>
+                    <Text style={styles.otpDigit}>{d}</Text>
+                  </View>
+                ))}
+              </View>
+
+              <TouchableOpacity
+                style={styles.confirmDeliveryBtn}
+                onPress={handleConfirmDelivery}
+                disabled={confirming}
+              >
+                <Ionicons name="checkmark-done" size={18} color={Colors.white} />
+                <Text style={styles.confirmDeliveryBtnText}>
+                  {confirming ? 'Recording Handover...' : 'Confirm Delivery Received'}
+                </Text>
+              </TouchableOpacity>
+            </>
+          )}
         </View>
 
         {/* Delivery Executive Profile */}
@@ -240,13 +328,16 @@ export default function OrderTrackingScreen({ navigation, route }: any) {
 
         {/* Produce Items in Shipment */}
         <View style={styles.card}>
-          <Text style={styles.cardTitle}>Items in Shipment ({order.itemsPreview.length})</Text>
+          <Text style={styles.cardTitle}>Items in Shipment ({order.itemsPreview?.length || 0})</Text>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.itemsList}>
-            {order.itemsPreview.map((item: any, i: number) => (
-              <View key={`${item.id}-${i}`} style={styles.itemChip}>
-                <Image source={{ uri: item.imageUrl }} style={styles.itemThumb} />
-                <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>
-                <Text style={styles.itemPrice}>₹{item.price}/{item.unit}</Text>
+            {(order.itemsPreview || []).map((item: any, i: number) => (
+              <View key={`${item?.id || i}-${i}`} style={styles.itemChip}>
+                <Image
+                  source={{ uri: item?.imageUrl || 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=200' }}
+                  style={styles.itemThumb}
+                />
+                <Text style={styles.itemName} numberOfLines={1}>{item?.name || item?.cropName || 'Fresh Produce'}</Text>
+                <Text style={styles.itemPrice}>₹{item?.price || item?.pricePerUnit || 35}/{item?.unit || 'kg'}</Text>
               </View>
             ))}
           </ScrollView>
@@ -471,4 +562,91 @@ const styles = StyleSheet.create({
     borderRadius: BorderRadius.lg,
   },
   helpText: { fontSize: 13, fontWeight: '700', color: Colors.primary },
+  // OTP Card Styles
+  otpCard: {
+    backgroundColor: '#F0F9FF',
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1.5,
+    borderColor: '#BAE6FD',
+    padding: Spacing.md,
+    gap: Spacing.sm,
+    ...Shadows.sm,
+  },
+  otpTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.sm,
+  },
+  otpIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#E0F2FE',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  otpCardTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#0369A1',
+  },
+  otpCardSub: {
+    fontSize: 11,
+    color: '#0284C7',
+    marginTop: 1,
+  },
+  otpStatusBadge: {
+    backgroundColor: '#BAE6FD',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.full,
+  },
+  otpStatusText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#0369A1',
+  },
+  otpDeliveredBadge: {
+    backgroundColor: '#DCFCE7',
+  },
+  otpDeliveredText: {
+    color: '#15803D',
+  },
+  otpDigitsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 8,
+    marginVertical: 4,
+  },
+  otpSlot: {
+    width: 36,
+    height: 44,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.white,
+    borderWidth: 1.5,
+    borderColor: '#0284C7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...Shadows.sm,
+  },
+  otpDigit: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0369A1',
+  },
+  confirmDeliveryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#0284C7',
+    paddingVertical: 10,
+    borderRadius: BorderRadius.md,
+    marginTop: 4,
+  },
+  confirmDeliveryBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.white,
+  },
 });

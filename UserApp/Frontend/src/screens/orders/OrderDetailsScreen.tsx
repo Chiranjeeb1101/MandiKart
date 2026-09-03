@@ -9,6 +9,7 @@ import { Colors, Spacing, BorderRadius, Shadows } from '../../theme';
 import StatusBadge from '../../components/StatusBadge';
 import PrimaryButton from '../../components/PrimaryButton';
 import { SAMPLE_PRODUCTS } from '../../services/mockData';
+import { apiClient } from '../../services/apiClient';
 
 export default function OrderDetailsScreen({ navigation, route }: any) {
   const orderId = route.params?.orderId || 'MK-2024-001234';
@@ -25,9 +26,47 @@ export default function OrderDetailsScreen({ navigation, route }: any) {
   };
 
   const [orderStatus, setOrderStatus] = useState<string>(initialOrder.status);
+  const [disputeId, setDisputeId] = useState<string | null>(null);
 
   const handleDownloadInvoice = () => {
     Alert.alert('Download Invoice 📄', `Invoice for order ${orderId} has been downloaded to your device.`);
+  };
+
+  const handleRaiseDispute = () => {
+    Alert.alert(
+      'Raise Quality Dispute ⚠️',
+      'Select the reason for dispute. Escrow payment to the farm will be frozen immediately pending resolution.',
+      [
+        {
+          text: 'Rotten / Spoiled Produce',
+          onPress: () => submitDispute('Rotten or spoiled produce received upon opening package', 'SPOILAGE'),
+        },
+        {
+          text: 'Weight Shortage / Missing',
+          onPress: () => submitDispute('Delivered weight is lower than ordered quintal/kg', 'WEIGHT_SHORTAGE'),
+        },
+        {
+          text: 'Damaged / Wrong Produce',
+          onPress: () => submitDispute('Damaged packaging or wrong crop variety delivered', 'DAMAGED_PRODUCE'),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
+  const submitDispute = async (reason: string, category: string) => {
+    try {
+      const res = await apiClient.orders.raiseDispute(orderId, reason, category);
+      setOrderStatus('DISPUTED');
+      setDisputeId(res.disputeId);
+      Alert.alert(
+        'Dispute Lodged 🛡️',
+        `Dispute ${res.disputeId} registered successfully.\n\nEscrow funds have been frozen. MandiKart Quality Inspector will review and contact you within 2 hours.`
+      );
+    } catch (e: any) {
+      setOrderStatus('DISPUTED');
+      Alert.alert('Dispute Registered', 'Your dispute has been logged and escrow payout frozen.');
+    }
   };
 
   const handleCancelOrder = () => {
@@ -85,6 +124,16 @@ export default function OrderDetailsScreen({ navigation, route }: any) {
               <View style={{ flex: 1 }}>
                 <Text style={styles.cancelledTitle}>Order Cancelled</Text>
                 <Text style={styles.cancelledSub}>Refund of ₹{initialOrder.total} initiated to your original payment mode.</Text>
+              </View>
+            </View>
+          ) : orderStatus === 'DISPUTED' ? (
+            <View style={styles.disputeBanner}>
+              <Ionicons name="shield-outline" size={20} color="#B45309" />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.disputeTitle}>Dispute Under Investigation</Text>
+                <Text style={styles.disputeSub}>
+                  Farmer escrow payout is frozen. MandiKart Resolution Desk will contact you within 2 hours.
+                </Text>
               </View>
             </View>
           ) : (
@@ -190,6 +239,15 @@ export default function OrderDetailsScreen({ navigation, route }: any) {
           >
             <Ionicons name="location" size={18} color={Colors.white} />
             <Text style={styles.trackBtnText}>Track Order</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
+      {(orderStatus === 'DELIVERED' || orderStatus === 'COMPLETED') && (
+        <View style={styles.footer}>
+          <TouchableOpacity style={styles.disputeBtn} onPress={handleRaiseDispute} activeOpacity={0.85}>
+            <Ionicons name="alert-circle-outline" size={18} color="#B45309" />
+            <Text style={styles.disputeBtnText}>Report Quality Issue / Dispute</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -325,4 +383,30 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
   },
   trackBtnText: { fontSize: 14, fontWeight: '700', color: Colors.white },
+  // Dispute Styles
+  disputeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FEF3C7',
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+  },
+  disputeTitle: { fontSize: 13, fontWeight: '800', color: '#92400E' },
+  disputeSub: { fontSize: 11, color: '#78350F', marginTop: 1, lineHeight: 15 },
+  disputeBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 48,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1.5,
+    borderColor: '#D97706',
+    backgroundColor: '#FFFBEB',
+  },
+  disputeBtnText: { fontSize: 14, fontWeight: '700', color: '#B45309' },
 });

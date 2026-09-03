@@ -11,6 +11,7 @@ import { ordersRouter } from './routes/orders.routes.js';
 import { negotiationsRouter } from './routes/negotiations.routes.js';
 import { consentRouter } from './routes/consent.routes.js';
 import { notificationRouter } from './routes/notification.routes.js';
+import { bulkRequirementsRouter } from './routes/bulk-requirements.routes.js';
 
 dotenv.config();
 
@@ -51,6 +52,7 @@ app.use('/api/v1/orders', ordersRouter);
 app.use('/api/v1/negotiations', negotiationsRouter);
 app.use('/api/v1/consent', consentRouter);
 app.use('/api/v1/notifications', notificationRouter);
+app.use('/api/v1/bulk-requirements', bulkRequirementsRouter);
 
 // Centralized error handler
 app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Pressable, FlatList, StatusBar, Image, Dimensions,
+  Pressable, FlatList, StatusBar, Image, Dimensions, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -13,6 +13,9 @@ import SearchBar from '../../components/SearchBar';
 import ProductCard from '../../components/ProductCard';
 import MarqueeTicker from '../../components/MarqueeTicker';
 import { SAMPLE_PRODUCTS, SAMPLE_CATEGORIES } from '../../services/mockData';
+import { useAuth } from '../../context/AuthContext';
+import { useLocation } from '../../context/LocationContext';
+import InteractiveMapView from '../../components/InteractiveMapView';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -26,10 +29,36 @@ const BANNER_WIDTH = Dimensions.get('window').width - 32;
 
 export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
+  const { buyerMode, toggleBuyerMode, user } = useAuth();
+  const { currentAddress, fetchCurrentLocation, isLoadingLocation } = useLocation();
   const [searchText, setSearchText] = useState('');
   const [wishlisted, setWishlisted] = useState<string[]>([]);
+  const [showMap, setShowMap] = useState<boolean>(true);
   const bannerScrollRef = useRef<FlatList>(null);
   const bannerIndex = useRef(0);
+
+  const handleLocationPress = () => {
+    Alert.alert(
+      'Delivery Location 📍',
+      `Current: ${currentAddress?.formattedAddress || 'Pune, Maharashtra'}\n\nWould you like to auto-detect your live GPS coordinates or enter an address?`,
+      [
+        {
+          text: 'Auto-Detect GPS 🎯',
+          onPress: async () => {
+            const loc = await fetchCurrentLocation(true);
+            if (loc) {
+              Alert.alert('GPS Updated! 📍', 'Your delivery hub has been set using your device coordinates.');
+            }
+          },
+        },
+        {
+          text: 'Add New Address 📝',
+          onPress: () => navigation.navigate('AddAddress', {}),
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
 
   const handleBannerPress = (catId: string, catName: string) => {
     navigation.navigate('ProductStack', {
@@ -67,7 +96,7 @@ export default function HomeScreen() {
               onPress={() => navigation.navigate('Main', { screen: 'Profile' } as any)}
             >
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>R</Text>
+                <Text style={styles.avatarText}>{user?.fullName?.charAt(0) || 'A'}</Text>
               </View>
               <View style={styles.onlineDot} />
             </TouchableOpacity>
@@ -77,10 +106,12 @@ export default function HomeScreen() {
               <Text style={styles.locationLabel}>Deliver to</Text>
               <TouchableOpacity
                 style={styles.locationRow}
-                onPress={() => navigation.navigate('AddAddress', {})}
+                onPress={handleLocationPress}
               >
                 <Ionicons name="location" size={14} color={Colors.primary} />
-                <Text style={styles.locationText}>Pune, Maharashtra</Text>
+                <Text style={styles.locationText} numberOfLines={1}>
+                  {currentAddress?.area ? `${currentAddress.area}, ${currentAddress.city}` : 'Pune, Maharashtra'}
+                </Text>
                 <Ionicons name="chevron-down" size={14} color={Colors.textSecondary} />
               </TouchableOpacity>
             </View>
@@ -102,6 +133,38 @@ export default function HomeScreen() {
               </TouchableOpacity>
             </View>
           </View>
+
+          {/* Mode Switcher Pill (Retail vs Bulk) */}
+          <View style={styles.modeToggleContainer}>
+            <TouchableOpacity
+              style={[styles.modeTab, buyerMode === 'RETAIL' && styles.modeTabActive]}
+              onPress={() => buyerMode !== 'RETAIL' && toggleBuyerMode()}
+            >
+              <Ionicons
+                name="basket-outline"
+                size={15}
+                color={buyerMode === 'RETAIL' ? Colors.white : Colors.textSecondary}
+              />
+              <Text style={[styles.modeTabText, buyerMode === 'RETAIL' && styles.modeTabTextActive]}>
+                Household / Retail
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.modeTab, buyerMode === 'BULK' && styles.modeTabActive]}
+              onPress={() => buyerMode !== 'BULK' && toggleBuyerMode()}
+            >
+              <Ionicons
+                name="business-outline"
+                size={15}
+                color={buyerMode === 'BULK' ? Colors.white : Colors.textSecondary}
+              />
+              <Text style={[styles.modeTabText, buyerMode === 'BULK' && styles.modeTabTextActive]}>
+                Hotel & Bulk Buyer
+              </Text>
+            </TouchableOpacity>
+          </View>
+
           <SearchBar
             value={searchText}
             onChangeText={setSearchText}
@@ -109,6 +172,29 @@ export default function HomeScreen() {
             style={styles.searchBar}
           />
         </View>
+
+        {/* Bulk Procurement Hero Card (Only in Bulk Mode) */}
+        {buyerMode === 'BULK' && (
+          <View style={styles.bulkHeroBox}>
+            <View style={styles.bulkHeroTop}>
+              <View style={styles.bulkTag}>
+                <Ionicons name="sparkles" size={13} color="#15803D" />
+                <Text style={styles.bulkTagText}>WHOLESALE MANDI DESK</Text>
+              </View>
+              <Text style={styles.bulkHeroTitle}>Direct FPO Procurement</Text>
+              <Text style={styles.bulkHeroSub}>
+                Procure commercial truckloads with volume price discounts, multi-farmer aggregation, and AI matching.
+              </Text>
+            </View>
+            <TouchableOpacity
+              style={styles.postRequirementBtn}
+              onPress={() => navigation.navigate('BulkRequirement' as any)}
+            >
+              <Ionicons name="add-circle" size={18} color={Colors.white} />
+              <Text style={styles.postRequirementBtnText}>Post Commercial Requirement</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {/* Marquee ticker */}
         <MarqueeTicker
@@ -188,6 +274,35 @@ export default function HomeScreen() {
               </TouchableOpacity>
             )}
           />
+        </View>
+
+        {/* Live Farm & Fleet GPS Map Widget */}
+        <View style={styles.section}>
+          <View style={styles.sectionHeader}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="map" size={18} color={Colors.primary} />
+              <Text style={styles.sectionTitle}>Live Farm & GPS Fleet</Text>
+            </View>
+            <TouchableOpacity onPress={() => setShowMap(!showMap)}>
+              <Text style={styles.seeAll}>{showMap ? 'Hide Map' : 'View Live Map'}</Text>
+            </TouchableOpacity>
+          </View>
+
+          {showMap && (
+            <View style={{ paddingHorizontal: Spacing.md, marginTop: Spacing.xs }}>
+              <InteractiveMapView
+                origin={{
+                  title: 'Nashik Organic Farm',
+                  coordinates: { latitude: 19.9975, longitude: 73.7898 },
+                  subTitle: 'Harvest Lot #2026-09',
+                }}
+                destination={{
+                  title: 'Your Location',
+                  subTitle: currentAddress?.formattedAddress || 'Pune Delivery Hub',
+                }}
+              />
+            </View>
+          )}
         </View>
 
         {/* Fresh Deals */}
@@ -279,6 +394,91 @@ const styles = StyleSheet.create({
   iconBtn: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: Colors.gray100 },
   notifDot: { position: 'absolute', top: 8, right: 8, width: 8, height: 8, borderRadius: 4, backgroundColor: Colors.error, borderWidth: 1.5, borderColor: Colors.white },
   searchBar: { marginBottom: Spacing.sm },
+  modeToggleContainer: {
+    flexDirection: 'row',
+    backgroundColor: Colors.gray100,
+    borderRadius: BorderRadius.full,
+    padding: 3,
+    marginBottom: Spacing.sm,
+    gap: 4,
+  },
+  modeTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 7,
+    borderRadius: BorderRadius.full,
+  },
+  modeTabActive: {
+    backgroundColor: Colors.primary,
+    ...Shadows.sm,
+  },
+  modeTabText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  modeTabTextActive: {
+    color: Colors.white,
+    fontWeight: '700',
+  },
+  bulkHeroBox: {
+    marginHorizontal: Spacing.md,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.xs,
+    backgroundColor: '#F0FDF4',
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1.5,
+    borderColor: '#BBF7D0',
+    padding: Spacing.md,
+    gap: Spacing.sm,
+    ...Shadows.sm,
+  },
+  bulkHeroTop: {
+    gap: 4,
+  },
+  bulkTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: BorderRadius.full,
+    alignSelf: 'flex-start',
+  },
+  bulkTagText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#15803D',
+    letterSpacing: 0.5,
+  },
+  bulkHeroTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+  },
+  bulkHeroSub: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    lineHeight: 17,
+  },
+  postRequirementBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#16A34A',
+    paddingVertical: 10,
+    borderRadius: BorderRadius.md,
+  },
+  postRequirementBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.white,
+  },
   bannerList: { paddingHorizontal: Spacing.md, gap: Spacing.sm },
   banner: { width: BANNER_WIDTH, borderRadius: BorderRadius.xl, padding: Spacing.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginVertical: Spacing.md, overflow: 'hidden' },
   bannerContent: { flex: 1, gap: 4 },

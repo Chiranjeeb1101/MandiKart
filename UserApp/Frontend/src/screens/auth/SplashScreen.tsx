@@ -81,7 +81,7 @@ export default function SplashScreen({ navigation }: Props) {
       {/* Deep Rich Emerald Gradient Background */}
       <LinearGradient
         colors={['#011F16', '#064E3B', '#047857', '#10B981']}
-        style={StyleSheet.absoluteFillObject}
+        style={StyleSheet.absoluteFill}
         start={{ x: 0.1, y: 0.1 }}
         end={{ x: 0.9, y: 0.9 }}
       />

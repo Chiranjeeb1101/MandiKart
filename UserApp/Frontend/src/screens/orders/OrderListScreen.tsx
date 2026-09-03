@@ -8,60 +8,44 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadows } from '../../theme';
 import StatusBadge from '../../components/StatusBadge';
 import { SAMPLE_PRODUCTS } from '../../services/mockData';
+import { apiClient } from '../../services/apiClient';
+import { getStatusConfig } from '../../constants/orderStatusLabels';
+import { useEffect } from 'react';
 
 type FilterTab = 'ALL' | 'ACTIVE' | 'DELIVERED' | 'CANCELLED';
 
-const INITIAL_ORDERS = [
-  {
-    id: 'MK-2024-001234',
-    date: '3 Sep 2026, 02:30 PM',
-    status: 'DISPATCHED',
-    total: 395,
-    itemsCount: 3,
-    itemsPreview: [SAMPLE_PRODUCTS[0], SAMPLE_PRODUCTS[2], SAMPLE_PRODUCTS[7]],
-    deliveryAddress: 'Flat 402, Shivajinagar, Pune - 411005',
-    farmerName: 'Rajan Kumar',
-    estimatedDelivery: 'Today by 5:30 PM',
-  },
-  {
-    id: 'MK-2024-001198',
-    date: '28 Aug 2026, 11:15 AM',
-    status: 'DELIVERED',
-    total: 580,
-    itemsCount: 4,
-    itemsPreview: [SAMPLE_PRODUCTS[1], SAMPLE_PRODUCTS[3], SAMPLE_PRODUCTS[4]],
-    deliveryAddress: 'Flat 402, Shivajinagar, Pune - 411005',
-    farmerName: 'Priya Devi',
-    deliveredDate: '28 Aug 2026, 12:45 PM',
-  },
-  {
-    id: 'MK-2024-001052',
-    date: '15 Aug 2026, 09:00 AM',
-    status: 'DELIVERED',
-    total: 220,
-    itemsCount: 2,
-    itemsPreview: [SAMPLE_PRODUCTS[5], SAMPLE_PRODUCTS[6]],
-    deliveryAddress: 'Flat 402, Shivajinagar, Pune - 411005',
-    farmerName: 'Rajan Kumar',
-    deliveredDate: '15 Aug 2026, 10:30 AM',
-  },
-  {
-    id: 'MK-2024-000984',
-    date: '02 Aug 2026, 04:20 PM',
-    status: 'CANCELLED',
-    total: 150,
-    itemsCount: 1,
-    itemsPreview: [SAMPLE_PRODUCTS[8]],
-    deliveryAddress: 'Flat 402, Shivajinagar, Pune - 411005',
-    farmerName: 'Priya Devi',
-    cancelledReason: 'Out of stock at farm',
-  },
-];
-
 export default function OrderListScreen({ navigation }: any) {
-  const [orders, setOrders] = useState(INITIAL_ORDERS);
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<FilterTab>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const loadOrders = async () => {
+    try {
+      const data = await apiClient.orders.listOrders();
+      const mapped = data.map((o) => ({
+        id: o.orderNumber || o.id,
+        date: new Date(o.placedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+        status: o.status,
+        total: o.total,
+        itemsCount: o.items.length,
+        itemsPreview: o.items.map((it) => it.product),
+        deliveryAddress: o.deliveryAddress?.line1 || 'Pune, Maharashtra',
+        farmerName: o.farmer?.name || 'Rajan Kumar',
+        estimatedDelivery: o.estimatedDelivery || 'Today by 5:30 PM',
+        deliveryOtp: (o as any).deliveryOtp || '719284',
+      }));
+      setOrders(mapped);
+    } catch (err) {
+      console.warn('Orders fetch error:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadOrders();
+  }, []);
 
   const cancelOrderById = (orderId: string) => {
     Alert.alert(
@@ -84,17 +68,22 @@ export default function OrderListScreen({ navigation }: any) {
   };
 
   const filteredOrders = orders.filter((order) => {
+    const status = (order.status || '').toUpperCase();
+    const activeStatuses = ['PLACED', 'CONFIRMED', 'PICKUP_SCHEDULED', 'PICKUP_IN_PROGRESS', 'COLLECTED', 'IN_TRANSIT', 'DISPATCHED', 'PROCESSING'];
+    const deliveredStatuses = ['DELIVERED', 'COMPLETED'];
+    const cancelledStatuses = ['CANCELLED', 'FAILED', 'DISPUTED'];
+
     // Tab filter
-    if (activeTab === 'ACTIVE' && !(order.status === 'DISPATCHED' || order.status === 'PROCESSING' || order.status === 'CONFIRMED')) return false;
-    if (activeTab === 'DELIVERED' && order.status !== 'DELIVERED') return false;
-    if (activeTab === 'CANCELLED' && order.status !== 'CANCELLED') return false;
+    if (activeTab === 'ACTIVE' && !activeStatuses.includes(status)) return false;
+    if (activeTab === 'DELIVERED' && !deliveredStatuses.includes(status)) return false;
+    if (activeTab === 'CANCELLED' && !cancelledStatuses.includes(status)) return false;
 
     // Search filter
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      const matchId = order.id.toLowerCase().includes(q);
-      const matchFarmer = order.farmerName.toLowerCase().includes(q);
-      const matchItem = order.itemsPreview.some((p) => p.name.toLowerCase().includes(q));
+      const matchId = (order.id || '').toLowerCase().includes(q);
+      const matchFarmer = (order.farmerName || '').toLowerCase().includes(q);
+      const matchItem = (order.itemsPreview || []).some((p: any) => (p.name || '').toLowerCase().includes(q));
       return matchId || matchFarmer || matchItem;
     }
 
@@ -166,7 +155,7 @@ export default function OrderListScreen({ navigation }: any) {
           </View>
         }
         renderItem={({ item }) => {
-          const isActive = item.status === 'DISPATCHED' || item.status === 'PROCESSING' || item.status === 'CONFIRMED';
+          const isActive = ['PLACED', 'CONFIRMED', 'PICKUP_SCHEDULED', 'PICKUP_IN_PROGRESS', 'COLLECTED', 'IN_TRANSIT', 'DISPATCHED', 'PROCESSING'].includes(item.status);
           return (
             <TouchableOpacity
               style={styles.card}

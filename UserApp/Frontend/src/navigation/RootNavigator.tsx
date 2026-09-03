@@ -28,17 +28,19 @@ import NotificationsScreen from '../screens/profile/NotificationScreen';
 import EditProfileScreen from '../screens/profile/EditProfileScreen';
 import SettingsScreen from '../screens/profile/SettingsScreen';
 import AddAddressScreen from '../screens/checkout/AddAddressScreen';
+import BulkRequirementScreen from '../screens/main/BulkRequirementScreen';
+import BulkMatchDiscoveryScreen from '../screens/main/BulkMatchDiscoveryScreen';
 
-const RootStack = createNativeStackNavigator<RootStackParamList>();
-const ProductStack = createNativeStackNavigator<ProductStackParamList>();
-const CheckoutStack = createNativeStackNavigator<CheckoutStackParamList>();
-const ChatStack = createNativeStackNavigator<ChatStackParamList>();
+const RootStack = createNativeStackNavigator<any>();
+const ProductStack = createNativeStackNavigator<any>();
+const CheckoutStack = createNativeStackNavigator<any>();
+const ChatStack = createNativeStackNavigator<any>();
 
 export default function RootNavigator() {
   const { isAuthenticated } = useAuth();
 
   return (
-    <RootStack.Navigator screenOptions={{ headerShown: false }}>
+    <RootStack.Navigator id="root" screenOptions={{ headerShown: false }}>
       {!isAuthenticated ? (
         <RootStack.Screen name="Auth" component={AuthNavigator} />
       ) : (
@@ -47,7 +49,7 @@ export default function RootNavigator() {
       {/* These screens are accessible from anywhere in the app */}
       <RootStack.Screen name="ProductStack" options={{ presentation: 'card' }}>
         {() => (
-          <ProductStack.Navigator screenOptions={{ headerShown: false }}>
+          <ProductStack.Navigator id="product" screenOptions={{ headerShown: false }}>
             <ProductStack.Screen name="Search" component={SearchScreen as any} />
             <ProductStack.Screen name="ProductListing" component={ProductListingScreen as any} />
             <ProductStack.Screen name="ProductDetails" component={ProductDetailsScreen as any} />
@@ -58,7 +60,7 @@ export default function RootNavigator() {
       </RootStack.Screen>
       <RootStack.Screen name="CheckoutStack" options={{ presentation: 'card' }}>
         {() => (
-          <CheckoutStack.Navigator screenOptions={{ headerShown: false }}>
+          <CheckoutStack.Navigator id="checkout" screenOptions={{ headerShown: false }}>
             <CheckoutStack.Screen name="DeliveryAddress" component={DeliveryAddressScreen as any} />
             <CheckoutStack.Screen name="CheckoutReview" component={CheckoutReviewScreen as any} />
             <CheckoutStack.Screen name="Payment" component={PaymentScreen as any} />
@@ -68,7 +70,7 @@ export default function RootNavigator() {
       </RootStack.Screen>
       <RootStack.Screen name="ChatStack" options={{ presentation: 'card' }}>
         {() => (
-          <ChatStack.Navigator screenOptions={{ headerShown: false }}>
+          <ChatStack.Navigator id="chat" screenOptions={{ headerShown: false }}>
             <ChatStack.Screen name="ChatList" component={ChatListScreen as any} />
             <ChatStack.Screen name="Chat" component={ChatScreen as any} />
           </ChatStack.Navigator>
@@ -82,6 +84,8 @@ export default function RootNavigator() {
       <RootStack.Screen name="OrderDetails" component={OrderDetailsScreen as any} />
       <RootStack.Screen name="OrderTracking" component={OrderTrackingScreen as any} />
       <RootStack.Screen name="OrderConfirmation" component={OrderConfirmationScreen as any} />
+      <RootStack.Screen name="BulkRequirement" component={BulkRequirementScreen as any} />
+      <RootStack.Screen name="BulkMatchDiscovery" component={BulkMatchDiscoveryScreen as any} />
     </RootStack.Navigator>
   );
 }

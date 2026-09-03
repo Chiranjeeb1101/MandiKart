@@ -26,7 +26,7 @@ export default function LoginScreen({ navigation }: Props) {
   const [rememberMe, setRememberMe] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!phone || phone.length < 10) {
       Alert.alert('Invalid Phone', 'Please enter a valid 10-digit mobile number.');
       return;
@@ -38,10 +38,13 @@ export default function LoginScreen({ navigation }: Props) {
     }
 
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await signIn(phone, otpCode);
+    } catch (e) {
+      console.warn('Login error:', e);
+    } finally {
       setLoading(false);
-      signIn(); // Triggers global auth state to navigate to Main app
-    }, 1000);
+    }
   };
 
   const handleSendOTP = () => {
@@ -53,12 +56,15 @@ export default function LoginScreen({ navigation }: Props) {
     Alert.alert('OTP Sent! 📱', `A 4-digit verification code has been sent to +91 ${phone}. (Demo OTP: 1234)`);
   };
 
-  const handleDemoLogin = () => {
+  const handleDemoLogin = async () => {
     setLoading(true);
-    setTimeout(() => {
+    try {
+      await signIn('9876543210');
+    } catch (e) {
+      console.warn('Demo login error:', e);
+    } finally {
       setLoading(false);
-      signIn();
-    }, 600);
+    }
   };
 
   return (

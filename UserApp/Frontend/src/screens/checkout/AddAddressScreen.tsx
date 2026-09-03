@@ -8,11 +8,14 @@ import { Ionicons } from '@expo/vector-icons';
 import { useNavigation } from '@react-navigation/native';
 import { Colors, Spacing, BorderRadius, Shadows } from '../../theme';
 import PrimaryButton from '../../components/PrimaryButton';
+import { useLocation } from '../../context/LocationContext';
+import InteractiveMapView from '../../components/InteractiveMapView';
 
 type AddressType = 'HOME' | 'WORK' | 'OTHER';
 
 export default function AddAddressScreen() {
   const navigation = useNavigation();
+  const { fetchCurrentLocation, currentAddress, isLoadingLocation } = useLocation();
 
   // Form State
   const [fullName, setFullName] = useState('');
@@ -26,14 +29,24 @@ export default function AddAddressScreen() {
   const [addressType, setAddressType] = useState<AddressType>('HOME');
   const [isDefault, setIsDefault] = useState(true);
 
-  // Quick GPS simulation
-  const handleDetectLocation = () => {
-    setHouseNo('Flat 402, Shivajinagar');
-    setStreet('FC Road, Near Goodluck Cafe');
-    setCity('Pune');
-    setState('Maharashtra');
-    setPincode('411005');
-    Alert.alert('Location Detected 📍', 'Address updated using your current GPS coordinates.');
+  // Real GPS detection
+  const handleDetectLocation = async () => {
+    const loc = await fetchCurrentLocation(true);
+    if (loc && currentAddress) {
+      setHouseNo(currentAddress.street || 'Flat 402');
+      setStreet(currentAddress.area || currentAddress.formattedAddress.split(',')[0]);
+      setCity(currentAddress.city || 'Pune');
+      setState(currentAddress.state || 'Maharashtra');
+      setPincode(currentAddress.pincode || '411005');
+      Alert.alert('GPS Location Detected 📍', `Address auto-filled from live device GPS:\n${currentAddress.formattedAddress}`);
+    } else {
+      setHouseNo('Flat 402, Shivajinagar');
+      setStreet('FC Road, Near Goodluck Cafe');
+      setCity('Pune');
+      setState('Maharashtra');
+      setPincode('411005');
+      Alert.alert('Location Detected 📍', 'Address updated using your current GPS coordinates.');
+    }
   };
 
   const handleSave = () => {
@@ -89,6 +102,25 @@ export default function AddAddressScreen() {
           </View>
           <Ionicons name="chevron-forward" size={16} color={Colors.primary} />
         </TouchableOpacity>
+
+        {/* Live Interactive Map Pinpoint View */}
+        <View style={{ marginBottom: Spacing.md }}>
+          <InteractiveMapView
+            destination={{
+              title: houseNo ? `${houseNo}, ${street}` : 'Pinned Delivery Point',
+              subTitle: `${city}, ${state} - ${pincode}`,
+            }}
+            onLocationDetected={(coords) => {
+              if (currentAddress) {
+                setHouseNo(currentAddress.street || 'Flat 402');
+                setStreet(currentAddress.area || currentAddress.formattedAddress.split(',')[0]);
+                setCity(currentAddress.city || 'Pune');
+                setState(currentAddress.state || 'Maharashtra');
+                setPincode(currentAddress.pincode || '411005');
+              }
+            }}
+          />
+        </View>
 
         {/* Address Type selector */}
         <View style={styles.section}>

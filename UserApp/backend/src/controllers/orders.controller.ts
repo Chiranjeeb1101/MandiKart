@@ -155,4 +155,41 @@ export class BuyerOrdersController {
       error: null,
     });
   }
+
+  static async raiseDispute(req: Request, res: Response): Promise<void> {
+    const buyerId = req.user?.id || 'buyer_default_01';
+    const orderId = String(req.params.id);
+    const { reason, category, evidenceNotes } = req.body;
+
+    if (!reason) {
+      res.status(400).json({
+        data: null,
+        meta: null,
+        error: { code: 'VALIDATION_ERROR', message: 'Dispute reason is required' },
+      });
+      return;
+    }
+
+    const result = await BuyerOrderService.raiseDispute(orderId, buyerId, reason, category, evidenceNotes);
+
+    if (!result.success) {
+      res.status(400).json({
+        data: null,
+        meta: null,
+        error: { code: 'DISPUTE_FAILED', message: result.error || 'Failed to raise dispute' },
+      });
+      return;
+    }
+
+    res.status(200).json({
+      data: {
+        orderId,
+        status: 'DISPUTED',
+        disputeId: result.disputeId,
+        message: 'Dispute registered. Escrow settlement frozen pending quality review.',
+      },
+      meta: null,
+      error: null,
+    });
+  }
 }

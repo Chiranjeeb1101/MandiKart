@@ -224,3 +224,6 @@ export interface DevicePushTokenRecord {
   lastSeenAt: string;
 }
 
+export * from './location.types.js';
+
+

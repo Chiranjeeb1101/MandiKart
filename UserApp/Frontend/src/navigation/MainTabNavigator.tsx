@@ -32,6 +32,7 @@ const TABS: TabConfig[] = [
 export default function MainTabNavigator() {
   return (
     <Tab.Navigator
+      id="main-tabs"
       screenOptions={({ route }) => ({
         headerShown: false,
         tabBarShowLabel: true,

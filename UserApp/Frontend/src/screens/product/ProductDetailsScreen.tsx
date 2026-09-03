@@ -10,19 +10,24 @@ import QuantitySelector from '../../components/QuantitySelector';
 import FarmerCard from '../../components/FarmerCard';
 import { SAMPLE_PRODUCTS } from '../../services/mockData';
 
+import NegotiationModal from '../../components/NegotiationModal';
+import { useLocation } from '../../context/LocationContext';
+
 type Props = NativeStackScreenProps<RootStackParamList, 'ProductStack'>;
 
 export default function ProductDetailsScreen({ navigation, route }: any) {
   const { productId } = route.params;
   const product = SAMPLE_PRODUCTS.find((p) => p.id === productId) || SAMPLE_PRODUCTS[0];
+  const { currentAddress } = useLocation();
   const [qty, setQty] = useState(1);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isNegotiating, setIsNegotiating] = useState(false);
 
   return (
     <View style={styles.container}>
       <StatusBar barStyle="light-content" backgroundColor="transparent" translucent />
       
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 100 }}>
+      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
         {/* Image & Header */}
         <View style={styles.imageHeader}>
           <Image source={{ uri: product.imageUrl }} style={styles.image} />
@@ -52,6 +57,21 @@ export default function ProductDetailsScreen({ navigation, route }: any) {
 
           <Text style={styles.sectionTitle}>Description</Text>
           <Text style={styles.desc}>{product.description}</Text>
+
+          {/* User Proximity & Delivery Speed Badge */}
+          <View style={styles.proximityCard}>
+            <View style={styles.proximityIconCircle}>
+              <Ionicons name="location" size={16} color={Colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.proximityTitle}>
+                Deliver to {currentAddress?.city ? `${currentAddress.area || currentAddress.city}` : 'Your Location'}
+              </Text>
+              <Text style={styles.proximitySub}>
+                ~38 km from {product.farmer?.name || 'Farm'} • Express cold-chain slot available
+              </Text>
+            </View>
+          </View>
         </View>
 
         {/* Farmer Info */}
@@ -60,7 +80,7 @@ export default function ProductDetailsScreen({ navigation, route }: any) {
           <FarmerCard
             farmer={product.farmer}
             onPress={() => {}}
-            onChat={() => navigation.navigate('ChatStack', { screen: 'ChatRoom' })}
+            onChat={() => navigation.navigate('ChatStack', { screen: 'Chat' })}
           />
         </View>
 
@@ -92,12 +112,29 @@ export default function ProductDetailsScreen({ navigation, route }: any) {
         <View style={styles.qtyWrap}>
           <QuantitySelector quantity={qty} onIncrease={() => setQty(qty + 1)} onDecrease={() => setQty(qty - 1)} />
         </View>
+        <TouchableOpacity
+          style={styles.negotiateBtn}
+          onPress={() => setIsNegotiating(true)}
+        >
+          <Ionicons name="pricetags-outline" size={18} color={Colors.primary} />
+          <Text style={styles.negotiateBtnText}>Negotiate</Text>
+        </TouchableOpacity>
         <PrimaryButton
-          title={`Add to Cart • ₹${product.price * qty}`}
+          title={`Add • ₹${product.price * qty}`}
           onPress={() => navigation.navigate('Main', { screen: 'Cart' } as any)}
           style={styles.addBtn}
         />
       </View>
+
+      <NegotiationModal
+        visible={isNegotiating}
+        product={product}
+        initialQuantity={qty}
+        onClose={() => setIsNegotiating(false)}
+        onOfferSubmitted={() => {
+          navigation.navigate('ChatStack', { screen: 'Chat', params: { farmerName: product.farmer?.name } });
+        }}
+      />
     </View>
   );
 }
@@ -129,6 +166,51 @@ const styles = StyleSheet.create({
   reviewText: { fontSize: 14, color: Colors.textSecondary, lineHeight: 20 },
   bottomBar: { position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: 'transparent', padding: Spacing.md, paddingBottom: 30, flexDirection: 'row', gap: Spacing.md, borderTopWidth: 1, borderTopColor: Colors.borderLight, ...Shadows.md },
   qtyWrap: { justifyContent: 'center' },
+  negotiateBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  negotiateBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
   addBtn: { flex: 1 },
+  proximityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    backgroundColor: '#F0FDF4',
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    marginTop: Spacing.md,
+  },
+  proximityIconCircle: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  proximityTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  proximitySub: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 1,
+  },
 });
 

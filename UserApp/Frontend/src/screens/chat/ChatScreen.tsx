@@ -7,15 +7,57 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../../theme';
-import { SAMPLE_CHAT_MESSAGES } from '../../services/mockData';
-import { ChatMessage } from '../../types';
+import { apiClient } from '../../services/apiClient';
+import { ChatMessage, NegotiationOffer } from '../../types';
 
 const CURRENT_USER_ID = 'user-1';
 
-export default function ChatScreen({ navigation, route }: any) {
-  const { farmerName, farmerAvatar } = route?.params ?? { farmerName: 'Rajan Kumar' };
+const INITIAL_MESSAGES_WITH_NEGOTIATION: ChatMessage[] = [
+  {
+    id: 'cm-1',
+    senderId: 'farmer-1',
+    text: 'Namaste! Welcome to Nashik Fresh Farms. All our produce is harvest-fresh.',
+    timestamp: new Date(Date.now() - 3600000).toISOString(),
+    isRead: true,
+    type: 'text',
+  },
+  {
+    id: 'cm-2',
+    senderId: CURRENT_USER_ID,
+    text: 'Hello, looking for Grade A produce with verified APMC purity.',
+    timestamp: new Date(Date.now() - 1800000).toISOString(),
+    isRead: true,
+    type: 'text',
+  },
+  {
+    id: 'cm-neg-1',
+    senderId: 'farmer-1',
+    text: 'Counter-Offer: I can supply Grade A Red Onion lot at ₹24.50/kg for your 200kg requirement.',
+    timestamp: new Date().toISOString(),
+    isRead: true,
+    type: 'negotiation',
+    negotiationRef: {
+      id: 'neg_101',
+      productId: 'prod_1',
+      cropName: 'Red Onion (Grade A)',
+      farmerId: 'farmer-1',
+      farmerName: 'Rajan Kumar',
+      buyerId: 'buyer_default_01',
+      originalPrice: 26.5,
+      offeredPrice: 24.0,
+      counterPrice: 24.5,
+      quantity: 200,
+      unit: 'kg',
+      status: 'COUNTER_OFFERED',
+      remarks: 'Direct farm lot reservation.',
+    },
+  },
+];
 
-  const [messages, setMessages] = useState<ChatMessage[]>(SAMPLE_CHAT_MESSAGES);
+export default function ChatScreen({ navigation, route }: any) {
+  const { farmerName } = route?.params ?? { farmerName: 'Rajan Kumar' };
+
+  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES_WITH_NEGOTIATION);
   const [text, setText] = useState('');
   const flatRef = useRef<FlatList>(null);
 
@@ -35,6 +77,34 @@ export default function ChatScreen({ navigation, route }: any) {
     setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
   };
 
+  const handleAcceptNegotiation = async (neg: NegotiationOffer) => {
+    try {
+      await apiClient.negotiations.respond(neg.id, 'ACCEPT');
+      const orderRes = await apiClient.negotiations.convertToOrder(neg.id, 'Flat 402, Shivajinagar, Pune');
+
+      setMessages((prev) =>
+        prev.map((m) =>
+          m.negotiationRef?.id === neg.id
+            ? {
+                ...m,
+                negotiationRef: { ...m.negotiationRef, status: 'ORDERED' },
+              }
+            : m
+        )
+      );
+
+      navigation.navigate('CheckoutStack', {
+        screen: 'OrderConfirmation',
+        params: {
+          orderId: orderRes.order?.orderNumber || 'MK-ORD-2026-9041',
+          deliveryOtp: orderRes.order?.deliveryOtp || '749182',
+        },
+      });
+    } catch (err: any) {
+      console.warn('Accept negotiation error:', err);
+    }
+  };
+
   const formatTime = (iso?: string) => {
     if (!iso) return '';
     const d = new Date(iso);
@@ -43,6 +113,72 @@ export default function ChatScreen({ navigation, route }: any) {
 
   const renderMessage = ({ item }: { item: ChatMessage }) => {
     const isMine = item.senderId === CURRENT_USER_ID;
+
+    // Render Negotiation Card
+    if (item.type === 'negotiation' && item.negotiationRef) {
+      const neg = item.negotiationRef;
+      const isAccepted = neg.status === 'ACCEPTED' || neg.status === 'ORDERED';
+      const isCounter = neg.status === 'COUNTER_OFFERED';
+      const lotTotal = (neg.counterPrice || neg.offeredPrice) * neg.quantity;
+
+      return (
+        <View style={styles.negCardWrap}>
+          <View style={styles.negCard}>
+            <View style={styles.negHeader}>
+              <Ionicons name="pricetags" size={18} color={Colors.primary} />
+              <Text style={styles.negTitle}>FARM DIRECT PRICE COUNTER-OFFER</Text>
+            </View>
+            <Text style={styles.negCropName}>{neg.cropName}</Text>
+            <Text style={styles.negLotInfo}>
+              Volume: {neg.quantity} {neg.unit} • Listed: ₹{neg.originalPrice}/{neg.unit}
+            </Text>
+
+            <View style={styles.priceCompareBox}>
+              <View style={styles.priceCol}>
+                <Text style={styles.priceSubLabel}>Your Offer</Text>
+                <Text style={styles.buyerPrice}>₹{neg.offeredPrice}/{neg.unit}</Text>
+              </View>
+              <Ionicons name="arrow-forward" size={16} color={Colors.textDisabled} />
+              <View style={styles.priceCol}>
+                <Text style={styles.priceSubLabel}>Farmer Counter</Text>
+                <Text style={styles.counterPrice}>₹{neg.counterPrice || neg.offeredPrice}/{neg.unit}</Text>
+              </View>
+            </View>
+
+            <View style={styles.lotTotalRow}>
+              <Text style={styles.lotTotalLabel}>Total Agreed Deal Value:</Text>
+              <Text style={styles.lotTotalValue}>₹{lotTotal.toLocaleString('en-IN')}</Text>
+            </View>
+
+            {isCounter && (
+              <View style={styles.negActions}>
+                <TouchableOpacity
+                  style={styles.declineBtn}
+                  onPress={() => apiClient.negotiations.respond(neg.id, 'REJECT')}
+                >
+                  <Text style={styles.declineBtnText}>Decline</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.acceptBtn}
+                  onPress={() => handleAcceptNegotiation(neg)}
+                >
+                  <Ionicons name="checkmark-circle" size={16} color={Colors.white} />
+                  <Text style={styles.acceptBtnText}>Accept & Order</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+
+            {isAccepted && (
+              <View style={styles.acceptedBadge}>
+                <Ionicons name="shield-checkmark" size={16} color="#15803D" />
+                <Text style={styles.acceptedBadgeText}>Deal Accepted • Order Created</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      );
+    }
+
     return (
       <View style={[styles.msgRow, isMine ? styles.msgRowRight : styles.msgRowLeft]}>
         {!isMine && (
@@ -235,4 +371,131 @@ const styles = StyleSheet.create({
     alignItems: 'center', justifyContent: 'center',
   },
   sendBtnDisabled: { backgroundColor: Colors.gray200 },
+  negCardWrap: {
+    marginVertical: Spacing.sm,
+    paddingHorizontal: Spacing.xs,
+  },
+  negCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    padding: Spacing.md,
+    gap: 6,
+  },
+  negHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  negTitle: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: Colors.primary,
+    letterSpacing: 0.5,
+  },
+  negCropName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  negLotInfo: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  priceCompareBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: '#CBD5E1',
+    paddingVertical: 8,
+    marginVertical: 4,
+  },
+  priceCol: {
+    alignItems: 'center',
+  },
+  priceSubLabel: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+    fontWeight: '500',
+  },
+  buyerPrice: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+  },
+  counterPrice: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  lotTotalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  lotTotalLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: Colors.textSecondary,
+  },
+  lotTotalValue: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  negActions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: 4,
+  },
+  declineBtn: {
+    flex: 1,
+    height: 38,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.white,
+  },
+  declineBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  acceptBtn: {
+    flex: 2,
+    height: 38,
+    borderRadius: BorderRadius.md,
+    backgroundColor: '#15803D',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  acceptBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.white,
+  },
+  acceptedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    backgroundColor: '#DCFCE7',
+    paddingVertical: 6,
+    borderRadius: BorderRadius.md,
+    marginTop: 4,
+  },
+  acceptedBadgeText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#15803D',
+  },
 });

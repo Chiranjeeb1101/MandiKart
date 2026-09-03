@@ -4,33 +4,36 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import RootNavigator from './src/navigation/RootNavigator';
 import { StatusBar } from 'expo-status-bar';
 import { AuthProvider } from './src/context/AuthContext';
+import { LocationProvider } from './src/context/LocationContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 
 export default function App() {
   return (
     <AuthProvider>
-      <SafeAreaProvider>
-        {/* Global faded green + orange background — applied to every screen */}
-        <View style={styles.root}>
-          <LinearGradient
-            colors={['rgba(35,134,54,0.14)', 'rgba(35,134,54,0.0)']}
-            style={styles.blobTopLeft}
-            start={{ x: 0, y: 0 }}
-            end={{ x: 1, y: 1 }}
-          />
-          <LinearGradient
-            colors={['rgba(245,158,11,0.13)', 'rgba(245,158,11,0.0)']}
-            style={styles.blobBottomRight}
-            start={{ x: 1, y: 1 }}
-            end={{ x: 0, y: 0 }}
-          />
-          <NavigationContainer>
-            <StatusBar style="dark" translucent />
-            <RootNavigator />
-          </NavigationContainer>
-        </View>
-      </SafeAreaProvider>
+      <LocationProvider>
+        <SafeAreaProvider>
+          {/* Global faded green + orange background — applied to every screen */}
+          <View style={styles.root}>
+            <LinearGradient
+              colors={['rgba(35,134,54,0.14)', 'rgba(35,134,54,0.0)']}
+              style={styles.blobTopLeft}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 1 }}
+            />
+            <LinearGradient
+              colors={['rgba(245,158,11,0.13)', 'rgba(245,158,11,0.0)']}
+              style={styles.blobBottomRight}
+              start={{ x: 1, y: 1 }}
+              end={{ x: 0, y: 0 }}
+            />
+            <NavigationContainer>
+              <StatusBar style="dark" />
+              <RootNavigator />
+            </NavigationContainer>
+          </View>
+        </SafeAreaProvider>
+      </LocationProvider>
     </AuthProvider>
   );
 }

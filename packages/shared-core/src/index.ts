@@ -9,4 +9,6 @@ export * from './auth/session.js';
 export * from './services/marketPrice.js';
 export * from './services/consent.service.js';
 export * from './services/notification.service.js';
+export * from './utils/geo.utils.js';
+
 

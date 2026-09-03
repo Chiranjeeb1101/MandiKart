@@ -7,3 +7,4 @@ export const ordersRouter = Router();
 ordersRouter.post('/', requireAuth, requireIdempotency, BuyerOrdersController.placeOrder);
 ordersRouter.get('/', requireAuth, BuyerOrdersController.listOrders);
 ordersRouter.post('/:id/confirm-delivery', requireAuth, requireIdempotency, BuyerOrdersController.confirmDelivery);
+ordersRouter.post('/:id/dispute', requireAuth, requireIdempotency, BuyerOrdersController.raiseDispute);

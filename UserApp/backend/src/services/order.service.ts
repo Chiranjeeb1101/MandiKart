@@ -228,4 +228,67 @@ export class BuyerOrderService {
       return { success: false, error: (err as Error).message };
     }
   }
+
+  /**
+   * Buyer raises a dispute for damaged, spoiled, or missing produce.
+   * Freezes settlement and transitions status to DISPUTED.
+   */
+  static async raiseDispute(
+    orderId: string,
+    buyerId: string,
+    reason: string,
+    category?: string,
+    evidenceNotes?: string
+  ): Promise<{ success: boolean; disputeId?: string; error?: string }> {
+    try {
+      const supabase = getSupabaseAdmin();
+      const isMock = !process.env.SUPABASE_URL || process.env.SUPABASE_URL.includes('placeholder');
+      const disputeId = `disp_${Date.now()}`;
+
+      if (isMock) {
+        await auditLog({
+          actorId: buyerId,
+          role: UserRole.BUYER,
+          action: 'RAISE_DISPUTE',
+          resourceType: 'DISPUTE',
+          resourceId: disputeId,
+          metadata: { orderId, reason, category },
+        });
+
+        return { success: true, disputeId };
+      }
+
+      const { data: order } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('id', orderId)
+        .eq('buyer_id', buyerId)
+        .single();
+
+      if (!order) {
+        return { success: false, error: 'Order not found' };
+      }
+
+      await supabase
+        .from('orders')
+        .update({
+          status: OrderStatus.DISPUTED,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', orderId);
+
+      await auditLog({
+        actorId: buyerId,
+        role: UserRole.BUYER,
+        action: 'RAISE_DISPUTE',
+        resourceType: 'DISPUTE',
+        resourceId: disputeId,
+        metadata: { orderId, reason, category, evidenceNotes },
+      });
+
+      return { success: true, disputeId };
+    } catch (err) {
+      return { success: false, error: (err as Error).message };
+    }
+  }
 }

@@ -96,13 +96,22 @@ export interface Order {
 }
 
 export type OrderStatus =
-  | 'PENDING'
+  | 'PLACED'
   | 'CONFIRMED'
+  | 'PICKUP_SCHEDULED'
+  | 'PICKUP_IN_PROGRESS'
+  | 'COLLECTED'
+  | 'IN_TRANSIT'
+  | 'DELIVERED'
+  | 'COMPLETED'
+  | 'CANCELLED'
+  | 'FAILED'
+  | 'DISPUTED'
+  // Legacy UI aliases supported for backward compatibility:
+  | 'PENDING'
   | 'PROCESSING'
   | 'DISPATCHED'
   | 'OUT_FOR_DELIVERY'
-  | 'DELIVERED'
-  | 'CANCELLED'
   | 'RETURNED';
 
 export interface OrderItem {
@@ -139,16 +148,72 @@ export interface ChatMessage {
   text: string;
   timestamp: string;
   isRead: boolean;
-  type: 'text' | 'image' | 'product';
+  type: 'text' | 'image' | 'product' | 'negotiation';
   productRef?: Pick<Product, 'id' | 'name' | 'imageUrl' | 'price' | 'unit'>;
+  negotiationRef?: NegotiationOffer;
 }
 
 export interface Notification {
   id: string;
-  type: 'ORDER' | 'PROMOTION' | 'SYSTEM' | 'CHAT';
+  type: 'ORDER' | 'PROMOTION' | 'SYSTEM' | 'CHAT' | 'NEGOTIATION';
   title: string;
   body: string;
   timestamp: string;
   isRead: boolean;
   actionId?: string; // e.g. orderId for ORDER type
 }
+
+export interface NegotiationOffer {
+  id: string;
+  productId: string;
+  cropName: string;
+  farmerId: string;
+  farmerName: string;
+  buyerId: string;
+  originalPrice: number;
+  offeredPrice: number;
+  counterPrice?: number | null;
+  quantity: number;
+  unit: string;
+  status: 'PENDING_FARMER' | 'COUNTER_OFFERED' | 'ACCEPTED' | 'REJECTED' | 'ORDERED';
+  remarks?: string;
+  history?: Array<{
+    sender: 'BUYER' | 'FARMER';
+    price?: number | null;
+    text: string;
+    timestamp: string;
+  }>;
+  updatedAt?: string;
+}
+
+export interface BulkRequirement {
+  id: string;
+  buyerId: string;
+  cropName: string;
+  grade: 'A' | 'B' | 'C';
+  requiredQuantity: number;
+  quantityUnit: 'kg' | 'quintal' | 'tonne';
+  maxTargetPricePerUnit: number;
+  deliveryLocation: string;
+  requiredByDate: string;
+  status: 'OPEN' | 'MATCHED' | 'FULFILLED' | 'CANCELLED';
+  matchedSupplierCount: number;
+  createdAt: string;
+}
+
+export interface BulkSupplierMatch {
+  supplierId: string;
+  supplierName: string;
+  type: 'FPO_CLUSTER' | 'FARMER';
+  cropName: string;
+  grade: 'A' | 'B' | 'C';
+  availableCapacity: number;
+  capacityUnit: string;
+  askingPricePerUnit: number;
+  distanceKm: number;
+  aiMatchScore: number;
+  isVerified: boolean;
+  fulfillmentPurity: string;
+  location: string;
+}
+

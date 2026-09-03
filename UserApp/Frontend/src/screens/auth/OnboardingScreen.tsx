@@ -201,7 +201,7 @@ const styles = StyleSheet.create({
   imageCard: {
     width: width - 48,
     height: 220,
-    borderRadius: BorderRadius.xxl,
+    borderRadius: BorderRadius['2xl'],
     overflow: 'hidden',
     position: 'relative',
     borderWidth: 1,
