@@ -78,15 +78,18 @@ export const MKButton: React.FC<MKButtonProps> = ({
       width: fullWidth ? '100%' : 'auto',
     };
 
-    // Size
+    // Size - Use minHeight + paddingVertical so multiline text/font scaling never clips
     if (size === 'lg') {
-      base.height = 56;
+      base.minHeight = 56;
+      base.paddingVertical = 14;
       base.paddingHorizontal = 24;
     } else if (size === 'md') {
-      base.height = 48;
+      base.minHeight = 48;
+      base.paddingVertical = 12;
       base.paddingHorizontal = 20;
     } else {
-      base.height = 38;
+      base.minHeight = 38;
+      base.paddingVertical = 8;
       base.paddingHorizontal = 14;
       base.borderRadius = 10;
     }
@@ -183,7 +186,7 @@ export const MKButton: React.FC<MKButtonProps> = ({
         ) : (
           <View style={styles.innerContent}>
             {leftIcon && <View style={styles.leftIconWrapper}>{leftIcon}</View>}
-            <Text style={[getTextStyle(), textStyle]}>{title}</Text>
+            <Text style={[getTextStyle(), styles.buttonText, textStyle]}>{title}</Text>
             {rightIcon && <View style={styles.rightIconWrapper}>{rightIcon}</View>}
           </View>
         )}
@@ -197,11 +200,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 1,
+  },
+  buttonText: {
+    flexShrink: 1,
   },
   leftIconWrapper: {
     marginRight: 8,
+    flexShrink: 0,
   },
   rightIconWrapper: {
     marginLeft: 8,
+    flexShrink: 0,
   },
 });

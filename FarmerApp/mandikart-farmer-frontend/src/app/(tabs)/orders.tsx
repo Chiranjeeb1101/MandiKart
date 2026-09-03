@@ -19,6 +19,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Truck,
   CheckCircle2,
@@ -35,6 +36,7 @@ import {
   Navigation,
   RefreshCw,
 } from 'lucide-react-native';
+import { MKLayout } from '@/constants/layout';
 
 // ─── Design Tokens (AgroPremium Tactile) ───────────────────────────────────
 const C = {
@@ -74,7 +76,11 @@ type OrderTab = 'All' | 'Active' | 'Pending' | 'Completed';
 
 export default function OrdersScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [selectedTab, setSelectedTab] = useState<OrderTab>('All');
+
+  const topPadding = MKLayout.getTopHeaderPadding(insets);
+  const bottomPadding = MKLayout.getBottomTabClearance(insets);
 
   // Modals state
   const [trackModalVisible, setTrackModalVisible] = useState(false);
@@ -155,13 +161,15 @@ export default function OrdersScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Background Blobs */}
-      <View style={styles.blobOrange} />
-      <View style={styles.blobGreen} />
-      <View style={styles.blobFade} />
+      {/* Background Blobs with pointerEvents="none" */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <View style={styles.blobOrange} />
+        <View style={styles.blobGreen} />
+        <View style={styles.blobFade} />
+      </View>
 
       {/* ── Top Header ── */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: topPadding }]}>
         <View style={styles.headerTextCol}>
           <Text style={styles.headerTitle}>My Orders</Text>
           <Text style={styles.headerSubtitle}>Track sales, pickup schedules & payouts</Text>
@@ -183,7 +191,11 @@ export default function OrdersScreen() {
         </View>
       </View>
 
-      <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPadding }]}
+        showsVerticalScrollIndicator={false}
+      >
         {/* ── 3-Column Summary Strip ── */}
         <View style={styles.summaryStrip}>
           <Pressable
@@ -259,7 +271,7 @@ export default function OrdersScreen() {
                     {/* Crop details */}
                     <View style={styles.itemBox}>
                       <Image source={{ uri: ONION_CROP_URI }} style={styles.cropThumb} />
-                      <View>
+                      <View style={styles.itemTextCol}>
                         <Text style={styles.itemTitle}>{order.crop}</Text>
                         <Text style={styles.itemSubtext}>
                           {order.quantity} • {order.grade} @ {order.rate}
@@ -477,20 +489,21 @@ const styles = StyleSheet.create({
   blobGreen: { position: 'absolute', bottom: 60, right: -80, width: 320, height: 320, borderRadius: 160, backgroundColor: 'rgba(165,214,167,0.2)' },
   blobFade: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(249,251,249,0.84)' },
 
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingTop: 56, paddingBottom: 12 },
-  headerTextCol: { flex: 1 },
-  headerTitle: { fontSize: 22, fontWeight: '800', color: C.primary, letterSpacing: -0.4 },
-  headerSubtitle: { fontSize: 12, color: C.onSurfaceVariant, marginTop: 2 },
-  headerRightButtons: { flexDirection: 'row', gap: 8 },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingBottom: 12 },
+  headerTextCol: { flex: 1, minWidth: 0 },
+  headerTitle: { fontSize: 22, fontWeight: '800', color: C.primary, letterSpacing: -0.4, flexShrink: 1 },
+  headerSubtitle: { fontSize: 12, color: C.onSurfaceVariant, marginTop: 2, flexShrink: 1 },
+  headerRightButtons: { flexDirection: 'row', gap: 8, flexShrink: 0, marginLeft: 8 },
   circleBtn: { width: 40, height: 40, borderRadius: 20, backgroundColor: C.surface, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: C.outlineVariant, ...SOFT_SHADOW },
 
+  scrollView: { flex: 1 },
   scrollContent: { paddingHorizontal: 20, paddingTop: 8 },
 
-  summaryStrip: { flexDirection: 'row', gap: 10, marginBottom: 16 },
-  summaryBox: { flex: 1, backgroundColor: C.surface, borderRadius: 16, paddingVertical: 14, alignItems: 'center', borderWidth: 1.5, borderColor: C.outlineVariant, ...SOFT_SHADOW },
+  summaryStrip: { flexDirection: 'row', gap: 8, marginBottom: 16 },
+  summaryBox: { flex: 1, minWidth: 0, backgroundColor: C.surface, borderRadius: 16, paddingVertical: 14, paddingHorizontal: 4, alignItems: 'center', borderWidth: 1.5, borderColor: C.outlineVariant, ...SOFT_SHADOW },
   summaryBoxActive: { borderColor: C.secondary, backgroundColor: C.dataMatch },
-  summaryCount: { fontSize: 22, fontWeight: '800', marginBottom: 2 },
-  summaryLabel: { fontSize: 10, fontWeight: '700', color: C.onSurfaceVariant, letterSpacing: 0.8 },
+  summaryCount: { fontSize: 22, fontWeight: '800', marginBottom: 2, textAlign: 'center', flexShrink: 1 },
+  summaryLabel: { fontSize: 10, fontWeight: '700', color: C.onSurfaceVariant, letterSpacing: 0.8, textAlign: 'center' },
 
   filterTabsRow: { flexDirection: 'row', backgroundColor: C.surfaceVariant, borderRadius: 24, padding: 4, marginBottom: 16 },
   filterPill: { flex: 1, paddingVertical: 8, borderRadius: 20, alignItems: 'center' },
@@ -504,19 +517,20 @@ const styles = StyleSheet.create({
 
   orderCard: { backgroundColor: C.surface, borderRadius: 20, padding: 16, ...SOFT_SHADOW },
   cardHeaderRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 },
-  activeBadgePill: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.dataMatch, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 },
+  activeBadgePill: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.dataMatch, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6, flexShrink: 0 },
   activeBadgeText: { fontSize: 10, fontWeight: '800', color: C.secondary, letterSpacing: 0.5 },
   orderValueAmount: { fontSize: 20, fontWeight: '800', color: C.onSurface },
   orderValueLabel: { fontSize: 11, color: C.onSurfaceVariant },
 
   orderNumber: { fontSize: 17, fontWeight: '800', color: C.onSurface },
   buyerRow: { flexDirection: 'row', alignItems: 'center', marginTop: 2, marginBottom: 12 },
-  buyerName: { fontSize: 13, fontWeight: '600', color: C.onSurfaceVariant },
+  buyerName: { fontSize: 13, fontWeight: '600', color: C.onSurfaceVariant, flexShrink: 1 },
 
   itemBox: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.surfaceContainerLow, borderRadius: 12, padding: 12, marginBottom: 14, borderWidth: 1, borderColor: 'rgba(221,193,176,0.3)' },
-  cropThumb: { width: 44, height: 44, borderRadius: 8, marginRight: 12 },
-  itemTitle: { fontSize: 14, fontWeight: '700', color: C.onSurface },
-  itemSubtext: { fontSize: 12, color: C.onSurfaceVariant, marginTop: 2 },
+  cropThumb: { width: 44, height: 44, borderRadius: 8, marginRight: 12, flexShrink: 0 },
+  itemTextCol: { flex: 1, minWidth: 0 },
+  itemTitle: { fontSize: 14, fontWeight: '700', color: C.onSurface, flexShrink: 1 },
+  itemSubtext: { fontSize: 12, color: C.onSurfaceVariant, marginTop: 2, flexShrink: 1 },
 
   stepperContainer: { backgroundColor: C.background, borderRadius: 12, padding: 12, marginBottom: 14 },
   stepperHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },

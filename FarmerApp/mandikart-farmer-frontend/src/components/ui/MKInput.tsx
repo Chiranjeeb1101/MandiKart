@@ -102,7 +102,8 @@ const styles = StyleSheet.create({
   inputWrapper: {
     flexDirection: 'row',
     alignItems: 'center',
-    height: 52,
+    minHeight: 52,
+    paddingVertical: 4,
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     borderWidth: 1.5,
@@ -125,6 +126,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingRight: 8,
+    flexShrink: 0,
   },
   phonePrefixFlag: {
     fontSize: 18,
@@ -144,7 +146,8 @@ const styles = StyleSheet.create({
   },
   input: {
     flex: 1,
-    height: '100%',
+    minWidth: 0,
+    minHeight: 44,
     fontSize: 15,
     color: '#1A1C1E',
     fontWeight: '500',

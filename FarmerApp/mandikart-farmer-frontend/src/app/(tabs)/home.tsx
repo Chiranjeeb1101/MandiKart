@@ -56,6 +56,7 @@ import {
   TrendingUp,
 } from 'lucide-react-native';
 import { useAuthStore } from '@/store/authStore';
+import { MKLayout } from '@/constants/layout';
 
 // ─── Design Tokens ───────────────────────────────────────────────────────────
 const C = {
@@ -106,9 +107,9 @@ export default function HomeScreen() {
   const farmerName = user?.name ? user.name.split(' ')[0] : 'Ravi';
   const locationName = `${selectedDistrict}, Maharashtra`;
 
-  // Safe area top padding: accounts for Android status bar / notch / camera hole
-  const topPadding = Platform.OS === 'web' ? 16 : Math.max(insets.top, 20) + 8;
-  const bottomPadding = Platform.OS === 'web' ? 32 : Math.max(insets.bottom, 16) + 68;
+  // Safe area top and bottom tab clearance
+  const topPadding = MKLayout.getTopHeaderPadding(insets);
+  const bottomPadding = MKLayout.getBottomTabClearance(insets);
 
   return (
     <View style={styles.root}>
@@ -481,6 +482,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    flex: 1,
+    minWidth: 0,
   },
   avatar: {
     width: 48,
@@ -488,29 +491,37 @@ const styles = StyleSheet.create({
     borderRadius: 24,
     borderWidth: 2,
     borderColor: '#FFFFFF',
+    flexShrink: 0,
     ...SOFT_SHADOW,
   },
   greetingCol: {
     justifyContent: 'center',
+    flex: 1,
+    minWidth: 0,
   },
   greetingText: {
     fontSize: 18,
     fontWeight: '800',
     color: C.textTitle,
     letterSpacing: -0.2,
+    flexShrink: 1,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginTop: 2,
+    flexShrink: 1,
   },
   locationText: {
     fontSize: 12,
     fontWeight: '600',
     color: C.textSub,
+    flexShrink: 1,
   },
   bellWrapper: {
     position: 'relative',
+    flexShrink: 0,
+    marginLeft: 8,
   },
   bellButton: {
     width: 42,
@@ -556,11 +567,12 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 20,
+    marginBottom: 24,
     ...SOFT_SHADOW,
   },
   heroLeftCol: {
     flex: 1,
+    minWidth: 0,
     paddingRight: 8,
   },
   heroTitle: {
@@ -569,29 +581,32 @@ const styles = StyleSheet.create({
     color: C.textTitle,
     lineHeight: 24,
     marginBottom: 6,
+    flexShrink: 1,
   },
   heroSubtitle: {
     fontSize: 12.5,
     color: C.textSub,
     lineHeight: 17,
     marginBottom: 14,
+    flexShrink: 1,
   },
   addProduceBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: C.secondaryGreen,
+    backgroundColor: '#1B6D24',
     borderRadius: 10,
     paddingVertical: 11,
     paddingHorizontal: 18,
     gap: 6,
     alignSelf: 'flex-start',
+    overflow: 'hidden',
     ...SOFT_SHADOW,
   },
   addProduceBtnText: {
     fontSize: 14,
     fontWeight: '700',
-    color: C.onSecondary,
+    color: '#FFFFFF',
   },
   heroRightCol: {
     width: 95,
@@ -607,14 +622,14 @@ const styles = StyleSheet.create({
 
   // ── 2. "Today at a Glance" (Precision 3-Card Design) ──
   glanceSection: {
-    marginBottom: 20,
+    marginBottom: 26,
   },
   sectionHeaderTitle: {
     fontSize: 18,
     fontWeight: '800',
     color: C.textTitle,
     letterSpacing: -0.3,
-    marginBottom: 12,
+    marginBottom: 14,
   },
   glanceCardsRow: {
     flexDirection: 'row',
@@ -622,21 +637,24 @@ const styles = StyleSheet.create({
   },
   glanceCard: {
     flex: 1,
-    backgroundColor: C.surface,
+    backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 4,
+    borderWidth: 1,
+    borderColor: '#E8E5DF',
+    paddingVertical: 18,
+    paddingHorizontal: 6,
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
     ...SOFT_SHADOW,
   },
   glanceIconCircle: {
-    width: 46,
-    height: 46,
-    borderRadius: 23,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   glanceValueLarge: {
     fontSize: 22,

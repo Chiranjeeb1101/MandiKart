@@ -25,6 +25,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Plus,
   Search,
@@ -37,6 +38,7 @@ import {
   Building2,
 } from 'lucide-react-native';
 import { useAuthStore } from '@/store/authStore';
+import { MKLayout } from '@/constants/layout';
 
 // ─── Design Tokens (AgroPremium Tactile) ───────────────────────────────────
 const C = {
@@ -188,9 +190,14 @@ const SOFT_SHADOW = {
 
 export default function ProduceScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [items, setItems] = useState<ProduceItem[]>(INITIAL_PRODUCE_LIST);
   const [activeTab, setActiveTab] = useState<FilterTab>('Available');
   const [searchQuery, setSearchQuery] = useState('');
+
+  // Top header and bottom tab clearance
+  const topPadding = MKLayout.getTopHeaderPadding(insets);
+  const bottomPadding = MKLayout.getBottomTabClearance(insets, 48);
 
   // Edit modal state
   const [editingItem, setEditingItem] = useState<ProduceItem | null>(null);
@@ -267,12 +274,15 @@ export default function ProduceScreen() {
 
   return (
     <View style={styles.root}>
-      <View style={styles.blobOrange} />
-      <View style={styles.blobGreen} />
-      <View style={styles.blobFade} />
+      {/* ── Background Blobs with pointerEvents="none" ── */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <View style={styles.blobOrange} />
+        <View style={styles.blobGreen} />
+        <View style={styles.blobFade} />
+      </View>
 
       {/* ── Header ── */}
-      <View style={styles.header}>
+      <View style={[styles.header, { paddingTop: topPadding }]}>
         <View style={styles.headerLeft}>
           <View style={styles.headerTitleRow}>
             <Sprout size={22} color={C.primary} strokeWidth={2.2} style={{ marginRight: 8 }} />
@@ -293,7 +303,8 @@ export default function ProduceScreen() {
       </View>
 
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPadding }]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
@@ -317,7 +328,7 @@ export default function ProduceScreen() {
         <Pressable
           style={({ pressed }) => [styles.addProduceBtn, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
           onPress={() => router.push('/(tabs)/sell')}
-          android_ripple={{ color: 'rgba(255,255,255,0.2)' }}
+          android_ripple={{ color: 'rgba(255, 255, 255, 0.2)' }}
         >
           <View style={styles.addProduceBtnInner}>
             <Plus size={22} color="#FFFFFF" strokeWidth={2.6} />
@@ -503,7 +514,7 @@ export default function ProduceScreen() {
         style={({ pressed }) => [styles.fabAddProduce, pressed && { transform: [{ scale: 0.94 }], opacity: 0.95 }]}
         onPress={() => router.push('/(tabs)/sell')}
       >
-        <Plus size={20} color="#FFFFFF" strokeWidth={2.8} />
+        <Plus size={20} color="#7f1414ff" strokeWidth={2.8} />
         <Text style={styles.fabAddProduceText}>Add Produce</Text>
       </Pressable>
     </View>
@@ -538,18 +549,19 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 20,
-    paddingTop: 56,
     paddingBottom: 8,
     zIndex: 10,
   },
-  headerLeft: { flex: 1 },
+  headerLeft: { flex: 1, minWidth: 0 },
   headerTitleRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
-  headerTitle: { fontSize: 22, fontWeight: '700', color: C.primary, letterSpacing: -0.3 },
-  headerSubtitle: { fontSize: 13, color: C.onSurfaceVariant, paddingLeft: 30 },
+  headerTitle: { fontSize: 22, fontWeight: '700', color: C.primary, letterSpacing: -0.3, flexShrink: 1 },
+  headerSubtitle: { fontSize: 13, color: C.onSurfaceVariant, marginTop: 2, flexShrink: 1 },
   headerRightCol: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    flexShrink: 0,
+    marginLeft: 8,
   },
   headerAddBtn: {
     flexDirection: 'row',
@@ -572,12 +584,13 @@ const styles = StyleSheet.create({
   },
   headerAvatar: { width: 42, height: 42, borderRadius: 21, borderWidth: 2, borderColor: C.surface, ...SOFT_SHADOW },
 
-  scrollContent: { paddingHorizontal: 20, paddingTop: 12, paddingBottom: 80 },
+  scrollView: { flex: 1 },
+  scrollContent: { paddingHorizontal: 20, paddingTop: 12 },
 
   summaryStrip: { flexDirection: 'row', gap: 8, marginBottom: 16 },
-  summaryPill: { flex: 1, backgroundColor: C.surface, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 10, alignItems: 'center', ...SOFT_SHADOW },
+  summaryPill: { flex: 1, minWidth: 0, backgroundColor: C.surface, borderRadius: 12, paddingVertical: 12, paddingHorizontal: 6, alignItems: 'center', ...SOFT_SHADOW },
   summaryLabel: { fontSize: 10, fontWeight: '700', color: C.onSurfaceVariant, letterSpacing: 0.8, marginBottom: 4 },
-  summaryValue: { fontSize: 15, fontWeight: '700', color: C.primary },
+  summaryValue: { fontSize: 15, fontWeight: '700', color: C.primary, textAlign: 'center', flexShrink: 1 },
 
   // Ultra Visible Add Produce Banner CTA
   addProduceBtn: {
@@ -589,6 +602,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 0,
+    overflow: 'hidden',
     shadowColor: '#1B6D24',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.35,
@@ -614,10 +628,10 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // Floating Action Button (Always Visible)
+  // Floating Action Button (Safely elevated above bottom tab navigation)
   fabAddProduce: {
     position: 'absolute',
-    bottom: 24,
+    bottom: 88,
     right: 20,
     flexDirection: 'row',
     alignItems: 'center',
@@ -626,6 +640,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 18,
     borderRadius: 30,
     gap: 6,
+    overflow: 'hidden',
     shadowColor: '#000000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
@@ -656,13 +671,13 @@ const styles = StyleSheet.create({
 
   produceCard: { backgroundColor: C.surface, borderRadius: 20, padding: 16, ...SOFT_SHADOW },
   cardTopRow: { flexDirection: 'row', gap: 14, marginBottom: 12 },
-  cropImage: { width: 88, height: 88, borderRadius: 12, backgroundColor: C.surfaceVariant },
-  cardInfo: { flex: 1 },
+  cropImage: { width: 80, height: 80, borderRadius: 12, backgroundColor: C.surfaceVariant, flexShrink: 0 },
+  cardInfo: { flex: 1, minWidth: 0 },
   cardTitleRow: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 },
-  cropName: { fontSize: 15, fontWeight: '700', color: C.onSurface, flex: 1, marginRight: 8 },
-  matchBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.dataMatch, paddingHorizontal: 7, paddingVertical: 4, borderRadius: 8 },
+  cropName: { fontSize: 15, fontWeight: '700', color: C.onSurface, flex: 1, minWidth: 0, marginRight: 8 },
+  matchBadge: { flexDirection: 'row', alignItems: 'center', backgroundColor: C.dataMatch, paddingHorizontal: 7, paddingVertical: 4, borderRadius: 8, flexShrink: 0 },
   matchText: { fontSize: 10, fontWeight: '700', color: C.onSecondaryContainer, letterSpacing: 0.4 },
-  cropMeta: { fontSize: 12, color: C.onSurfaceVariant, marginBottom: 8 },
+  cropMeta: { fontSize: 12, color: C.onSurfaceVariant, marginBottom: 8, flexShrink: 1 },
   listedChip: { backgroundColor: 'rgba(160, 243, 153, 0.3)', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 6, alignSelf: 'flex-start' },
   listedChipText: { fontSize: 10, fontWeight: '700', color: C.statusAccepted, letterSpacing: 0.6 },
 
@@ -677,12 +692,12 @@ const styles = StyleSheet.create({
   priceLabel: { fontSize: 11, color: C.onSurfaceVariant, marginBottom: 2 },
   priceValue: { fontSize: 22, fontWeight: '700', color: C.primary, letterSpacing: -0.5 },
   priceUnit: { fontSize: 13, fontWeight: '400', color: C.onSurfaceVariant },
-  buyersFound: { fontSize: 12, fontWeight: '500', color: C.onSurfaceVariant },
+  buyersFound: { fontSize: 12, fontWeight: '500', color: C.onSurfaceVariant, flexShrink: 0 },
 
-  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: 'rgba(221,193,176,0.2)', paddingTop: 10 },
-  viewOptionsBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  viewOptionsBtnText: { fontSize: 12, fontWeight: '700', color: C.secondary, letterSpacing: 0.4 },
-  editBtn: { flexDirection: 'row', alignItems: 'center' },
+  cardFooter: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', borderTopWidth: 1, borderTopColor: 'rgba(221,193,176,0.2)', paddingTop: 10, gap: 8 },
+  viewOptionsBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, flex: 1, minWidth: 0 },
+  viewOptionsBtnText: { fontSize: 12, fontWeight: '700', color: C.secondary, letterSpacing: 0.4, flexShrink: 1 },
+  editBtn: { flexDirection: 'row', alignItems: 'center', flexShrink: 0 },
   editText: { fontSize: 13, fontWeight: '500', color: C.onSurfaceVariant },
 
   // Modal styles

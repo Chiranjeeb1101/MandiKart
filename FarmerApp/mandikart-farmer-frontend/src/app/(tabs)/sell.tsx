@@ -29,6 +29,7 @@ import {
   Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ChevronLeft,
   Bell,
@@ -43,6 +44,7 @@ import {
   Store,
   Users,
 } from 'lucide-react-native';
+import { MKLayout } from '@/constants/layout';
 
 const C = {
   background: '#FAF8F5',
@@ -82,10 +84,13 @@ const CROP_IMAGES = {
 
 export default function SellScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const [selectedCrop, setSelectedCrop] = useState<'Onion' | 'Tomato' | 'Potato'>('Onion');
   const [quantity, setQuantity] = useState('1,000');
   const [grade, setGrade] = useState('Grade A');
   const [showGradeDropdown, setShowGradeDropdown] = useState(false);
+
+  const topPadding = MKLayout.getTopHeaderPadding(insets);
 
   function adjustQuantity(delta: number) {
     const num = parseInt(quantity.replace(/,/g, ''), 10) || 1000;
@@ -108,12 +113,14 @@ export default function SellScreen() {
 
   return (
     <View style={styles.root}>
-      {/* Background blobs */}
-      <View style={styles.blobOrange} />
-      <View style={styles.blobGreen} />
+      {/* Background blobs with pointerEvents="none" */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <View style={styles.blobOrange} />
+        <View style={styles.blobGreen} />
+      </View>
 
-      {/* ── Top App Bar (Exact Match Image 2) ── */}
-      <View style={styles.topBar}>
+      {/* ── Top App Bar (Safe Area Aware) ── */}
+      <View style={[styles.topBar, { paddingTop: topPadding }]}>
         <Pressable style={styles.circleBtn} onPress={() => router.back()}>
           <ChevronLeft size={22} color={C.onSurface} strokeWidth={2} />
         </Pressable>
@@ -130,12 +137,13 @@ export default function SellScreen() {
 
       {/* ── Scrollable Content ── */}
       <ScrollView
+        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
         {/* ── Main Container Card (What do you want to sell?) ── */}
-        <View style={styles.mainCard}>
+        <View style={[styles.mainCard, showGradeDropdown && { zIndex: 100, elevation: 12 }]}>
           <Text style={styles.cardTitle}>What do you want to sell?</Text>
 
           {/* Crop Horizontal Selector */}
@@ -371,7 +379,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 18,
-    paddingTop: 52,
     paddingBottom: 12,
   },
   circleBtn: {
@@ -381,15 +388,21 @@ const styles = StyleSheet.create({
     backgroundColor: C.surface,
     alignItems: 'center',
     justifyContent: 'center',
+    flexShrink: 0,
     ...SOFT_SHADOW,
   },
   topBarTitle: {
     fontSize: 18,
     fontWeight: '800',
     color: C.onSurface,
+    flex: 1,
+    minWidth: 0,
+    textAlign: 'center',
+    flexShrink: 1,
   },
   bellWrapper: {
     position: 'relative',
+    flexShrink: 0,
   },
   bellDot: {
     position: 'absolute',
@@ -403,9 +416,13 @@ const styles = StyleSheet.create({
     borderColor: C.surface,
   },
 
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
     paddingHorizontal: 18,
     paddingTop: 6,
+    paddingBottom: 120,
   },
 
   // Main Card
@@ -492,10 +509,12 @@ const styles = StyleSheet.create({
   controlsRow: {
     flexDirection: 'row',
     gap: 12,
+    zIndex: 100,
   },
   controlCol: {
     flex: 1,
     position: 'relative',
+    zIndex: 100,
   },
   controlLabel: {
     fontSize: 13,
@@ -541,14 +560,19 @@ const styles = StyleSheet.create({
   },
   dropdownMenu: {
     position: 'absolute',
-    top: 72,
-    left: 0, right: 0,
-    backgroundColor: C.surface,
+    top: 74,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: C.outlineVariant,
-    zIndex: 50,
-    ...SOFT_SHADOW,
+    zIndex: 999,
+    elevation: 15,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
   },
   dropdownMenuItem: {
     paddingVertical: 10,
@@ -566,6 +590,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     gap: 12,
     marginBottom: 16,
+    zIndex: 1,
   },
   metricCard: {
     flex: 1,
@@ -697,23 +722,28 @@ const styles = StyleSheet.create({
     backgroundColor: C.background,
     paddingHorizontal: 18,
     paddingTop: 10,
-    paddingBottom: 24,
+    paddingBottom: 14,
     borderTopWidth: 1,
     borderTopColor: C.outlineVariant,
   },
   findOptionsBtn: {
-    backgroundColor: C.secondaryGreen,
+    backgroundColor: '#1B6D24',
     borderRadius: 16,
-    paddingVertical: 16,
+    minHeight: 52,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
     ...SOFT_SHADOW,
   },
   findOptionsBtnText: {
     fontSize: 15,
     fontWeight: '800',
-    color: C.onSecondary,
+    color: '#FFFFFF',
     letterSpacing: 0.5,
+    flexShrink: 1,
+    textAlign: 'center',
   },
 });

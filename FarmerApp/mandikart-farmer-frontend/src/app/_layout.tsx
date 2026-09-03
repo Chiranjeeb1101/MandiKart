@@ -29,11 +29,11 @@ export default function RootLayout() {
 
   return (
     <SafeAreaProvider>
-      <StatusBar style="light" />
+      <StatusBar style="dark" />
       <Stack
         screenOptions={{
           headerShown: false,
-          contentStyle: { backgroundColor: '#0A1A0D' },
+          contentStyle: { backgroundColor: '#FAF8F5' },
           animation: 'slide_from_right',
           animationDuration: 320,
         }}
