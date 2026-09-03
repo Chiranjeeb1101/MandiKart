@@ -1,27 +1,31 @@
 /**
  * MandiKart — Home Screen (Selling Command Center)
  *
- * Exact implementation matching design screenshot and specifications:
+ * 100% Pixel-Perfect Match with Native Mobile & Web:
  * 1. Background:
- *    - Soft golden amber wash radiating smoothly from top-left
+ *    - Soft golden amber wash radiating smoothly from top-left (with pointerEvents="none")
  *    - Gentle pale leaf-green mist on the right edge
- *    - Clean, light #F8FAF7 canvas base
+ *    - Clean #F8FAF7 canvas base
  * 2. Header:
- *    - Single row: Avatar + "Namaste, Ravi 👋" + "📍 Nashik, Maharashtra" on left; Bell with badge '3' on right
+ *    - Safe-area aware topBar (works across all Android/iOS notch cutouts & web)
+ *    - Farmer avatar + "Namaste, Ravi 👋" + "📍 Nashik, Maharashtra" on left
+ *    - Circular bell button with badge '3' on right
  * 3. Hero Card:
  *    - "What do you want to sell today?", "Find best buyers and get better returns"
- *    - Deep rich forest green "+ Add Produce" button (#1B6D24)
- *    - Woven basket of fresh vegetables
+ *    - Rich solid forest green "+ Add Produce" button (#1B6D24)
+ *    - Fresh vegetable woven basket on right (flex-row layout, zero native clipping)
  * 4. "Today at a Glance" (Precision 3-Card Design):
- *    - Card 1: Circular soft peach badge (#FFF4EB), orange doc icon (#FF6B00), bold count 2, "Active Orders"
- *    - Card 2: Circular soft herbal green badge (#EDF7EE), delivery truck icon (#16A34A), bold text Tomorrow, "Pickup Schedule"
- *    - Card 3: Circular soft herbal green badge (#EDF7EE), wallet icon (#16A34A), bold amount ₹48,500, "Monthly Earning"
+ *    - Card 1: Circular soft peach badge (#FFF4EB), orange doc icon (#FF6B00), bold count 2, "Active\nOrders"
+ *    - Card 2: Circular soft herbal green badge (#EDF7EE), delivery truck icon (#16A34A), bold text Tomorrow, "Pickup\nSchedule"
+ *    - Card 3: Circular soft herbal green badge (#EDF7EE), wallet icon (#16A34A), bold amount ₹48,500, "Monthly\nEarning"
  *    - Clean white floating cards with soft ambient drop shadows
  * 5. Best Opportunity for You:
- *    - "★ Recommended" (orange badge) and "94% Match" (soft green badge)
- *    - Fresh Red Onion image, "Onion • Grade A", "1,000 KG", "₹22.00 /kg", "Estimated Net Return"
- *    - 3-metric breakdown: Selling Price (₹24.00 /kg), Transport Cost (₹2.00 /kg), Demand (High 🔥)
- *    - Outline Button: "View Best Options ➔" (2px green border, green bold text, green right arrow)
+ *    - Title row: "Best Opportunity for You" left, "View all" green link right
+ *    - Card top row: Onion photo (left) + Recommended badge & 94% Match badge + Onion • Grade A + 1,000 KG (right)
+ *    - Card divider
+ *    - Estimated Net Return label + large bold price: ₹22.00 /kg (#964900)
+ *    - Card divider
+ *    - 3 metrics row: Selling Price (₹24.00 /kg), Transport Cost (₹2.00 /kg), Demand (High 🔥)
  */
 
 import React, { useState } from 'react';
@@ -34,8 +38,10 @@ import {
   ScrollView,
   Modal,
   Alert,
+  Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { LinearGradient } from 'expo-linear-gradient';
 import {
   Bell,
@@ -43,7 +49,6 @@ import {
   Plus,
   Star,
   Flame,
-  ArrowRight,
   FileText,
   Truck,
   Wallet,
@@ -57,17 +62,18 @@ const C = {
   canvasBg: '#F8FAF7',
   surface: '#FFFFFF',
   primaryOrange: '#EF7D1A',
+  priceOrange: '#964900',
   secondaryGreen: '#1B6D24',
   onSecondary: '#FFFFFF',
   textTitle: '#241913',
   textSub: '#564336',
-  outlineVariant: '#DDC1B0',
+  dividerColor: '#EFEAE0',
   dataMatchBg: '#E8F5E9',
   dataMatchText: '#1B6D24',
-  badgeOrange: '#C85A00',
+  badgeOrange: '#964900',
   statusWaiting: '#F39C12',
 
-  // Exact Precision 3-Card Design Tokens
+  // Precision 3-Card Design Tokens
   iconOrangeBg: '#FFF4EB',    // Circular soft peach badge
   iconOrangeColor: '#FF6B00', // Orange document icon
   iconGreenBg: '#EDF7EE',     // Circular soft herbal green badge
@@ -88,6 +94,7 @@ const TOMATO_PHOTO_URI =
 
 export default function HomeScreen() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { user } = useAuthStore();
 
   const [showAllOpportunities, setShowAllOpportunities] = useState(false);
@@ -99,26 +106,30 @@ export default function HomeScreen() {
   const farmerName = user?.name ? user.name.split(' ')[0] : 'Ravi';
   const locationName = `${selectedDistrict}, Maharashtra`;
 
+  // Safe area top padding: accounts for Android status bar / notch / camera hole
+  const topPadding = Platform.OS === 'web' ? 16 : Math.max(insets.top, 20) + 8;
+  const bottomPadding = Platform.OS === 'web' ? 32 : Math.max(insets.bottom, 16) + 68;
+
   return (
     <View style={styles.root}>
-      {/* ── 1. Organic Watercolor Background Wash ── */}
-      {/* Soft golden amber wash radiating smoothly from top-left */}
-      <LinearGradient
-        colors={['#FFE7CE', 'rgba(255, 241, 230, 0.7)', 'transparent']}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 0.75, y: 0.4 }}
-        style={styles.gradientTopWarm}
-      />
-      {/* Gentle pale leaf-green mist on the right edge */}
-      <LinearGradient
-        colors={['#DCEFDE', 'rgba(235, 247, 238, 0.65)', 'transparent']}
-        start={{ x: 1, y: 0.1 }}
-        end={{ x: 0.35, y: 0.55 }}
-        style={styles.gradientTopGreen}
-      />
+      {/* ── 1. Organic Watercolor Background Washes (pointerEvents="none" prevents touch blocking) ── */}
+      <View style={StyleSheet.absoluteFill} pointerEvents="none">
+        <LinearGradient
+          colors={['#FFE7CE', 'rgba(255, 241, 230, 0.75)', 'transparent']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 0.75, y: 0.4 }}
+          style={styles.gradientTopWarm}
+        />
+        <LinearGradient
+          colors={['#DCEFDE', 'rgba(235, 247, 238, 0.70)', 'transparent']}
+          start={{ x: 1, y: 0.05 }}
+          end={{ x: 0.35, y: 0.55 }}
+          style={styles.gradientTopGreen}
+        />
+      </View>
 
-      {/* ── Top Bar (Single Row: Avatar+Greeting left, Bell right) ── */}
-      <View style={styles.topBar}>
+      {/* ── Top Bar (Avatar + Greeting left, Bell right) ── */}
+      <View style={[styles.topBar, { paddingTop: topPadding }]}>
         <View style={styles.topBarLeft}>
           <Pressable onPress={() => router.push('/(tabs)/more')}>
             <Image source={{ uri: FARMER_AVATAR_URI }} style={styles.avatar} />
@@ -148,25 +159,26 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      {/* ── Scrollable Body ── */}
+      {/* ── Scrollable Body (flex: 1 prevents mobile scroll collapse) ── */}
       <ScrollView
-        contentContainerStyle={styles.scrollContent}
+        style={styles.scrollView}
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPadding }]}
         showsVerticalScrollIndicator={false}
       >
         {/* ═══ SECTION 1: HERO CARD ("What do you want to sell today?") ═══ */}
         <View style={styles.heroCard}>
-          <View style={styles.heroTextCol}>
-            <Text style={styles.heroTitle}>What do you want to sell today?</Text>
-            <Text style={styles.heroSubtitle}>Find best buyers and get better returns</Text>
+          <View style={styles.heroLeftCol}>
+            <Text style={styles.heroTitle}>What do you want to{'\n'}sell today?</Text>
+            <Text style={styles.heroSubtitle}>Find best buyers and get{'\n'}better returns</Text>
             <Pressable
               style={({ pressed }) => [styles.addProduceBtn, pressed && { opacity: 0.9, transform: [{ scale: 0.98 }] }]}
               onPress={() => router.push('/(tabs)/sell')}
             >
-              <Plus size={18} color={C.onSecondary} strokeWidth={2.5} />
+              <Plus size={18} color="#FFFFFF" strokeWidth={2.6} />
               <Text style={styles.addProduceBtnText}>Add Produce</Text>
             </Pressable>
           </View>
-          <View style={styles.heroImageCol}>
+          <View style={styles.heroRightCol}>
             <Image source={{ uri: VEGGIE_BASKET_URI }} style={styles.heroImage} />
           </View>
         </View>
@@ -184,7 +196,7 @@ export default function HomeScreen() {
                 <FileText size={22} color={C.iconOrangeColor} strokeWidth={2} />
               </View>
               <Text style={styles.glanceValueLarge}>2</Text>
-              <Text numberOfLines={1} style={styles.glanceLabel}>Active Orders</Text>
+              <Text style={styles.glanceLabel}>Active{'\n'}Orders</Text>
             </Pressable>
 
             {/* Card 2: Pickup Schedule */}
@@ -196,7 +208,7 @@ export default function HomeScreen() {
                 <Truck size={22} color={C.iconGreenColor} strokeWidth={2} />
               </View>
               <Text style={styles.glanceValueMd}>Tomorrow</Text>
-              <Text numberOfLines={1} style={styles.glanceLabel}>Pickup Schedule</Text>
+              <Text style={styles.glanceLabel}>Pickup{'\n'}Schedule</Text>
             </Pressable>
 
             {/* Card 3: Monthly Earning */}
@@ -208,7 +220,7 @@ export default function HomeScreen() {
                 <Wallet size={22} color={C.iconGreenColor} strokeWidth={2} />
               </View>
               <Text style={styles.glanceValueMd}>₹48,500</Text>
-              <Text numberOfLines={1} style={styles.glanceLabel}>Monthly Earning</Text>
+              <Text style={styles.glanceLabel}>Monthly{'\n'}Earning</Text>
             </Pressable>
           </View>
         </View>
@@ -222,35 +234,38 @@ export default function HomeScreen() {
         </View>
 
         <View style={styles.opportunityCard}>
-          {/* Top Badges */}
-          <View style={styles.opportunityBadgesRow}>
-            <View style={styles.recommendedBadge}>
-              <Star size={11} color="#FFFFFF" fill="#FFFFFF" strokeWidth={0} style={{ marginRight: 4 }} />
-              <Text style={styles.recommendedBadgeText}>Recommended</Text>
-            </View>
-            <View style={styles.matchBadge}>
-              <Text style={styles.matchBadgeText}>94% Match</Text>
-            </View>
-          </View>
-
-          {/* Crop Info Row */}
-          <View style={styles.opportunityMainRow}>
+          {/* Top Row: Crop Photo (left) + Badges & Info (right) */}
+          <View style={styles.opportunityHeaderRow}>
             <Image source={{ uri: ONION_PHOTO_URI }} style={styles.onionThumb} />
-            <View style={styles.opportunityTextCol}>
+            <View style={styles.opportunityHeaderInfo}>
+              <View style={styles.opportunityBadgesRow}>
+                <View style={styles.recommendedBadge}>
+                  <Star size={11} color="#FFFFFF" fill="#FFFFFF" strokeWidth={0} style={{ marginRight: 4 }} />
+                  <Text style={styles.recommendedBadgeText}>Recommended</Text>
+                </View>
+                <View style={styles.matchBadge}>
+                  <Text style={styles.matchBadgeText}>94% Match</Text>
+                </View>
+              </View>
               <Text style={styles.cropTitle}>Onion • Grade A</Text>
               <Text style={styles.cropQty}>1,000 KG</Text>
-              <View style={styles.netReturnRow}>
-                <Text style={styles.netReturnPrice}>₹22.00</Text>
-                <Text style={styles.netReturnUnit}> /kg</Text>
-              </View>
-              <Text style={styles.netReturnSub}>Estimated Net Return</Text>
             </View>
           </View>
 
           {/* Divider */}
           <View style={styles.cardDivider} />
 
-          {/* 3 Metric Columns */}
+          {/* Estimated Net Return Section */}
+          <Text style={styles.netReturnLabel}>Estimated Net Return</Text>
+          <View style={styles.netReturnPriceRow}>
+            <Text style={styles.netReturnPrice}>₹22.00</Text>
+            <Text style={styles.netReturnUnit}> /kg</Text>
+          </View>
+
+          {/* Divider */}
+          <View style={styles.cardDivider} />
+
+          {/* 3 Metric Columns: Selling Price | Transport Cost | Demand */}
           <View style={styles.metricGrid}>
             <View style={styles.metricCol}>
               <Text style={styles.metricLabel}>Selling Price</Text>
@@ -264,45 +279,38 @@ export default function HomeScreen() {
               <Text style={styles.metricLabel}>Demand</Text>
               <View style={styles.demandRow}>
                 <Text style={styles.demandValue}>High </Text>
-                <Flame size={13} color="#D9531E" fill="#D9531E" strokeWidth={0} />
+                <Flame size={14} color="#EF7D1A" fill="#EF7D1A" strokeWidth={0} />
               </View>
             </View>
           </View>
-
-          {/* View Best Options Outline Button */}
-          <Pressable
-            style={({ pressed }) => [styles.viewBestOptionsBtn, pressed && { backgroundColor: '#F0F9F1' }]}
-            onPress={() => router.push('/(tabs)/sell')}
-          >
-            <Text style={styles.viewBestOptionsBtnText}>View Best Options</Text>
-            <ArrowRight size={17} color={C.secondaryGreen} strokeWidth={2.4} style={{ marginLeft: 6 }} />
-          </Pressable>
         </View>
 
-        {/* Toggled Tomato Opportunity */}
+        {/* Toggled Extra Opportunity (Tomatoes) */}
         {showAllOpportunities && (
-          <View style={[styles.opportunityCard, { marginTop: 6 }]}>
-            <View style={styles.opportunityBadgesRow}>
-              <View style={[styles.recommendedBadge, { backgroundColor: '#2980B9' }]}>
-                <TrendingUp size={11} color="#FFFFFF" style={{ marginRight: 4 }} />
-                <Text style={styles.recommendedBadgeText}>High Demand</Text>
-              </View>
-              <View style={[styles.matchBadge, { backgroundColor: '#EBF5FB' }]}>
-                <Text style={[styles.matchBadgeText, { color: '#2980B9' }]}>88% Match</Text>
+          <View style={[styles.opportunityCard, { marginTop: 4 }]}>
+            <View style={styles.opportunityHeaderRow}>
+              <Image source={{ uri: TOMATO_PHOTO_URI }} style={styles.onionThumb} />
+              <View style={styles.opportunityHeaderInfo}>
+                <View style={styles.opportunityBadgesRow}>
+                  <View style={[styles.recommendedBadge, { backgroundColor: '#2980B9' }]}>
+                    <TrendingUp size={11} color="#FFFFFF" style={{ marginRight: 4 }} />
+                    <Text style={styles.recommendedBadgeText}>High Demand</Text>
+                  </View>
+                  <View style={[styles.matchBadge, { backgroundColor: '#EBF5FB' }]}>
+                    <Text style={[styles.matchBadgeText, { color: '#2980B9' }]}>88% Match</Text>
+                  </View>
+                </View>
+                <Text style={styles.cropTitle}>Red Tomatoes • Grade A</Text>
+                <Text style={styles.cropQty}>800 KG</Text>
               </View>
             </View>
 
-            <View style={styles.opportunityMainRow}>
-              <Image source={{ uri: TOMATO_PHOTO_URI }} style={styles.onionThumb} />
-              <View style={styles.opportunityTextCol}>
-                <Text style={styles.cropTitle}>Red Tomatoes • Grade A</Text>
-                <Text style={styles.cropQty}>800 KG</Text>
-                <View style={styles.netReturnRow}>
-                  <Text style={[styles.netReturnPrice, { color: '#2980B9' }]}>₹31.50</Text>
-                  <Text style={styles.netReturnUnit}> /kg</Text>
-                </View>
-                <Text style={styles.netReturnSub}>Estimated Net Return</Text>
-              </View>
+            <View style={styles.cardDivider} />
+
+            <Text style={styles.netReturnLabel}>Estimated Net Return</Text>
+            <View style={styles.netReturnPriceRow}>
+              <Text style={[styles.netReturnPrice, { color: '#2980B9' }]}>₹31.50</Text>
+              <Text style={styles.netReturnUnit}> /kg</Text>
             </View>
 
             <View style={styles.cardDivider} />
@@ -320,22 +328,12 @@ export default function HomeScreen() {
                 <Text style={styles.metricLabel}>Demand</Text>
                 <View style={styles.demandRow}>
                   <Text style={[styles.demandValue, { color: '#E74C3C' }]}>Very High </Text>
-                  <Flame size={13} color="#E74C3C" fill="#E74C3C" strokeWidth={0} />
+                  <Flame size={14} color="#E74C3C" fill="#E74C3C" strokeWidth={0} />
                 </View>
               </View>
             </View>
-
-            <Pressable
-              style={({ pressed }) => [styles.viewBestOptionsBtn, { borderColor: '#2980B9' }, pressed && { backgroundColor: '#EBF5FB' }]}
-              onPress={() => router.push('/(tabs)/sell')}
-            >
-              <Text style={[styles.viewBestOptionsBtnText, { color: '#2980B9' }]}>View Tomato Options</Text>
-              <ArrowRight size={17} color="#2980B9" strokeWidth={2.4} style={{ marginLeft: 6 }} />
-            </Pressable>
           </View>
         )}
-
-        <View style={{ height: 32 }} />
       </ScrollView>
 
       {/* ── Modals ── */}
@@ -442,9 +440,9 @@ export default function HomeScreen() {
 
 const SOFT_SHADOW = {
   shadowColor: '#000000',
-  shadowOffset: { width: 0, height: 4 },
-  shadowOpacity: 0.05,
-  shadowRadius: 12,
+  shadowOffset: { width: 0, height: 3 },
+  shadowOpacity: 0.06,
+  shadowRadius: 10,
   elevation: 3,
 };
 
@@ -470,13 +468,12 @@ const styles = StyleSheet.create({
     height: 360,
   },
 
-  // Top Bar (Single Row: Avatar + Greeting, Bell)
+  // Top Bar (Safe Area aware, flex-row)
   topBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
-    paddingTop: 52,
     paddingBottom: 10,
     zIndex: 10,
   },
@@ -541,74 +538,70 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
 
+  // Scroll View & Content Container
+  scrollView: {
+    flex: 1,
+  },
   scrollContent: {
     paddingHorizontal: 16,
-    paddingTop: 4,
+    paddingTop: 8,
   },
 
-  // ── Hero Card ──
+  // ── Hero Card (Flex Row layout, zero native clipping) ──
   heroCard: {
     backgroundColor: C.surface,
     borderRadius: 20,
-    padding: 18,
-    position: 'relative',
+    paddingVertical: 18,
+    paddingHorizontal: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 20,
-    overflow: 'hidden',
     ...SOFT_SHADOW,
   },
-  heroTextCol: {
-    width: '68%',
-    zIndex: 2,
+  heroLeftCol: {
+    flex: 1,
+    paddingRight: 8,
   },
   heroTitle: {
     fontSize: 18,
     fontWeight: '800',
     color: C.textTitle,
     lineHeight: 24,
-    marginBottom: 4,
+    marginBottom: 6,
   },
   heroSubtitle: {
     fontSize: 12.5,
     color: C.textSub,
-    marginBottom: 14,
     lineHeight: 17,
+    marginBottom: 14,
   },
-  // Rich Forest Green "+ Add Produce" Button (#1B6D24) — Ultra Visible
   addProduceBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#1B6D24',
-    borderRadius: 12,
-    paddingVertical: 12,
-    paddingHorizontal: 20,
-    gap: 8,
+    backgroundColor: C.secondaryGreen,
+    borderRadius: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 18,
+    gap: 6,
     alignSelf: 'flex-start',
-    shadowColor: '#1B6D24',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.35,
-    shadowRadius: 6,
-    elevation: 4,
+    ...SOFT_SHADOW,
   },
   addProduceBtnText: {
-    fontSize: 14.5,
+    fontSize: 14,
     fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.2,
+    color: C.onSecondary,
   },
-  heroImageCol: {
-    position: 'absolute',
-    bottom: -6,
-    right: -6,
-    width: 115,
-    height: 115,
-    alignItems: 'flex-end',
-    justifyContent: 'flex-end',
-    zIndex: 1,
+  heroRightCol: {
+    width: 95,
+    height: 95,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   heroImage: {
-    width: 115,
-    height: 115,
+    width: 95,
+    height: 95,
     resizeMode: 'contain',
   },
 
@@ -631,39 +624,40 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: C.surface,
     borderRadius: 16,
-    paddingVertical: 18,
-    paddingHorizontal: 6,
+    paddingVertical: 16,
+    paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
     ...SOFT_SHADOW,
   },
   glanceIconCircle: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 46,
+    height: 46,
+    borderRadius: 23,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   glanceValueLarge: {
     fontSize: 22,
     fontWeight: '800',
     color: C.textTitle,
     textAlign: 'center',
-    marginBottom: 3,
+    marginBottom: 4,
   },
   glanceValueMd: {
-    fontSize: 15,
+    fontSize: 14.5,
     fontWeight: '800',
     color: C.textTitle,
     textAlign: 'center',
-    marginBottom: 3,
+    marginBottom: 4,
   },
   glanceLabel: {
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '500',
     color: C.textSub,
     textAlign: 'center',
+    lineHeight: 15,
   },
 
   // ── Best Opportunity Section ──
@@ -682,52 +676,51 @@ const styles = StyleSheet.create({
     backgroundColor: C.surface,
     borderRadius: 20,
     padding: 16,
-    marginBottom: 20,
+    marginBottom: 16,
     ...SOFT_SHADOW,
+  },
+  opportunityHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+  },
+  onionThumb: {
+    width: 78,
+    height: 78,
+    borderRadius: 14,
+  },
+  opportunityHeaderInfo: {
+    flex: 1,
   },
   opportunityBadgesRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    gap: 8,
+    marginBottom: 6,
   },
   recommendedBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: C.badgeOrange,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   recommendedBadgeText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   matchBadge: {
     backgroundColor: C.dataMatchBg,
     paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingVertical: 3,
     borderRadius: 6,
   },
   matchBadgeText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '800',
     color: C.dataMatchText,
-  },
-  opportunityMainRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    marginBottom: 12,
-  },
-  onionThumb: {
-    width: 92,
-    height: 92,
-    borderRadius: 14,
-  },
-  opportunityTextCol: {
-    flex: 1,
   },
   cropTitle: {
     fontSize: 15,
@@ -738,31 +731,29 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: C.textSub,
     marginTop: 2,
-    marginBottom: 6,
   },
-  netReturnRow: {
+  cardDivider: {
+    height: 1,
+    backgroundColor: C.dividerColor,
+    marginVertical: 12,
+  },
+  netReturnLabel: {
+    fontSize: 11.5,
+    color: C.textSub,
+    marginBottom: 3,
+  },
+  netReturnPriceRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
   },
   netReturnPrice: {
     fontSize: 22,
     fontWeight: '800',
-    color: C.textTitle,
+    color: C.priceOrange,
   },
   netReturnUnit: {
     fontSize: 13,
     color: C.textSub,
-  },
-  netReturnSub: {
-    fontSize: 11,
-    color: C.textSub,
-    marginTop: 1,
-  },
-  cardDivider: {
-    height: 1,
-    backgroundColor: C.outlineVariant,
-    opacity: 0.35,
-    marginVertical: 12,
   },
   metricGrid: {
     flexDirection: 'row',
@@ -788,25 +779,7 @@ const styles = StyleSheet.create({
   demandValue: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#D9531E',
-  },
-
-  // View Best Options: 2px green border, white bg
-  viewBestOptionsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 2,
-    borderColor: C.secondaryGreen,
-    borderRadius: 12,
-    paddingVertical: 12,
-    marginTop: 14,
-    backgroundColor: C.surface,
-  },
-  viewBestOptionsBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
-    color: C.secondaryGreen,
+    color: C.primaryOrange,
   },
 
   // Modal styles
