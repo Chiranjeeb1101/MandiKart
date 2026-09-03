@@ -1,0 +1,328 @@
+import React, { useState } from 'react';
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity,
+  Image, StatusBar, Alert,
+} from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
+import { Ionicons } from '@expo/vector-icons';
+import { Colors, Spacing, BorderRadius, Shadows } from '../../theme';
+import StatusBadge from '../../components/StatusBadge';
+import PrimaryButton from '../../components/PrimaryButton';
+import { SAMPLE_PRODUCTS } from '../../services/mockData';
+
+export default function OrderDetailsScreen({ navigation, route }: any) {
+  const orderId = route.params?.orderId || 'MK-2024-001234';
+  const initialOrder = route.params?.order || {
+    id: orderId,
+    date: '3 Sep 2026, 02:30 PM',
+    status: 'DISPATCHED',
+    total: 395,
+    itemsCount: 3,
+    itemsPreview: [SAMPLE_PRODUCTS[0], SAMPLE_PRODUCTS[2], SAMPLE_PRODUCTS[7]],
+    deliveryAddress: 'Flat 402, Shivajinagar, Pune - 411005',
+    farmerName: 'Rajan Kumar',
+    estimatedDelivery: 'Today by 5:30 PM',
+  };
+
+  const [orderStatus, setOrderStatus] = useState<string>(initialOrder.status);
+
+  const handleDownloadInvoice = () => {
+    Alert.alert('Download Invoice 📄', `Invoice for order ${orderId} has been downloaded to your device.`);
+  };
+
+  const handleCancelOrder = () => {
+    Alert.alert(
+      'Cancel Order 🚫',
+      `Are you sure you want to cancel Order #${orderId}?\n\nA full refund of ₹${initialOrder.total} will be processed immediately to your original payment method.`,
+      [
+        { text: 'Keep Order', style: 'cancel' },
+        {
+          text: 'Yes, Cancel Order',
+          style: 'destructive',
+          onPress: () => {
+            setOrderStatus('CANCELLED');
+            if (route.params?.onCancel) {
+              route.params.onCancel();
+            }
+            Alert.alert('Order Cancelled', 'Your order has been cancelled successfully and refund initiated.');
+          },
+        },
+      ]
+    );
+  };
+
+  const isCancelable = orderStatus === 'DISPATCHED' || orderStatus === 'PROCESSING' || orderStatus === 'CONFIRMED' || orderStatus === 'PENDING';
+
+  return (
+    <SafeAreaView style={styles.safe} edges={['top']}>
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent />
+
+      {/* Header */}
+      <View style={styles.header}>
+        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()}>
+          <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
+        </TouchableOpacity>
+        <Text style={styles.title}>Order Details</Text>
+        <TouchableOpacity onPress={handleDownloadInvoice}>
+          <Ionicons name="download-outline" size={20} color={Colors.primary} />
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
+        {/* Status Card */}
+        <View style={styles.statusCard}>
+          <View style={styles.statusTopRow}>
+            <View>
+              <Text style={styles.orderIdText}>{orderId}</Text>
+              <Text style={styles.dateText}>Placed on {initialOrder.date}</Text>
+            </View>
+            <StatusBadge status={orderStatus as any} size="md" />
+          </View>
+
+          {orderStatus === 'CANCELLED' ? (
+            <View style={styles.cancelledBanner}>
+              <Ionicons name="alert-circle" size={18} color={Colors.error} />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.cancelledTitle}>Order Cancelled</Text>
+                <Text style={styles.cancelledSub}>Refund of ₹{initialOrder.total} initiated to your original payment mode.</Text>
+              </View>
+            </View>
+          ) : (
+            initialOrder.estimatedDelivery && (
+              <View style={styles.etaRow}>
+                <Ionicons name="time" size={16} color={Colors.primary} />
+                <Text style={styles.etaText}>Estimated Delivery: <Text style={styles.etaHighlight}>{initialOrder.estimatedDelivery}</Text></Text>
+              </View>
+            )
+          )}
+        </View>
+
+        {/* Farmer Info Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Source Farm</Text>
+          <View style={styles.farmerRow}>
+            <View style={styles.farmerAvatar}>
+              <Text style={styles.avatarText}>🧑‍🌾</Text>
+            </View>
+            <View style={styles.farmerInfo}>
+              <Text style={styles.farmerName}>{initialOrder.farmerName}</Text>
+              <Text style={styles.farmerSub}>Verified Direct Farmer • Nashik, MH</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.chatBtn}
+              onPress={() => navigation.navigate('ChatStack', { screen: 'Chat', params: { name: initialOrder.farmerName } })}
+            >
+              <Ionicons name="chatbubble-ellipses-outline" size={18} color={Colors.primary} />
+            </TouchableOpacity>
+          </View>
+        </View>
+
+        {/* Ordered Items */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Ordered Items ({initialOrder.itemsPreview.length})</Text>
+          <View style={styles.itemsList}>
+            {initialOrder.itemsPreview.map((item: any, i: number) => (
+              <View key={`${item.id}-${i}`} style={styles.itemRow}>
+                <Image source={{ uri: item.imageUrl }} style={styles.itemThumb} />
+                <View style={styles.itemDetails}>
+                  <Text style={styles.itemName}>{item.name}</Text>
+                  <Text style={styles.itemUnit}>Qty: 1 {item.unit} • ₹{item.price}/{item.unit}</Text>
+                </View>
+                <Text style={styles.itemPrice}>₹{item.price}</Text>
+              </View>
+            ))}
+          </View>
+        </View>
+
+        {/* Delivery Address */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Delivery Address</Text>
+          <View style={styles.addressRow}>
+            <Ionicons name="location-outline" size={20} color={Colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.addressName}>Ramesh Sharma (Home)</Text>
+              <Text style={styles.addressText}>{initialOrder.deliveryAddress}</Text>
+              <Text style={styles.phoneText}>Phone: +91 98765 43210</Text>
+            </View>
+          </View>
+        </View>
+
+        {/* Payment Summary */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>Payment Breakdown</Text>
+
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Item Subtotal</Text>
+            <Text style={styles.summaryValue}>₹{initialOrder.total - 5}</Text>
+          </View>
+
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Delivery Fee</Text>
+            <Text style={[styles.summaryValue, { color: Colors.success, fontWeight: '700' }]}>FREE</Text>
+          </View>
+
+          <View style={styles.summaryRow}>
+            <Text style={styles.summaryLabel}>Handling Fee</Text>
+            <Text style={styles.summaryValue}>₹5</Text>
+          </View>
+
+          <View style={styles.divider} />
+
+          <View style={styles.summaryRow}>
+            <Text style={styles.totalLabel}>Total {orderStatus === 'CANCELLED' ? 'Refunded' : 'Paid (UPI)'}</Text>
+            <Text style={[styles.totalValue, orderStatus === 'CANCELLED' && { color: Colors.error }]}>₹{initialOrder.total}</Text>
+          </View>
+        </View>
+      </ScrollView>
+
+      {/* Footer Buttons */}
+      {isCancelable && (
+        <View style={styles.footer}>
+          <TouchableOpacity style={styles.cancelBtn} onPress={handleCancelOrder} activeOpacity={0.85}>
+            <Ionicons name="close-circle-outline" size={18} color={Colors.error} />
+            <Text style={styles.cancelBtnText}>Cancel Order</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.trackBtn}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('OrderTracking', { orderId: orderId, order: initialOrder })}
+          >
+            <Ionicons name="location" size={18} color={Colors.white} />
+            <Text style={styles.trackBtnText}>Track Order</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  safe: { flex: 1, backgroundColor: 'transparent' },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.borderLight,
+  },
+  backBtn: { padding: 4 },
+  title: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary },
+  scroll: { padding: Spacing.md, gap: Spacing.md, paddingBottom: 40 },
+  // Status Card
+  statusCard: {
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    gap: Spacing.sm,
+    ...Shadows.sm,
+  },
+  statusTopRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start' },
+  orderIdText: { fontSize: 16, fontWeight: '800', color: Colors.textPrimary },
+  dateText: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
+  etaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: Colors.primaryLight,
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+  },
+  etaText: { fontSize: 12, color: Colors.textPrimary },
+  etaHighlight: { fontWeight: '700', color: Colors.primary },
+  cancelledBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.08)',
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+  },
+  cancelledTitle: { fontSize: 13, fontWeight: '800', color: Colors.error },
+  cancelledSub: { fontSize: 11, color: Colors.textSecondary, marginTop: 1 },
+  // Common Card
+  card: {
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    gap: Spacing.sm,
+    ...Shadows.sm,
+  },
+  cardTitle: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary, marginBottom: 2 },
+  // Farmer
+  farmerRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  farmerAvatar: {
+    width: 40, height: 40, borderRadius: 20,
+    backgroundColor: Colors.primaryLight,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  avatarText: { fontSize: 20 },
+  farmerInfo: { flex: 1 },
+  farmerName: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
+  farmerSub: { fontSize: 11, color: Colors.textSecondary },
+  chatBtn: {
+    width: 36, height: 36, borderRadius: 18,
+    backgroundColor: Colors.primaryLight,
+    alignItems: 'center', justifyContent: 'center',
+  },
+  // Items
+  itemsList: { gap: Spacing.sm },
+  itemRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
+  itemThumb: { width: 44, height: 44, borderRadius: BorderRadius.md, backgroundColor: Colors.gray100 },
+  itemDetails: { flex: 1 },
+  itemName: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
+  itemUnit: { fontSize: 11, color: Colors.textSecondary, marginTop: 2 },
+  itemPrice: { fontSize: 14, fontWeight: '700', color: Colors.textPrimary },
+  // Address
+  addressRow: { flexDirection: 'row', gap: Spacing.sm, alignItems: 'flex-start' },
+  addressName: { fontSize: 13, fontWeight: '700', color: Colors.textPrimary },
+  addressText: { fontSize: 12, color: Colors.textSecondary, marginTop: 2, lineHeight: 16 },
+  phoneText: { fontSize: 11, color: Colors.textSecondary, marginTop: 4 },
+  // Payment
+  summaryRow: { flexDirection: 'row', justifyContent: 'space-between' },
+  summaryLabel: { fontSize: 13, color: Colors.textSecondary },
+  summaryValue: { fontSize: 13, fontWeight: '600', color: Colors.textPrimary },
+  divider: { height: 1, backgroundColor: Colors.borderLight, marginVertical: 4 },
+  totalLabel: { fontSize: 15, fontWeight: '800', color: Colors.textPrimary },
+  totalValue: { fontSize: 17, fontWeight: '800', color: Colors.primary },
+  // Footer
+  footer: {
+    flexDirection: 'row',
+    padding: Spacing.md,
+    gap: Spacing.md,
+    backgroundColor: Colors.white,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+    ...Shadows.lg,
+  },
+  cancelBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 48,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1.5,
+    borderColor: Colors.error,
+    backgroundColor: Colors.white,
+  },
+  cancelBtnText: { fontSize: 14, fontWeight: '700', color: Colors.error },
+  trackBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    height: 48,
+    borderRadius: BorderRadius.full,
+    backgroundColor: Colors.primary,
+  },
+  trackBtnText: { fontSize: 14, fontWeight: '700', color: Colors.white },
+});
