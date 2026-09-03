@@ -94,11 +94,13 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
+    width: '100%',
     position: 'relative',
     backgroundColor: '#FAF9F6',
   },
   contentLayer: {
     flex: 1,
+    width: '100%',
     zIndex: 1,
   },
 });

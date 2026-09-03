@@ -37,6 +37,7 @@ export const MKCard: React.FC<MKCardProps> = ({
   };
 
   const cardStyle: ViewStyle = {
+    width: '100%',
     backgroundColor: '#FFFFFF',
     borderRadius: 20,
     padding: getPadding(),
@@ -66,7 +67,7 @@ export const MKCard: React.FC<MKCardProps> = ({
         onPress={onPress}
         style={({ pressed }) => [
           cardStyle,
-          pressed && { opacity: 0.94, transform: [{ scale: 0.99 }] },
+          pressed && { opacity: 0.92, transform: [{ scale: 0.97 }], elevation: 1 },
           style,
         ]}
       >

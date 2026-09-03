@@ -157,7 +157,7 @@ export default function SignUpScreen() {
                 <View style={styles.kickerIcon}>
                   <ShieldCheck size={15} color={MKColors.primaryGreenDark} strokeWidth={2.6} />
                 </View>
-                <Text style={styles.kickerText}>Verified farmer commerce</Text>
+                <Text style={styles.kickerText}>Verified farmer E-Commerce</Text>
               </View>
               <Text style={styles.heroTitle}>
                 Create Your{'\n'}
@@ -372,6 +372,8 @@ function AuthField({
   error,
   rightIcon,
   tone = 'green',
+  onFocus,
+  onBlur,
   ...inputProps
 }: TextInputProps & {
   icon: IconComponent;
@@ -380,27 +382,47 @@ function AuthField({
   rightIcon?: React.ReactNode;
   tone?: FieldTone;
 }) {
+  const inputRef = React.useRef<TextInput>(null);
+  const [isFocused, setIsFocused] = useState(false);
+
   const iconColor = tone === 'orange' ? MKColors.accentOrangeDark : tone === 'neutral' ? MKColors.textSecondary : MKColors.primaryGreenDark;
   const iconBg = tone === 'orange' ? styles.fieldIconOrange : tone === 'neutral' ? styles.fieldIconNeutral : styles.fieldIconGreen;
+  const focusBorderColor = tone === 'orange' ? MKColors.accentOrangeDark : MKColors.primaryGreenDark;
 
   return (
     <View style={styles.fieldWrap}>
-      <View style={[styles.field, Boolean(error) && styles.fieldError]}>
+      <Pressable
+        onPress={() => inputRef.current?.focus()}
+        style={[
+          styles.field,
+          isFocused && { borderColor: focusBorderColor, borderWidth: 1.8, backgroundColor: '#FFFFFF' },
+          Boolean(error) && styles.fieldError,
+        ]}
+      >
         <View style={[styles.fieldIcon, iconBg]}>
           <Icon size={20} color={iconColor} strokeWidth={2.25} />
         </View>
         <View style={styles.fieldBody}>
           <TextInput
+            ref={inputRef}
             {...inputProps}
-            placeholderTextColor={MKColors.textSecondary}
+            placeholderTextColor="#9AA0A6"
             underlineColorAndroid="transparent"
             multiline={false}
             style={styles.input}
+            onFocus={(e) => {
+              setIsFocused(true);
+              onFocus?.(e);
+            }}
+            onBlur={(e) => {
+              setIsFocused(false);
+              onBlur?.(e);
+            }}
           />
-          <Text numberOfLines={1} style={styles.fieldHelper}>{helper}</Text>
         </View>
         {rightIcon ? <View style={styles.rightIcon}>{rightIcon}</View> : null}
-      </View>
+      </Pressable>
+      {helper && !error ? <Text numberOfLines={1} style={styles.fieldHelper}>{helper}</Text> : null}
       {error ? <Text style={styles.fieldErrorText}>{error}</Text> : null}
     </View>
   );
@@ -615,30 +637,30 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   fieldWrap: {
-    marginBottom: 12,
+    marginBottom: 14,
   },
   field: {
-    minHeight: 68,
-    borderRadius: 18,
+    minHeight: 56,
+    borderRadius: 16,
     borderWidth: 1.2,
     borderColor: '#E7E4DC',
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#FAFAF7',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingLeft: 12,
-    paddingRight: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 4,
   },
   fieldError: {
     borderColor: MKColors.error,
     backgroundColor: '#FFFCFC',
   },
   fieldIcon: {
-    width: 42,
-    height: 42,
-    borderRadius: 13,
+    width: 40,
+    height: 40,
+    borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 12,
+    marginRight: 10,
   },
   fieldIconGreen: {
     backgroundColor: '#EAF5E7',
@@ -650,31 +672,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#F1F3F1',
   },
   input: {
-    flex: 0,
+    flex: 1,
     width: '100%',
-    height: 29,
-    paddingTop: 0,
-    paddingBottom: 0,
+    minHeight: 48,
+    paddingVertical: 0,
     paddingHorizontal: 0,
-    includeFontPadding: true,
-    textAlignVertical: 'center',
     color: MKColors.textPrimary,
     fontSize: 16,
     fontWeight: '700',
+    textAlignVertical: 'center',
   },
   fieldBody: {
     flex: 1,
-    minWidth: 0,
-    height: 48,
+    minHeight: 48,
     justifyContent: 'center',
-    overflow: 'hidden',
   },
   fieldHelper: {
     color: MKColors.textMuted,
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
-    lineHeight: 16,
-    marginTop: 2,
+    marginTop: 4,
+    marginLeft: 6,
   },
   rightIcon: {
     width: 34,

@@ -5,11 +5,17 @@ import {
   StyleSheet,
   StatusBar,
   Pressable,
+  Image,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
-import Animated, { FadeIn, FadeInUp, FadeInDown } from 'react-native-reanimated';
-import { ArrowRight, Sprout } from 'lucide-react-native';
+import Animated, {
+  FadeIn,
+  FadeInUp,
+  useSharedValue,
+  useAnimatedStyle,
+  withSpring,
+} from 'react-native-reanimated';
+import { ArrowRight } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TypingText } from '@/components/ui/TypingText';
 import { useTranslation } from '@/hooks/useTranslation';
@@ -21,6 +27,20 @@ export default function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+
+  const btnScale = useSharedValue(1);
+
+  const animatedBtnStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: btnScale.value }],
+  }));
+
+  const handlePressIn = () => {
+    btnScale.value = withSpring(0.94, { damping: 12, stiffness: 200 });
+  };
+
+  const handlePressOut = () => {
+    btnScale.value = withSpring(1, { damping: 12, stiffness: 200 });
+  };
 
   const handleGetStarted = () => {
     router.push('/language-select');
@@ -42,12 +62,7 @@ export default function WelcomeScreen() {
         <Image
           source={GIF_SOURCE}
           style={styles.fullScreenGif}
-          contentFit="cover"
-          contentPosition="center"
-          autoplay
-          cachePolicy="memory-disk"
-          priority="high"
-          recyclingKey="welcome-fullscreen-gif"
+          resizeMode="cover"
         />
         
         {/* Subtle Overlay Gradient for perfect readability */}
@@ -73,17 +88,6 @@ export default function WelcomeScreen() {
           },
         ]}
       >
-        {/* ── Top Header: Branding Badge ── */}
-        <Animated.View
-          entering={FadeInDown.duration(600).delay(100)}
-          style={styles.headerRow}
-        >
-          <View style={styles.brandBadge}>
-            <Sprout size={16} color="#4ADE80" strokeWidth={2.5} />
-            <Text style={styles.brandBadgeText}>MandiKart • Farmer App</Text>
-          </View>
-        </Animated.View>
-
         {/* ── Spacer pushing title & button to bottom ── */}
         <View style={styles.flexSpacer} />
 
@@ -112,43 +116,44 @@ export default function WelcomeScreen() {
             entering={FadeInUp.duration(700).delay(450)}
             style={styles.bottomArea}
           >
-            <Pressable
-              onPress={handleGetStarted}
-              style={({ pressed }) => [
-                styles.getStartedBtnWrapper,
-                pressed && styles.getStartedBtnPressed,
-              ]}
-            >
-              {/* Dark 3D Extrusion Shadow Base */}
-              <View style={styles.getStarted3DBase}>
-                {/* Vibrant Cylinder Gradient Surface */}
-                <LinearGradient
-                  colors={['#4ADE80', '#22C55E', '#16A34A', '#15803D', '#0F5426']}
-                  locations={[0, 0.22, 0.65, 0.9, 1]}
-                  start={{ x: 0.5, y: 0 }}
-                  end={{ x: 0.5, y: 1 }}
-                  style={styles.getStartedCylinderSurface}
-                >
-                  {/* 3D Glass Curved Gloss Highlight */}
+            <Animated.View style={[styles.getStartedBtnWrapper, animatedBtnStyle]}>
+              <Pressable
+                onPress={handleGetStarted}
+                onPressIn={handlePressIn}
+                onPressOut={handlePressOut}
+                style={styles.getStartedPressable}
+              >
+                {/* Dark 3D Extrusion Shadow Base */}
+                <View style={styles.getStarted3DBase}>
+                  {/* Vibrant Cylinder Gradient Surface */}
                   <LinearGradient
-                    colors={['rgba(255, 255, 255, 0.45)', 'rgba(255, 255, 255, 0.05)']}
+                    colors={['#4ADE80', '#22C55E', '#16A34A', '#15803D', '#0F5426']}
+                    locations={[0, 0.22, 0.65, 0.9, 1]}
                     start={{ x: 0.5, y: 0 }}
                     end={{ x: 0.5, y: 1 }}
-                    style={styles.cylinderGlossSheen}
-                  />
+                    style={styles.getStartedCylinderSurface}
+                  >
+                    {/* 3D Glass Curved Gloss Highlight */}
+                    <LinearGradient
+                      colors={['rgba(255, 255, 255, 0.45)', 'rgba(255, 255, 255, 0.05)']}
+                      start={{ x: 0.5, y: 0 }}
+                      end={{ x: 0.5, y: 1 }}
+                      style={styles.cylinderGlossSheen}
+                    />
 
-                  {/* Content Row: Text & Arrow Badge */}
-                  <View style={styles.btnContentRow}>
-                    <Text style={styles.getStartedText}>
-                      {t.getStarted || 'GET STARTED'}
-                    </Text>
-                    <View style={styles.iconCircleBadge}>
-                      <ArrowRight size={18} color="#FFFFFF" strokeWidth={3} />
+                    {/* Content Row: Text & Arrow Badge */}
+                    <View style={styles.btnContentRow}>
+                      <Text style={styles.getStartedText}>
+                        {t.getStarted || 'GET STARTED'}
+                      </Text>
+                      <View style={styles.iconCircleBadge}>
+                        <ArrowRight size={18} color="#FFFFFF" strokeWidth={3} />
+                      </View>
                     </View>
-                  </View>
-                </LinearGradient>
-              </View>
-            </Pressable>
+                  </LinearGradient>
+                </View>
+              </Pressable>
+            </Animated.View>
           </Animated.View>
         </View>
       </View>
@@ -255,6 +260,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.5,
     shadowRadius: 16,
     elevation: 12,
+  },
+  getStartedPressable: {
+    width: '100%',
+    height: '100%',
   },
   getStartedBtnPressed: {
     transform: [{ translateY: 4 }],
