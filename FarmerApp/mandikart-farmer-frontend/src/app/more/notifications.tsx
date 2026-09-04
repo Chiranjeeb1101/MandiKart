@@ -63,55 +63,82 @@ export default function NotificationsScreen() {
   const [smsAlerts, setSmsAlerts] = useState(true);
   const [whatsappAlerts, setWhatsappAlerts] = useState(true);
 
+  const DEFAULT_NOTIFICATIONS: NotificationItem[] = [
+    {
+      id: 'notif_1',
+      title: '🚛 Pickup Vehicle En Route',
+      body: 'Tata Ace (MH 15 BX 4022) is arriving at your farmgate for 1,000 KG Onion collection.',
+      type: 'ORDER_UPDATE',
+      isRead: false,
+      createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'notif_2',
+      title: '💼 New Direct Corporate Offer',
+      body: 'FreshMart Supermarkets submitted an offer of ₹24.50/kg for your Grade A Red Onion lot.',
+      type: 'NEGOTIATION',
+      isRead: false,
+      createdAt: new Date(Date.now() - 45 * 60 * 1000).toISOString(),
+    },
+    {
+      id: 'notif_3',
+      title: '📈 Nashik Mandi Surge Alert',
+      body: 'Modal rate for Onion Grade A rose by 8.5% to ₹26.50/kg this morning with 20+ active buyers.',
+      type: 'PRICE_ALERT',
+      isRead: false,
+      createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
+    },
+    {
+      id: 'notif_4',
+      title: '🌾 Payment Settled (Escrow Released)',
+      body: '₹22,800 has been transferred to your HDFC bank account for Order #MK-ORD-9021.',
+      type: 'ORDER_UPDATE',
+      isRead: true,
+      createdAt: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
+    },
+    {
+      id: 'notif_5',
+      title: '☀️ Harvest Weather Advisory',
+      body: 'Clear dry conditions forecast for next 72h. Ideal window for harvesting and open chawl curing.',
+      type: 'SYSTEM',
+      isRead: true,
+      createdAt: new Date(Date.now() - 48 * 3600 * 1000).toISOString(),
+    },
+  ];
+
   const fetchNotifications = async () => {
     try {
       const baseUrl = getApiBaseUrl();
       const token = (await appStorage.getItem('mandikart_session_token')) || 'mock_farmer_token_01';
 
+      // 2-second timeout to prevent hanging on mobile
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000);
+
       const res = await fetch(`${baseUrl}/notifications`, {
+        signal: controller.signal,
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       }).catch(() => null);
 
+      clearTimeout(timeoutId);
+
       if (res && res.ok) {
         const json = await res.json();
-        setNotifications(json.data || []);
-        setUnreadCount(json.meta?.unreadCount ?? 0);
-      } else {
-        // High quality fallback feed
-        const defaultItems: NotificationItem[] = [
-          {
-            id: 'notif_1',
-            title: 'Order Confirmed! 🌾',
-            body: 'Buyer Amit Grocery Mart accepted your lot of 500kg Red Onion for ₹13,250.',
-            type: 'ORDER_UPDATE',
-            isRead: false,
-            createdAt: new Date(Date.now() - 15 * 60 * 1000).toISOString(),
-          },
-          {
-            id: 'notif_2',
-            title: 'Lasalgaon Mandi Price Surge 📈',
-            body: 'Modal rate for Onion Grade A rose by 8.5% to ₹26.50/kg this morning.',
-            type: 'PRICE_ALERT',
-            isRead: false,
-            createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-          },
-          {
-            id: 'notif_3',
-            title: 'Counter-Offer Received 🤝',
-            body: 'FreshBasket proposed ₹24.00/kg for your 1000kg Tomato lot. Review offer.',
-            type: 'NEGOTIATION',
-            isRead: true,
-            createdAt: new Date(Date.now() - 24 * 3600 * 1000).toISOString(),
-          },
-        ];
-        setNotifications(defaultItems);
-        setUnreadCount(2);
+        if (json.data && json.data.length > 0) {
+          setNotifications(json.data);
+          setUnreadCount(json.meta?.unreadCount ?? 0);
+          return;
+        }
       }
+      // Fallback
+      setNotifications(DEFAULT_NOTIFICATIONS);
+      setUnreadCount(3);
     } catch {
-      // Graceful fallback
+      setNotifications(DEFAULT_NOTIFICATIONS);
+      setUnreadCount(3);
     } finally {
       setLoading(false);
       setRefreshing(false);

@@ -58,6 +58,8 @@ import {
   CropItem,
   CropCondition,
   PriceHistoryPoint,
+  QualityGrade,
+  StorageType,
 } from '@/store/produceStore';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -70,6 +72,7 @@ export default function CropDetailsScreen() {
   const crops = useProduceStore((state) => state.crops);
   const updateCropCondition = useProduceStore((state) => state.updateCropCondition);
   const updateCropQuantity = useProduceStore((state) => state.updateCropQuantity);
+  const updateCropDetails = useProduceStore((state) => state.updateCropDetails);
   const deleteCrop = useProduceStore((state) => state.deleteCrop);
 
   // Find crop
@@ -93,6 +96,60 @@ export default function CropDetailsScreen() {
 
   // Freshness Info Modal
   const [freshnessInfoModalVisible, setFreshnessInfoModalVisible] = useState(false);
+
+  // Comprehensive Edit Modal State
+  const [editModalVisible, setEditModalVisible] = useState(false);
+  const [editVariety, setEditVariety] = useState('');
+  const [editGrade, setEditGrade] = useState<QualityGrade>('Grade A');
+  const [editAvailableKg, setEditAvailableKg] = useState('');
+  const [editExpectedPrice, setEditExpectedPrice] = useState('');
+  const [editStorageType, setEditStorageType] = useState<StorageType>('Warehouse');
+  const [editLocation, setEditLocation] = useState('');
+  const [editShelfLifeMax, setEditShelfLifeMax] = useState('');
+  const [editCondition, setEditCondition] = useState<CropCondition>('Good');
+  const [editConditionNote, setEditConditionNote] = useState('');
+
+  const handleOpenEditModal = () => {
+    if (!crop) return;
+    setEditVariety(crop.variety || '');
+    setEditGrade(crop.grade || 'Grade A');
+    setEditAvailableKg(crop.availableKg.toString());
+    setEditExpectedPrice(crop.expectedPricePerKg ? crop.expectedPricePerKg.toString() : '');
+    setEditStorageType(crop.storageType || 'Warehouse');
+    setEditLocation(crop.location || '');
+    setEditShelfLifeMax(crop.shelfLifeDaysEstMax ? crop.shelfLifeDaysEstMax.toString() : '10');
+    setEditCondition(crop.condition || 'Good');
+    setEditConditionNote(crop.conditionNote || '');
+    setEditModalVisible(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (!crop) return;
+    const availKg = parseFloat(editAvailableKg);
+    if (isNaN(availKg) || availKg < 0) {
+      Alert.alert('Invalid Stock', 'Please enter a valid available stock quantity.');
+      return;
+    }
+    const expPrice = parseFloat(editExpectedPrice);
+    const shelfLife = parseInt(editShelfLifeMax, 10);
+
+    updateCropDetails(crop.id, {
+      variety: editVariety.trim() || crop.cropName,
+      grade: editGrade,
+      availableKg: availKg,
+      totalKg: availKg + (crop.reservedKg || 0) + (crop.soldKg || 0),
+      expectedPricePerKg: isNaN(expPrice) ? crop.expectedPricePerKg : expPrice,
+      storageType: editStorageType,
+      location: editLocation.trim() || crop.location,
+      shelfLifeDaysEstMax: isNaN(shelfLife) ? crop.shelfLifeDaysEstMax : shelfLife,
+      condition: editCondition,
+      conditionNote: editConditionNote,
+      conditionUpdatedAt: 'Today',
+    });
+
+    setEditModalVisible(false);
+    Alert.alert('Crop Updated', `${crop.cropName} details have been updated successfully.`);
+  };
 
   if (!crop) {
     return (
@@ -239,13 +296,26 @@ export default function CropDetailsScreen() {
             {crop.cropName}
           </Text>
         </View>
-        <Pressable
-          style={styles.deleteIconBtn}
-          onPress={handleDeleteCrop}
-          accessibilityLabel="Remove Crop"
-        >
-          <Trash2 size={18} color="#DC2626" />
-        </Pressable>
+        <View style={styles.headerRightActions}>
+          <Pressable
+            style={styles.headerEditBtn}
+            onPress={handleOpenEditModal}
+            accessibilityLabel="Edit Crop"
+            hitSlop={8}
+          >
+            <Edit3 size={16} color={MKColors.primaryGreen} />
+            <Text style={styles.headerEditBtnText}>Edit</Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.deleteIconBtn}
+            onPress={handleDeleteCrop}
+            accessibilityLabel="Remove Crop"
+            hitSlop={8}
+          >
+            <Trash2 size={17} color="#DC2626" />
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -831,6 +901,179 @@ export default function CropDetailsScreen() {
           </View>
         </View>
       </Modal>
+
+      {/* ── Comprehensive Edit Crop Details Modal ─────────────────── */}
+      <Modal
+        visible={editModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setEditModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalContainer, { maxHeight: '90%' }]}>
+            <View style={styles.modalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Edit3 size={20} color={MKColors.primaryGreen} />
+                <Text style={styles.modalTitle}>Edit Crop Details</Text>
+              </View>
+              <Pressable
+                onPress={() => setEditModalVisible(false)}
+                hitSlop={10}
+              >
+                <X size={20} color={MKColors.textSecondary} />
+              </Pressable>
+            </View>
+
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Variety Name */}
+              <Text style={styles.modalFieldLabel}>Crop Variety / Sub-Type:</Text>
+              <TextInput
+                style={styles.editTextInput}
+                value={editVariety}
+                onChangeText={setEditVariety}
+                placeholder="e.g. Nashik Red Garwa"
+                placeholderTextColor={MKColors.textMuted}
+              />
+
+              {/* Quality Grade */}
+              <Text style={[styles.modalFieldLabel, { marginTop: 12 }]}>Quality Grade:</Text>
+              <View style={styles.gradePillRow}>
+                {(['Grade A', 'Grade B', 'Grade C', 'Unsorted'] as QualityGrade[]).map((g) => {
+                  const isSel = editGrade === g;
+                  return (
+                    <Pressable
+                      key={g}
+                      style={[styles.gradePill, isSel && styles.gradePillActive]}
+                      onPress={() => setEditGrade(g)}
+                    >
+                      <Text style={[styles.gradePillText, isSel && styles.gradePillTextActive]}>
+                        {g}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* Stock Available Quantity */}
+              <Text style={[styles.modalFieldLabel, { marginTop: 12 }]}>
+                Available Stock (KG):
+              </Text>
+              <TextInput
+                style={styles.editTextInput}
+                keyboardType="numeric"
+                value={editAvailableKg}
+                onChangeText={setEditAvailableKg}
+                placeholder="e.g. 1000"
+                placeholderTextColor={MKColors.textMuted}
+              />
+
+              {/* Expected Price */}
+              <Text style={[styles.modalFieldLabel, { marginTop: 12 }]}>
+                Target Price per KG (₹):
+              </Text>
+              <TextInput
+                style={styles.editTextInput}
+                keyboardType="numeric"
+                value={editExpectedPrice}
+                onChangeText={setEditExpectedPrice}
+                placeholder="e.g. 24"
+                placeholderTextColor={MKColors.textMuted}
+              />
+
+              {/* Storage Type */}
+              <Text style={[styles.modalFieldLabel, { marginTop: 12 }]}>Storage Method:</Text>
+              <View style={styles.gradePillRow}>
+                {(['Warehouse', 'Cold Storage', 'Farm', 'Other'] as StorageType[]).map((st) => {
+                  const isSel = editStorageType === st;
+                  return (
+                    <Pressable
+                      key={st}
+                      style={[styles.gradePill, isSel && styles.gradePillActive]}
+                      onPress={() => setEditStorageType(st)}
+                    >
+                      <Text style={[styles.gradePillText, isSel && styles.gradePillTextActive]}>
+                        {st}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* Location / Storage Facility */}
+              <Text style={[styles.modalFieldLabel, { marginTop: 12 }]}>
+                Storage Location / Shed:
+              </Text>
+              <TextInput
+                style={styles.editTextInput}
+                value={editLocation}
+                onChangeText={setEditLocation}
+                placeholder="e.g. Dindori Farm Shed #2"
+                placeholderTextColor={MKColors.textMuted}
+              />
+
+              {/* Shelf Life Days */}
+              <Text style={[styles.modalFieldLabel, { marginTop: 12 }]}>
+                Estimated Shelf-Life (Days remaining):
+              </Text>
+              <TextInput
+                style={styles.editTextInput}
+                keyboardType="numeric"
+                value={editShelfLifeMax}
+                onChangeText={setEditShelfLifeMax}
+                placeholder="e.g. 12"
+                placeholderTextColor={MKColors.textMuted}
+              />
+
+              {/* Condition */}
+              <Text style={[styles.modalFieldLabel, { marginTop: 12 }]}>Condition Status:</Text>
+              <View style={styles.gradePillRow}>
+                {(['Good', 'Needs Attention', 'Deteriorating'] as CropCondition[]).map((cond) => {
+                  const isSel = editCondition === cond;
+                  return (
+                    <Pressable
+                      key={cond}
+                      style={[
+                        styles.gradePill,
+                        isSel && (cond === 'Good' ? styles.gradePillGood : styles.gradePillWarn),
+                      ]}
+                      onPress={() => setEditCondition(cond)}
+                    >
+                      <Text
+                        style={[
+                          styles.gradePillText,
+                          isSel && { color: cond === 'Good' ? '#15803D' : '#DC2626', fontWeight: '700' },
+                        ]}
+                      >
+                        {cond}
+                      </Text>
+                    </Pressable>
+                  );
+                })}
+              </View>
+
+              {/* Notes */}
+              <Text style={[styles.modalFieldLabel, { marginTop: 12 }]}>
+                Curing / Crop Inspection Notes:
+              </Text>
+              <TextInput
+                style={styles.modalNoteInput}
+                value={editConditionNote}
+                onChangeText={setEditConditionNote}
+                placeholder="e.g. Well cured neck, clean dry skin, no fungal spots."
+                placeholderTextColor={MKColors.textMuted}
+                multiline
+              />
+
+              <Pressable
+                style={[styles.modalSaveBtn, { marginTop: 18, marginBottom: 20 }]}
+                onPress={handleSaveEdit}
+              >
+                <Text style={styles.modalSaveBtnText}>Save Crop Changes</Text>
+              </Pressable>
+            </ScrollView>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -908,13 +1151,81 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: MKColors.textPrimary,
   },
+  headerRightActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerEditBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1.5,
+    borderColor: MKColors.primaryGreen,
+    gap: 4,
+  },
+  headerEditBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: MKColors.primaryGreen,
+  },
   deleteIconBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
+  },
+
+  editTextInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#111827',
+    marginTop: 6,
+  },
+  gradePillRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 6,
+  },
+  gradePill: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#F9FAFB',
+  },
+  gradePillActive: {
+    borderColor: MKColors.primaryGreen,
+    backgroundColor: '#DCFCE7',
+  },
+  gradePillGood: {
+    borderColor: '#15803D',
+    backgroundColor: '#DCFCE7',
+  },
+  gradePillWarn: {
+    borderColor: '#DC2626',
+    backgroundColor: '#FEE2E2',
+  },
+  gradePillText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#4B5563',
+  },
+  gradePillTextActive: {
+    color: MKColors.primaryGreen,
+    fontWeight: '700',
   },
 
   scrollArea: {

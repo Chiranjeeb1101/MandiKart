@@ -495,6 +495,54 @@ export default function HomeScreen() {
         )}
       </View>
 
+      {/* ── 3.5 Live Notifications & Urgent Alerts Bar ── */}
+      <View style={styles.liveNotifSection}>
+        <View style={styles.liveNotifHeaderRow}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <View style={styles.liveNotifPulseDot} />
+            <Text style={styles.liveNotifSectionTitle}>Live Alerts & Updates</Text>
+          </View>
+          <Pressable
+            onPress={() => setNotificationModalVisible(true)}
+            hitSlop={8}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}
+          >
+            <Text style={styles.liveNotifViewAllText}>
+              View all ({notifications.length})
+            </Text>
+            <ChevronRight size={13} color="#15803D" />
+          </Pressable>
+        </View>
+
+        {/* Highlight Card for Top Active Notification */}
+        {notifications.length > 0 && (
+          <Pressable
+            style={({ pressed }) => [
+              styles.liveNotifCard,
+              pressed && { opacity: 0.88 },
+            ]}
+            onPress={() => handleNotificationPress(notifications[0])}
+            hitSlop={6}
+          >
+            <View style={styles.liveNotifIconBox}>
+              <Bell size={16} color="#15803D" />
+            </View>
+            <View style={{ flex: 1, marginLeft: 10 }}>
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text style={styles.liveNotifTitle} numberOfLines={1}>
+                  {notifications[0].title}
+                </Text>
+                <Text style={styles.liveNotifTime}>{notifications[0].time}</Text>
+              </View>
+              <Text style={styles.liveNotifBody} numberOfLines={1}>
+                {notifications[0].description}
+              </Text>
+            </View>
+            <ChevronRight size={16} color="#9CA3AF" style={{ marginLeft: 6 }} />
+          </Pressable>
+        )}
+      </View>
+
       {/* ── 4. Sell Today Hero Card ── */}
       <Pressable
         onPress={() => router.push('/(tabs)/produce')}
@@ -1230,6 +1278,74 @@ const styles = StyleSheet.create({
     color: '#475569',
     fontSize: 12,
     fontWeight: '600',
+  },
+  /* ── 3.5 Live Notifications & Alerts Bar ── */
+  liveNotifSection: {
+    marginBottom: 12,
+    width: '100%',
+  },
+  liveNotifHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+    paddingHorizontal: 2,
+  },
+  liveNotifPulseDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#15803D',
+  },
+  liveNotifSectionTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#15803D',
+    letterSpacing: 0.2,
+  },
+  liveNotifViewAllText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  liveNotifCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderWidth: 1.5,
+    borderColor: '#DCFCE7',
+    elevation: 2,
+    shadowColor: '#15803D',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+  },
+  liveNotifIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F0FDF4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  liveNotifTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#111827',
+    maxWidth: '75%',
+  },
+  liveNotifTime: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontWeight: '500',
+  },
+  liveNotifBody: {
+    fontSize: 11.5,
+    color: '#4B5563',
+    marginTop: 2,
   },
 
   /* ── 4. Hero Sell Card ── */

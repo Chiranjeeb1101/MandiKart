@@ -50,6 +50,7 @@ import {
   HelpCircle,
   Layers,
   Lock,
+  Edit3,
 } from 'lucide-react-native';
 import { MKColors } from '@/constants/colors';
 import { useProduceStore, CropItem, CropCondition } from '@/store/produceStore';
@@ -153,14 +154,31 @@ export default function ProduceScreen() {
           <Text style={styles.headerSubtitle}>MandiKart Inventory & Intel</Text>
           <Text style={styles.headerTitle}>My Produce</Text>
         </View>
-        <Pressable
-          style={styles.headerIconButton}
-          onPress={() => router.push('/more/notifications')}
-          accessibilityLabel="Notifications"
-        >
-          <Bell size={20} color={MKColors.textPrimary} />
-          {attentionCropsCount > 0 && <View style={styles.notificationDot} />}
-        </Pressable>
+
+        <View style={styles.headerActionsGroup}>
+          <Pressable
+            style={({ pressed }) => [
+              styles.headerAddCropBtn,
+              pressed && { opacity: 0.75 },
+            ]}
+            onPress={() => router.push('/produce/add')}
+            hitSlop={8}
+            accessibilityLabel="Add New Crop"
+          >
+            <Plus size={16} color="#15803D" strokeWidth={2.5} />
+            <Text style={styles.headerAddCropBtnText}>Add Crop</Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.headerIconButton}
+            onPress={() => router.push('/more/notifications')}
+            accessibilityLabel="Notifications"
+            hitSlop={8}
+          >
+            <Bell size={20} color={MKColors.textPrimary} />
+            {attentionCropsCount > 0 && <View style={styles.notificationDot} />}
+          </Pressable>
+        </View>
       </View>
 
       <ScrollView
@@ -584,7 +602,19 @@ export default function ProduceScreen() {
                     ]}
                     onPress={() => router.push(`/produce/${crop.id}` as any)}
                   >
-                    <Text style={styles.detailsButtonText}>View Details</Text>
+                    <Text style={styles.detailsButtonText}>View Intel</Text>
+                  </Pressable>
+
+                  <Pressable
+                    style={({ pressed }) => [
+                      styles.cardEditBtn,
+                      pressed && styles.pressedButton,
+                    ]}
+                    onPress={() => router.push(`/produce/${crop.id}` as any)}
+                    hitSlop={6}
+                  >
+                    <Edit3 size={13} color={MKColors.primaryGreen} />
+                    <Text style={styles.cardEditBtnText}>Edit</Text>
                   </Pressable>
 
                   <Pressable
@@ -702,8 +732,22 @@ export default function ProduceScreen() {
         </View>
 
         {/* Bottom spacing for smooth tab navigation */}
-        <View style={{ height: 40 }} />
+        <View style={{ height: 60 }} />
       </ScrollView>
+
+      {/* ── Sticky Floating Action Button: Add New Crop ───────────── */}
+      <Pressable
+        style={({ pressed }) => [
+          styles.floatingAddBtn,
+          pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] },
+        ]}
+        onPress={() => router.push('/produce/add')}
+        hitSlop={10}
+        accessibilityLabel="Add New Crop"
+      >
+        <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
+        <Text style={styles.floatingAddBtnText}>Add Crop</Text>
+      </Pressable>
 
       {/* ── Freshness Information Disclaimer Modal ─────────────────── */}
       <Modal
@@ -803,6 +847,28 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: MKColors.textPrimary,
     marginTop: 1,
+  },
+  headerActionsGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerAddCropBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1.5,
+    borderColor: '#15803D',
+    borderRadius: 22,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    gap: 4,
+    elevation: 1,
+  },
+  headerAddCropBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#15803D',
   },
   headerIconButton: {
     width: 44,
@@ -1228,6 +1294,23 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: MKColors.primaryGreen,
   },
+  cardEditBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 44,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#D1D5DB',
+    backgroundColor: '#F9FAFB',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  cardEditBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: MKColors.primaryGreen,
+  },
   sellCropButton: {
     flex: 1.2,
     height: 44,
@@ -1246,6 +1329,30 @@ const styles = StyleSheet.create({
   pressedButton: {
     opacity: 0.85,
     transform: [{ scale: 0.98 }],
+  },
+  floatingAddBtn: {
+    position: 'absolute',
+    bottom: 24,
+    right: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#15803D',
+    paddingHorizontal: 18,
+    paddingVertical: 12,
+    borderRadius: 28,
+    elevation: 5,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    gap: 6,
+    zIndex: 99,
+  },
+  floatingAddBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
 
   // ── Alert Card ────────────────────────────────────────────────────

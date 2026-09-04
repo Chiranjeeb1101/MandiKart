@@ -80,6 +80,7 @@ interface ProduceStoreState {
   addCrop: (crop: Omit<CropItem, 'id'>) => CropItem;
   updateCropCondition: (id: string, condition: CropCondition, note?: string) => void;
   updateCropQuantity: (id: string, availableKg: number, reservedKg?: number) => void;
+  updateCropDetails: (id: string, updates: Partial<CropItem>) => void;
   deleteCrop: (id: string) => void;
   getCropById: (id: string) => CropItem | undefined;
 }
@@ -380,6 +381,22 @@ export const useProduceStore = create<ProduceStoreState>((set, get) => ({
             reservedKg: res,
             totalKg: availableKg + res + c.soldKg,
           };
+        }
+        return c;
+      }),
+    }));
+  },
+
+  updateCropDetails: (id, updates) => {
+    set((state) => ({
+      crops: state.crops.map((c) => {
+        if (c.id === id) {
+          const updated = { ...c, ...updates };
+          // Keep totalKg in sync if availableKg is provided
+          if (updates.availableKg !== undefined && updates.totalKg === undefined) {
+            updated.totalKg = updates.availableKg + (updated.reservedKg || 0) + (updated.soldKg || 0);
+          }
+          return updated;
         }
         return c;
       }),
