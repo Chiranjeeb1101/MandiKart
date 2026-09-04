@@ -5,7 +5,29 @@
  * To be used within TanStack Query hooks.
  */
 
-const BASE_URL = process.env.EXPO_PUBLIC_FARMER_API_URL || process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+import { Platform, NativeModules } from 'react-native';
+
+export function resolveFarmerApiBaseUrl(): string {
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined' && window.location?.hostname && window.location.hostname !== 'localhost') {
+      return `http://${window.location.hostname}:4000/api/v1`;
+    }
+    return process.env.EXPO_PUBLIC_FARMER_API_URL || process.env.EXPO_PUBLIC_API_URL || 'http://localhost:4000/api/v1';
+  }
+
+  // On native device (Android / iOS)
+  try {
+    const scriptURL: string = (NativeModules as any)?.SourceCode?.scriptURL || '';
+    if (scriptURL) {
+      const host = scriptURL.split('://')[1]?.split('/')[0]?.split(':')[0];
+      if (host && host !== 'localhost' && host !== '127.0.0.1') {
+        return `http://${host}:4000/api/v1`;
+      }
+    }
+  } catch {}
+
+  return 'http://10.166.230.97:4000/api/v1';
+}
 
 export const apiClient = {
   get: async <T>(endpoint: string, token?: string | null): Promise<T> => {
@@ -16,7 +38,8 @@ export const apiClient = {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    const baseUrl = resolveFarmerApiBaseUrl();
+    const response = await fetch(`${baseUrl}${endpoint}`, {
       method: 'GET',
       headers,
     });
@@ -35,7 +58,8 @@ export const apiClient = {
       headers.Authorization = `Bearer ${token}`;
     }
 
-    const response = await fetch(`${BASE_URL}${endpoint}`, {
+    const baseUrl = resolveFarmerApiBaseUrl();
+    const response = await fetch(`${baseUrl}${endpoint}`, {
       method: 'POST',
       headers,
       body: JSON.stringify(data),
@@ -73,7 +97,8 @@ export const apiClient = {
     }
 
     try {
-      const response = await fetch(`${BASE_URL}/storage/upload`, {
+      const baseUrl = resolveFarmerApiBaseUrl();
+      const response = await fetch(`${baseUrl}/storage/upload`, {
         method: 'POST',
         headers,
         body: formData,

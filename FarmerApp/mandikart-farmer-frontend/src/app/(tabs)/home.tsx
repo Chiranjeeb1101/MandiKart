@@ -54,10 +54,12 @@ export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
 
-  const farmerName = user?.name ? user.name.split(' ')[0] : 'Ramesh';
+  const farmerName = user?.name ? user.name.split(' ')[0] : user?.phone ? user.phone : 'Farmer';
   const locationName = user?.district
-    ? `${user.district}, ${user.state}`
-    : 'Nashik, Maharashtra';
+    ? `${user.district}, ${user.state || 'India'}`
+    : user?.state
+    ? user.state
+    : 'MandiKart Verified';
 
   const { t, language } = useTranslation();
   const setLanguage = useAppStore((state) => state.setLanguage);

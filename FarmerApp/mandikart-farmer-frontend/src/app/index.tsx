@@ -14,6 +14,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TypingText } from '@/components/ui/TypingText';
 import { useTranslation } from '@/hooks/useTranslation';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useAuthStore } from '@/store/authStore';
 
 const GIF_SOURCE = require('../../assets/images/tabIcons/InShot_Crystal_Clear_Enhanced.gif');
 
@@ -21,6 +22,7 @@ export default function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
+  const { isAuthenticated } = useAuthStore();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
 
@@ -37,7 +39,11 @@ export default function WelcomeScreen() {
   };
 
   const handleSkipToDashboard = () => {
-    router.replace('/(tabs)/home');
+    if (isAuthenticated) {
+      router.replace('/(tabs)/home');
+    } else {
+      router.push('/auth/login');
+    }
   };
 
   const phrases = [

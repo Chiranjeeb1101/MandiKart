@@ -66,8 +66,8 @@ setInterval(() => {
 // Start APMC Mandi Daily Benchmark Rate Auto-Sync Service
 ApmcSyncService.startAutomatedCron();
 
-app.listen(PORT, () => {
-  console.log(`🌾 MandiKart Farmer Backend running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🌾 MandiKart Farmer Backend running on port ${PORT} (0.0.0.0)`);
   console.log(`🔗 Health Check: http://localhost:${PORT}/api/v1/health`);
 });
 

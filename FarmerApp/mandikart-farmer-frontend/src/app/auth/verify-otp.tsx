@@ -31,13 +31,14 @@ import {
 import { MKBackground, MKButton, MKHeader } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
 import { useTranslation } from '@/hooks/useTranslation';
+import { apiClient } from '@/services/apiClient';
 
 type VerificationMode = 'mobile' | 'email';
 
 export default function VerifyOtpScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ phone?: string; name?: string; email?: string }>();
-  const { setPhoneNumber, setIsAuthenticated, user, setUser } = useAuthStore();
+  const { setPhoneNumber, setIsAuthenticated, setAuthenticated, user, setUser } = useAuthStore();
   const { t } = useTranslation();
 
   const [mode, setMode] = useState<VerificationMode>('mobile');
@@ -130,6 +131,8 @@ export default function VerifyOtpScreen() {
       setMobileCanResend(false);
       setMobileOtp(['', '', '', '', '', '']);
       mobileInputRefs.current[0]?.focus();
+      const cleanPhone = displayPhone.replace(/\D/g, '').slice(-10);
+      apiClient.post('/auth/send-otp', { phone: cleanPhone, channel: 'SMS' }).catch(() => {});
       Alert.alert('OTP Sent', `A new verification code was sent to ${displayPhone}`);
     } else {
       if (!emailCanResend) return;
@@ -141,30 +144,42 @@ export default function VerifyOtpScreen() {
     }
   };
 
-  const handleVerify = () => {
+  const handleVerify = async () => {
     if (mode === 'mobile') {
       const enteredCode = mobileOtp.join('');
-      if (enteredCode.length < 6) {
-        setMobileError('Please enter the complete 6-digit Mobile OTP');
+      if (enteredCode.length < 4) {
+        setMobileError('Please enter the complete Mobile OTP');
         return;
       }
 
-      setIsAuthenticated(true);
-      setPhoneNumber(displayPhone);
-      setUser({
-        ...(user || {}),
-        id: user?.id || `farmer_${Date.now()}`,
-        name: params.name || user?.name || 'Ramesh Patil',
-        phone: displayPhone,
-        isVerified: true,
-        role: 'FARMER',
-      });
+      try {
+        const cleanPhone = displayPhone.replace(/\D/g, '').slice(-10);
+        const res: any = await apiClient.post('/auth/verify-otp', {
+          phone: cleanPhone,
+          otp: enteredCode,
+        });
 
-      router.push('/onboarding/farmer-profile');
+        if (res?.data?.token && res?.data?.farmer) {
+          setAuthenticated(res.data.token, res.data.farmer);
+          setUser({
+            ...(user || {}),
+            id: res.data.farmer.id,
+            name: res.data.farmer.fullName || params.name || user?.name || `Farmer ${cleanPhone.slice(-4)}`,
+            phone: res.data.farmer.phone || displayPhone,
+            isVerified: true,
+            role: 'FARMER',
+          });
+          router.push('/onboarding/farmer-profile');
+          return;
+        }
+        setMobileError(res?.error?.message || 'Invalid verification code. Please try again.');
+      } catch (err: any) {
+        setMobileError(err?.message || 'Incorrect OTP or verification expired. Please try again.');
+      }
     } else {
       const enteredCode = emailOtp.join('');
-      if (enteredCode.length < 6) {
-        setEmailError('Please enter the complete 6-digit Email OTP');
+      if (enteredCode.length < 4) {
+        setEmailError('Please enter the complete Email OTP');
         return;
       }
 

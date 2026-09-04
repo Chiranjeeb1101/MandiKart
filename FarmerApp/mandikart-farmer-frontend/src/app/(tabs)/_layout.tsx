@@ -10,14 +10,20 @@
  */
 
 import React from 'react';
-import { Tabs } from 'expo-router';
+import { Tabs, Redirect } from 'expo-router';
 import { View, StyleSheet, Platform } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Sprout, Tag, ShoppingCart, Menu } from 'lucide-react-native';
+import { useAuthStore } from '@/store/authStore';
 
 export default function TabLayout() {
+  const { isAuthenticated } = useAuthStore();
   const insets = useSafeAreaInsets();
   const bottomInset = Platform.OS === 'ios' ? insets.bottom : Math.max(insets.bottom, 8);
+
+  if (!isAuthenticated) {
+    return <Redirect href="/auth/login" />;
+  }
 
   return (
     <Tabs

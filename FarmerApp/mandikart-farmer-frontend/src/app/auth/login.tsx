@@ -20,10 +20,11 @@ import { useRouter } from 'expo-router';
 import { Sprout, Phone, Lock, Eye, EyeOff, ArrowRight, KeyRound } from 'lucide-react-native';
 import { MKBackground, MKButton, MKInput, MKHeader } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
+import { apiClient } from '@/services/apiClient';
 
 export default function LoginScreen() {
   const router = useRouter();
-  const { setPhoneNumber, setIsAuthenticated, setUser } = useAuthStore();
+  const { setPhoneNumber, setIsAuthenticated, setAuthenticated, setUser } = useAuthStore();
 
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
@@ -38,24 +39,26 @@ export default function LoginScreen() {
     return Object.keys(errs).length === 0;
   };
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!validate()) return;
 
-    setPhoneNumber(`+91${mobile}`);
-    setUser({
-      id: 'farmer_ramesh_01',
-      name: 'Ramesh Patil',
-      phone: `+91 ${mobile}`,
-      language: 'en',
-      state: 'Maharashtra',
-      district: 'Nashik',
-      village: 'Dindori',
-      farmSizeAcres: 8,
-      isVerified: true,
-      role: 'FARMER',
-    });
-    setIsAuthenticated(true);
-    router.replace('/(tabs)/home');
+    try {
+      const cleanPhone = mobile.replace(/\D/g, '').slice(-10);
+      const res: any = await apiClient.post('/auth/login', {
+        phone: cleanPhone,
+        password: password,
+      });
+
+      if (res?.data?.token && res?.data?.farmer) {
+        setAuthenticated(res.data.token, res.data.farmer);
+        setPhoneNumber(`+91${cleanPhone}`);
+        router.replace('/(tabs)/home');
+        return;
+      }
+      setErrors({ mobile: res?.error?.message || 'Login failed. Please check your credentials.' });
+    } catch (err: any) {
+      setErrors({ mobile: err?.message || 'No farmer account found with this mobile number. Please register.' });
+    }
   };
 
   const handleLoginWithOtp = () => {

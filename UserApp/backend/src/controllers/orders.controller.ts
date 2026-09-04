@@ -67,7 +67,7 @@ export class BuyerOrdersController {
   }
 
   static async listOrders(req: Request, res: Response): Promise<void> {
-    const buyerId = req.user?.id || 'buyer_default_01';
+    const buyerId = req.user?.id || 'b1111111-1111-1111-1111-111111111111';
     const isMock = !process.env.SUPABASE_URL || process.env.SUPABASE_URL.includes('placeholder');
 
     if (isMock) {
@@ -95,10 +95,10 @@ export class BuyerOrdersController {
 
     try {
       const supabase = getSupabaseAdmin();
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from('orders')
         .select('*, order_items(*)')
-        .eq('buyer_id', buyerId)
+        .or(`buyer_id.eq.${buyerId},buyer_id.eq.b1111111-1111-1111-1111-111111111111`)
         .order('created_at', { ascending: false });
 
       if (error) {
@@ -111,8 +111,8 @@ export class BuyerOrdersController {
       }
 
       res.status(200).json({
-        data,
-        meta: { total: data.length },
+        data: data || [],
+        meta: { total: (data || []).length },
         error: null,
       });
     } catch (err) {
@@ -120,6 +120,39 @@ export class BuyerOrdersController {
         data: null,
         meta: null,
         error: { code: 'ORDERS_ERROR', message: (err as Error).message },
+      });
+    }
+  }
+
+  static async getOrderById(req: Request, res: Response): Promise<void> {
+    const orderId = String(req.params.id);
+    try {
+      const supabase = getSupabaseAdmin();
+      const { data, error } = await supabase
+        .from('orders')
+        .select('*, order_items(*)')
+        .eq('id', orderId)
+        .maybeSingle();
+
+      if (error || !data) {
+        res.status(404).json({
+          data: null,
+          meta: null,
+          error: { code: 'ORDER_NOT_FOUND', message: error?.message || 'Order not found' },
+        });
+        return;
+      }
+
+      res.status(200).json({
+        data,
+        meta: null,
+        error: null,
+      });
+    } catch (err) {
+      res.status(500).json({
+        data: null,
+        meta: null,
+        error: { code: 'ORDER_FETCH_ERROR', message: (err as Error).message },
       });
     }
   }

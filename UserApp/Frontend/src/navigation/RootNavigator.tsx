@@ -45,49 +45,51 @@ export default function RootNavigator() {
       {!isAuthenticated ? (
         <RootStack.Screen name="Auth" component={AuthNavigator} />
       ) : (
-        <RootStack.Screen name="Main" component={MainTabNavigator} />
+        <>
+          <RootStack.Screen name="Main" component={MainTabNavigator} />
+          {/* These screens are accessible once authenticated */}
+          <RootStack.Screen name="ProductStack" options={{ presentation: 'card' }}>
+            {() => (
+              <ProductStack.Navigator id="product" screenOptions={{ headerShown: false }}>
+                <ProductStack.Screen name="Search" component={SearchScreen as any} />
+                <ProductStack.Screen name="ProductListing" component={ProductListingScreen as any} />
+                <ProductStack.Screen name="ProductDetails" component={ProductDetailsScreen as any} />
+                <ProductStack.Screen name="FarmerProfile" component={FarmerProfileScreen as any} />
+                <ProductStack.Screen name="AllCategories" component={AllCategoriesScreen as any} />
+              </ProductStack.Navigator>
+            )}
+          </RootStack.Screen>
+          <RootStack.Screen name="CheckoutStack" options={{ presentation: 'card' }}>
+            {() => (
+              <CheckoutStack.Navigator id="checkout" screenOptions={{ headerShown: false }}>
+                <CheckoutStack.Screen name="DeliveryAddress" component={DeliveryAddressScreen as any} />
+                <CheckoutStack.Screen name="CheckoutReview" component={CheckoutReviewScreen as any} />
+                <CheckoutStack.Screen name="Payment" component={PaymentScreen as any} />
+                <CheckoutStack.Screen name="OrderConfirmation" component={OrderConfirmationScreen as any} />
+              </CheckoutStack.Navigator>
+            )}
+          </RootStack.Screen>
+          <RootStack.Screen name="ChatStack" options={{ presentation: 'card' }}>
+            {() => (
+              <ChatStack.Navigator id="chat" screenOptions={{ headerShown: false }}>
+                <ChatStack.Screen name="ChatList" component={ChatListScreen as any} />
+                <ChatStack.Screen name="Chat" component={ChatScreen as any} />
+              </ChatStack.Navigator>
+            )}
+          </RootStack.Screen>
+          <RootStack.Screen name="Wishlist" component={WishlistScreen} />
+          <RootStack.Screen name="Notifications" component={NotificationsScreen} />
+          <RootStack.Screen name="EditProfile" component={EditProfileScreen} />
+          <RootStack.Screen name="Settings" component={SettingsScreen} />
+          <RootStack.Screen name="AddAddress" component={AddAddressScreen as any} />
+          <RootStack.Screen name="OrderDetails" component={OrderDetailsScreen as any} />
+          <RootStack.Screen name="OrderTracking" component={OrderTrackingScreen as any} />
+          <RootStack.Screen name="OrderConfirmation" component={OrderConfirmationScreen as any} />
+          <RootStack.Screen name="BulkRequirement" component={BulkRequirementScreen as any} />
+          <RootStack.Screen name="BulkMatchDiscovery" component={BulkMatchDiscoveryScreen as any} />
+          <RootStack.Screen name="Analytics" component={AnalyticsDashboardScreen as any} />
+        </>
       )}
-      {/* These screens are accessible from anywhere in the app */}
-      <RootStack.Screen name="ProductStack" options={{ presentation: 'card' }}>
-        {() => (
-          <ProductStack.Navigator id="product" screenOptions={{ headerShown: false }}>
-            <ProductStack.Screen name="Search" component={SearchScreen as any} />
-            <ProductStack.Screen name="ProductListing" component={ProductListingScreen as any} />
-            <ProductStack.Screen name="ProductDetails" component={ProductDetailsScreen as any} />
-            <ProductStack.Screen name="FarmerProfile" component={FarmerProfileScreen as any} />
-            <ProductStack.Screen name="AllCategories" component={AllCategoriesScreen as any} />
-          </ProductStack.Navigator>
-        )}
-      </RootStack.Screen>
-      <RootStack.Screen name="CheckoutStack" options={{ presentation: 'card' }}>
-        {() => (
-          <CheckoutStack.Navigator id="checkout" screenOptions={{ headerShown: false }}>
-            <CheckoutStack.Screen name="DeliveryAddress" component={DeliveryAddressScreen as any} />
-            <CheckoutStack.Screen name="CheckoutReview" component={CheckoutReviewScreen as any} />
-            <CheckoutStack.Screen name="Payment" component={PaymentScreen as any} />
-            <CheckoutStack.Screen name="OrderConfirmation" component={OrderConfirmationScreen as any} />
-          </CheckoutStack.Navigator>
-        )}
-      </RootStack.Screen>
-      <RootStack.Screen name="ChatStack" options={{ presentation: 'card' }}>
-        {() => (
-          <ChatStack.Navigator id="chat" screenOptions={{ headerShown: false }}>
-            <ChatStack.Screen name="ChatList" component={ChatListScreen as any} />
-            <ChatStack.Screen name="Chat" component={ChatScreen as any} />
-          </ChatStack.Navigator>
-        )}
-      </RootStack.Screen>
-      <RootStack.Screen name="Wishlist" component={WishlistScreen} />
-      <RootStack.Screen name="Notifications" component={NotificationsScreen} />
-      <RootStack.Screen name="EditProfile" component={EditProfileScreen} />
-      <RootStack.Screen name="Settings" component={SettingsScreen} />
-      <RootStack.Screen name="AddAddress" component={AddAddressScreen as any} />
-      <RootStack.Screen name="OrderDetails" component={OrderDetailsScreen as any} />
-      <RootStack.Screen name="OrderTracking" component={OrderTrackingScreen as any} />
-      <RootStack.Screen name="OrderConfirmation" component={OrderConfirmationScreen as any} />
-      <RootStack.Screen name="BulkRequirement" component={BulkRequirementScreen as any} />
-      <RootStack.Screen name="BulkMatchDiscovery" component={BulkMatchDiscoveryScreen as any} />
-      <RootStack.Screen name="Analytics" component={AnalyticsDashboardScreen as any} />
     </RootStack.Navigator>
   );
 }

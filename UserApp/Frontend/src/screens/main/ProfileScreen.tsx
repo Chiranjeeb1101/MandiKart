@@ -19,11 +19,15 @@ type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ProfileScreen() {
   const navigation = useNavigation<Nav>();
-  const { logout } = useAuth();
+  const { user, logout } = useAuth();
   const { currentLanguageOption, setLanguage, t } = useLanguage();
 
+  const displayName = user?.fullName || (user?.phone ? `Buyer ${user.phone}` : 'Valued Buyer');
+  const displayContact = user?.phone ? `${user.phone}${user.email ? ` • ${user.email}` : ''}` : 'MandiKart Member';
+  const initialLetter = displayName.charAt(0).toUpperCase() || 'B';
+
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [avatarUri, setAvatarUri] = useState<string | null>(user?.avatarUrl || null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
   const handlePickAvatar = async () => {
@@ -126,7 +130,7 @@ export default function ProfileScreen() {
               <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
             ) : (
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>R</Text>
+                <Text style={styles.avatarText}>{initialLetter}</Text>
               </View>
             )}
             <View style={styles.cameraBadge}>
@@ -136,13 +140,13 @@ export default function ProfileScreen() {
 
           <View style={styles.userInfo}>
             <View style={styles.nameRow}>
-              <Text style={styles.userName}>Ramesh Sharma</Text>
+              <Text style={styles.userName}>{displayName}</Text>
               <View style={styles.verifiedBadge}>
                 <Ionicons name="checkmark-circle" size={14} color={Colors.primary} />
                 <Text style={styles.verifiedText}>Verified Buyer</Text>
               </View>
             </View>
-            <Text style={styles.userContact}>+91 98765 43210 • ramesh.sharma@example.com</Text>
+            <Text style={styles.userContact}>{displayContact}</Text>
 
             {/* Loyalty Badge */}
             <View style={styles.loyaltyTag}>

@@ -49,7 +49,6 @@ const SLIDES = [
 type Props = NativeStackScreenProps<AuthStackParamList, 'Onboarding'>;
 
 export default function OnboardingScreen({ navigation }: Props) {
-  const { signIn } = useAuth();
   const [currentIndex, setCurrentIndex] = useState(0);
   const listRef = useRef<FlatList>(null);
 
@@ -68,7 +67,7 @@ export default function OnboardingScreen({ navigation }: Props) {
   const handleSkip = () => navigation.replace('Login');
 
   const handleDemoGuest = () => {
-    signIn(); // Directly enters main app in sample mode
+    navigation.replace('Login');
   };
 
   return (

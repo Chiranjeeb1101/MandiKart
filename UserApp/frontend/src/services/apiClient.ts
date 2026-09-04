@@ -20,10 +20,36 @@ import {
   Notification,
 } from '../types';
 import { SAMPLE_PRODUCTS, SAMPLE_CATEGORIES, SAMPLE_FARMER } from './mockData';
+import { Platform, NativeModules } from 'react-native';
 
-// Configurable API base URL (reads from root .env or falls back to local dev)
-const API_BASE_URL = process.env.EXPO_PUBLIC_USER_API_URL || 'http://localhost:4001/api/v1';
-const REQUEST_TIMEOUT_MS = 3500;
+export function resolveApiBaseUrl(): string {
+  const envUrl = process.env.EXPO_PUBLIC_USER_API_URL;
+  if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
+    return envUrl;
+  }
+
+  if (Platform.OS === 'web') {
+    if (typeof window !== 'undefined' && window.location?.hostname && window.location.hostname !== 'localhost') {
+      return `http://${window.location.hostname}:4001/api/v1`;
+    }
+    return envUrl || 'http://localhost:4001/api/v1';
+  }
+
+  // On native device (Android / iOS)
+  try {
+    const scriptURL: string = (NativeModules as any)?.SourceCode?.scriptURL || '';
+    if (scriptURL) {
+      const host = scriptURL.split('://')[1]?.split('/')[0]?.split(':')[0];
+      if (host && host !== 'localhost' && host !== '127.0.0.1') {
+        return `http://${host}:4001/api/v1`;
+      }
+    }
+  } catch {}
+
+  return 'http://10.166.230.97:4001/api/v1';
+}
+
+const REQUEST_TIMEOUT_MS = 15000;
 
 // Internal token memory
 let activeAuthToken: string | null = null;
@@ -44,7 +70,8 @@ async function safeFetch<T>(
   options: RequestInit = {},
   fallbackData: T
 ): Promise<{ data: T; isFallback: boolean; error?: string }> {
-  const url = `${API_BASE_URL}${endpoint}`;
+  const baseUrl = resolveApiBaseUrl();
+  const url = `${baseUrl}${endpoint}`;
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
 
@@ -67,15 +94,26 @@ async function safeFetch<T>(
 
     if (!response.ok) {
       const errText = await response.text();
-      console.warn(`[API] HTTP ${response.status} from ${endpoint}:`, errText);
-      return { data: fallbackData, isFallback: true, error: `HTTP ${response.status}` };
+      let parsedErrorMessage = `HTTP ${response.status}`;
+      try {
+        const errJson = JSON.parse(errText);
+        if (errJson?.error?.message) {
+          parsedErrorMessage = errJson.error.message;
+        } else if (typeof errJson?.message === 'string') {
+          parsedErrorMessage = errJson.message;
+        } else if (typeof errJson?.error === 'string') {
+          parsedErrorMessage = errJson.error;
+        }
+      } catch {}
+      console.log(`[API] HTTP ${response.status} from ${endpoint}:`, parsedErrorMessage);
+      return { data: fallbackData, isFallback: true, error: parsedErrorMessage };
     }
 
     const json = await response.json();
     return { data: json.data !== undefined ? json.data : json, isFallback: false };
   } catch (err: any) {
     clearTimeout(timeoutId);
-    console.log(`[API] Fallback mode active for ${endpoint} (${err.message || 'offline'})`);
+    console.log(`[API] Network error for ${endpoint} (${err.message || 'offline'})`);
     return { data: fallbackData, isFallback: true, error: err.message };
   }
 }
@@ -87,39 +125,102 @@ async function safeFetch<T>(
 export const apiClient = {
   // 1. Auth Service
   auth: {
-    async login(phone: string): Promise<{
+    async register(params: {
+      phone: string;
+      fullName: string;
+      email?: string;
+      buyerType?: 'RETAIL' | 'BULK';
+      city?: string;
+      state?: string;
+      preferredLanguage?: string;
+    }): Promise<{
       token: string;
       sessionId: string;
       buyer: {
         id: string;
         fullName: string;
         phone: string;
+        email?: string;
         buyerType: 'RETAIL' | 'BULK';
         city: string;
         state: string;
         role: string;
-      };
+      } | null;
       isFallback: boolean;
+      error?: string;
     }> {
       const fallback = {
-        token: `mock_jwt_buyer_${Date.now()}`,
-        sessionId: `sess_${Date.now()}`,
-        buyer: {
-          id: `buyer_${Date.now()}`,
-          fullName: 'Aarav Sharma',
-          phone: phone || '+91 9876543210',
-          buyerType: 'RETAIL' as const,
-          city: 'Pune',
-          state: 'Maharashtra',
-          role: 'BUYER',
-        },
+        token: '',
+        sessionId: '',
+        buyer: null,
       };
+
+      const result = await safeFetch(
+        '/auth/register',
+        {
+          method: 'POST',
+          body: JSON.stringify(params),
+        },
+        fallback
+      );
+
+      if (result.data?.token) {
+        setApiAuthToken(result.data.token);
+      }
+      return { ...result.data, isFallback: result.isFallback, error: result.error };
+    },
+
+    async sendOtp(phone: string): Promise<{ success: boolean; message: string; simulatedCode?: string; error?: string }> {
+      const res = await safeFetch<any>(
+        '/auth/send-otp',
+        {
+          method: 'POST',
+          body: JSON.stringify({ phone }),
+        },
+        { success: false, message: 'Failed to send OTP' }
+      );
+      if (res.error) {
+        return { success: false, message: res.error, error: res.error };
+      }
+      return { success: true, message: res.data?.message || 'OTP dispatched to your mobile', simulatedCode: res.data?.simulatedCode };
+    },
+
+    async login(phoneOrEmail: string, password?: string): Promise<{
+      token: string;
+      sessionId: string;
+      buyer: {
+        id: string;
+        fullName: string;
+        phone: string;
+        email?: string;
+        buyerType: 'RETAIL' | 'BULK';
+        city: string;
+        state: string;
+        role: string;
+      } | null;
+      isFallback: boolean;
+      error?: string;
+    }> {
+      const fallback = {
+        token: '',
+        sessionId: '',
+        buyer: null,
+      };
+
+      const isEmail = phoneOrEmail.includes('@');
+      const payload: any = isEmail
+        ? { email: phoneOrEmail.trim().toLowerCase() }
+        : { phone: phoneOrEmail.trim() };
+
+      if (password) {
+        payload.password = password;
+      }
 
       const result = await safeFetch(
         '/auth/login',
         {
           method: 'POST',
-          body: JSON.stringify({ phone }),
+          body: JSON.stringify(payload),
         },
         fallback
       );
@@ -127,7 +228,7 @@ export const apiClient = {
       if (result.data.token) {
         setApiAuthToken(result.data.token);
       }
-      return { ...result.data, isFallback: result.isFallback };
+      return { ...result.data, isFallback: result.isFallback, error: result.error };
     },
 
     async refreshSession(): Promise<boolean> {
@@ -135,7 +236,7 @@ export const apiClient = {
       return !res.error;
     },
 
-    async loginWithGoogle(idToken?: string): Promise<{
+    async loginWithGoogle(idToken?: string, email?: string, fullName?: string, avatarUrl?: string): Promise<{
       token: string;
       sessionId: string;
       buyer: {
@@ -148,41 +249,59 @@ export const apiClient = {
         state: string;
         role: string;
         avatarUrl?: string;
-      };
+      } | null;
       isFallback: boolean;
+      error?: string;
     }> {
       const fallback = {
-        token: `mock_jwt_google_${Date.now()}`,
-        sessionId: `sess_google_${Date.now()}`,
-        buyer: {
-          id: `buyer_google_${Date.now()}`,
-          fullName: 'Aarav Sharma (Google)',
-          email: 'aarav.mandi@gmail.com',
-          phone: '+91 9876543210',
-          buyerType: 'RETAIL' as const,
-          city: 'Pune',
-          state: 'Maharashtra',
-          role: 'BUYER',
-          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
-        },
+        token: '',
+        sessionId: '',
+        buyer: null,
       };
+
+      const cleanEmail = email || 'buyer.google@mandikart.in';
+      const cleanName = fullName || 'Google Buyer';
 
       const result = await safeFetch(
         '/auth/google',
         {
           method: 'POST',
-          body: JSON.stringify({ idToken: idToken || 'simulated_google_id_token' }),
+          body: JSON.stringify({
+            idToken: idToken || 'simulated_google_id_token',
+            email: cleanEmail,
+            fullName: cleanName,
+            avatarUrl,
+          }),
         },
         fallback
       );
 
+      const rawUser = (result.data as any)?.buyer || (result.data as any)?.user;
+      const buyer = rawUser
+        ? {
+            id: rawUser.id,
+            fullName: rawUser.fullName || rawUser.full_name || cleanName,
+            phone: rawUser.phone || '',
+            email: rawUser.email || cleanEmail,
+            buyerType: (rawUser.buyerType || rawUser.buyer_type || 'RETAIL') as 'RETAIL' | 'BULK',
+            city: rawUser.city || 'Bhubaneswar',
+            state: rawUser.state || 'Odisha',
+            role: 'BUYER',
+          }
+        : null;
+
       if (result.data.token) {
         setApiAuthToken(result.data.token);
       }
-      return { ...result.data, isFallback: result.isFallback };
+      return {
+        ...result.data,
+        buyer,
+        isFallback: result.isFallback,
+        error: result.error,
+      };
     },
 
-    async loginWithPhoneOtp(phone: string, otp: string): Promise<{
+    async loginWithPhoneOtp(phone: string, otp: string, fullName?: string): Promise<{
       token: string;
       sessionId: string;
       buyer: {
@@ -193,36 +312,47 @@ export const apiClient = {
         city: string;
         state: string;
         role: string;
-      };
+      } | null;
       isFallback: boolean;
+      error?: string;
     }> {
       const fallback = {
-        token: `mock_jwt_phone_${Date.now()}`,
-        sessionId: `sess_phone_${Date.now()}`,
-        buyer: {
-          id: `buyer_phone_${Date.now()}`,
-          fullName: 'Verified Buyer',
-          phone: phone || '+91 9876543210',
-          buyerType: 'RETAIL' as const,
-          city: 'Pune',
-          state: 'Maharashtra',
-          role: 'BUYER',
-        },
+        token: '',
+        sessionId: '',
+        buyer: null,
       };
 
       const result = await safeFetch(
         '/auth/phone-otp',
         {
           method: 'POST',
-          body: JSON.stringify({ phone, code: otp, otp }),
+          body: JSON.stringify({ phone, code: otp, otp, fullName }),
         },
         fallback
       );
 
+      const rawUser = (result.data as any)?.buyer || (result.data as any)?.user;
+      const buyer = rawUser
+        ? {
+            id: rawUser.id,
+            fullName: rawUser.fullName || rawUser.full_name || fullName || 'MandiKart Buyer',
+            phone: rawUser.phone || phone,
+            buyerType: (rawUser.buyerType || rawUser.buyer_type || 'RETAIL') as 'RETAIL' | 'BULK',
+            city: rawUser.city || 'Bhubaneswar',
+            state: rawUser.state || 'Odisha',
+            role: 'BUYER',
+          }
+        : null;
+
       if (result.data.token) {
         setApiAuthToken(result.data.token);
       }
-      return { ...result.data, isFallback: result.isFallback };
+      return {
+        ...result.data,
+        buyer,
+        isFallback: result.isFallback,
+        error: result.error,
+      };
     },
   },
 
@@ -286,39 +416,9 @@ export const apiClient = {
   // 3. Orders Service
   orders: {
     async listOrders(): Promise<Order[]> {
-      const fallbackOrders: Order[] = [
-        {
-          id: 'ord_101',
-          orderNumber: 'MK-ORD-2026-9041',
-          status: 'IN_TRANSIT',
-          items: [
-            { id: 'oi-1', product: SAMPLE_PRODUCTS[0], quantity: 2, priceAtOrder: 35 },
-            { id: 'oi-2', product: SAMPLE_PRODUCTS[2], quantity: 1, priceAtOrder: 450 },
-          ],
-          deliveryAddress: {
-            id: 'addr_1',
-            label: 'Home',
-            fullName: 'Aarav Sharma',
-            phone: '+91 9876543210',
-            line1: 'Flat 402, Shivajinagar',
-            city: 'Pune',
-            state: 'Maharashtra',
-            pincode: '411005',
-            isDefault: true,
-          },
-          paymentMethod: 'UPI',
-          subtotal: 520,
-          deliveryCharge: 35,
-          total: 555,
-          placedAt: new Date(Date.now() - 7200000).toISOString(),
-          estimatedDelivery: 'Today by 5:30 PM',
-          farmer: SAMPLE_FARMER,
-        },
-      ];
-
       const res = await safeFetch<any[]>('/orders', { method: 'GET' }, []);
       if (res.isFallback || !res.data || res.data.length === 0) {
-        return fallbackOrders;
+        return [];
       }
 
       return res.data.map((o: any) => ({
@@ -339,12 +439,12 @@ export const apiClient = {
         deliveryAddress: {
           id: 'addr_1',
           label: 'Delivery',
-          fullName: 'Aarav Sharma',
-          phone: '+91 9876543210',
+          fullName: o.buyerName || o.buyer_name || 'Buyer',
+          phone: o.buyerPhone || o.buyer_phone || '',
           line1: o.deliveryAddress || '123 Market Road',
-          city: 'Pune',
-          state: 'Maharashtra',
-          pincode: '411001',
+          city: o.city || 'Pune',
+          state: o.state || 'Maharashtra',
+          pincode: o.pincode || '411001',
           isDefault: true,
         },
         paymentMethod: 'UPI' as const,
@@ -645,7 +745,8 @@ export const apiClient = {
       } as any);
 
       try {
-        const res = await fetch(`${API_BASE_URL}/storage/upload`, {
+        const baseUrl = resolveApiBaseUrl();
+        const res = await fetch(`${baseUrl}/storage/upload`, {
           method: 'POST',
           body: formData,
           headers: {

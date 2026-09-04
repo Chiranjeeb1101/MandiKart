@@ -10,12 +10,14 @@ import { Colors, Spacing, BorderRadius, Shadows } from '../../theme';
 import PrimaryButton from '../../components/PrimaryButton';
 import AuthBackground from '../../components/AuthBackground';
 import { useAuth } from '../../context/AuthContext';
+import { apiClient } from '../../services/apiClient';
+import { sendLocalOtpNotification } from '../../services/notificationService';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Register'>;
 type UserRole = 'household' | 'bulk';
 
 export default function RegisterScreen({ navigation }: Props) {
-  const { signIn } = useAuth();
+  const { signUp, signInWithGoogle } = useAuth();
 
   const [role, setRole] = useState<UserRole>('household');
   const [name, setName] = useState('');
@@ -38,7 +40,7 @@ export default function RegisterScreen({ navigation }: Props) {
 
   const strength = getPasswordStrength();
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     if (!name.trim()) {
       Alert.alert('Required Field', 'Please enter your Full Name.');
       return;
@@ -57,19 +59,59 @@ export default function RegisterScreen({ navigation }: Props) {
     }
 
     setLoading(true);
-    setTimeout(() => {
+    try {
+      // 1. Dispatch SMS OTP & Native Mobile Notification
+      const otpRes = await apiClient.auth.sendOtp(phone);
+      if (otpRes?.simulatedCode) {
+        sendLocalOtpNotification(otpRes.simulatedCode, phone).catch(() => {});
+      }
+
+      // 2. Register real buyer account with original data in Supabase
+      const res = await signUp({
+        phone,
+        fullName: name.trim(),
+        email: email.trim() || undefined,
+        password: password.trim() || undefined,
+        buyerType: role === 'bulk' ? 'BULK' : 'RETAIL',
+      });
+
       setLoading(false);
-      // Navigate to OTP verification
-      navigation.navigate('OTP', { phone, mode: 'register' });
-    }, 1000);
+      if (res.success) {
+        Alert.alert('Account Created! 🎉', 'Your MandiKart buyer account is now active.');
+      } else {
+        if (res.error?.includes('already exists')) {
+          Alert.alert(
+            'Account Exists',
+            res.error,
+            [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Sign In', onPress: () => navigation.navigate('Login') },
+            ]
+          );
+        } else {
+          Alert.alert('Registration Notice', res.error || 'Failed to complete registration.');
+        }
+      }
+    } catch (e: any) {
+      setLoading(false);
+      Alert.alert('Error', e?.message || 'Failed to create account. Please try again.');
+    }
   };
 
-  const handleSocialSignup = () => {
+  const handleSocialSignup = async () => {
     setLoading(true);
-    setTimeout(() => {
+    try {
+      const targetEmail = email.trim() || (name.trim() ? `${name.trim().toLowerCase().replace(/\s+/g, '')}@gmail.com` : 'buyer.google@mandikart.in');
+      const targetName = name.trim() || 'Google Buyer';
+      const ok = await signInWithGoogle(undefined, targetEmail, targetName);
+      if (!ok) {
+        Alert.alert('Google Sign-In Notice', 'Could not complete Google authentication. Please check network connection.');
+      }
+    } catch (err: any) {
+      Alert.alert('Google Sign-In Error', err?.message || 'Failed to authenticate with Google.');
+    } finally {
       setLoading(false);
-      signIn();
-    }, 600);
+    }
   };
 
   return (

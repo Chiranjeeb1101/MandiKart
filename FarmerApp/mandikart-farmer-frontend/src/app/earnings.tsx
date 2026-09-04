@@ -15,7 +15,7 @@ import {
   TextInput,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, Redirect } from 'expo-router';
 import Svg, { Rect, Text as SvgText, G } from 'react-native-svg';
 import {
   ChevronLeft,
@@ -38,7 +38,11 @@ import { useAuthStore } from '@/store/authStore';
 export default function EarningsScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user } = useAuthStore();
+  const { user, isAuthenticated } = useAuthStore();
+
+  if (!isAuthenticated) {
+    return <Redirect href="/auth/login" />;
+  }
 
   const [timeframe, setTimeframe] = useState<'7D' | '1M' | '1Y'>('7D');
   const [withdrawModalVisible, setWithdrawModalVisible] = useState(false);

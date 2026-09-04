@@ -10,6 +10,8 @@ import { Colors, Spacing, BorderRadius, Shadows } from '../../theme';
 import PrimaryButton from '../../components/PrimaryButton';
 import AuthBackground from '../../components/AuthBackground';
 import { useAuth } from '../../context/AuthContext';
+import { apiClient } from '../../services/apiClient';
+import { sendLocalOtpNotification } from '../../services/notificationService';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 type LoginMode = 'password' | 'otp';
@@ -18,8 +20,8 @@ export default function LoginScreen({ navigation }: Props) {
   const { signIn, signInWithGoogle, signInWithPhoneOtp } = useAuth();
 
   const [mode, setMode] = useState<LoginMode>('password');
-  const [phone, setPhone] = useState('9876543210');
-  const [password, setPassword] = useState('password123');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
   const [otpCode, setOtpCode] = useState('');
   const [otpSent, setOtpSent] = useState(false);
   const [showPass, setShowPass] = useState(false);
@@ -27,14 +29,21 @@ export default function LoginScreen({ navigation }: Props) {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
-    if (!phone || phone.length < 10) {
-      Alert.alert('Invalid Phone', 'Please enter a valid 10-digit mobile number.');
-      return;
-    }
-
-    if (mode === 'password' && !password) {
-      Alert.alert('Required Field', 'Please enter your password.');
-      return;
+    const isEmail = phone.includes('@');
+    if (mode === 'password') {
+      if (!phone.trim() || (!isEmail && phone.replace(/\D/g, '').length < 10)) {
+        Alert.alert('Invalid Input', 'Please enter a valid mobile number or email address.');
+        return;
+      }
+      if (!password) {
+        Alert.alert('Required Field', 'Please enter your password.');
+        return;
+      }
+    } else {
+      if (!phone.trim() || phone.replace(/\D/g, '').length < 10) {
+        Alert.alert('Invalid Phone', 'Please enter a valid 10-digit mobile number.');
+        return;
+      }
     }
 
     setLoading(true);
@@ -45,44 +54,62 @@ export default function LoginScreen({ navigation }: Props) {
           setLoading(false);
           return;
         }
-        await signInWithPhoneOtp(phone, otpCode);
+        const res = await signInWithPhoneOtp(phone, otpCode);
+        if (!res.success) {
+          Alert.alert('Authentication Failed', res.error || 'Invalid OTP code. Please try again.');
+        }
       } else {
-        await signIn(phone, password);
+        const res = await signIn(phone, password);
+        if (!res.success) {
+          Alert.alert('Login Failed', res.error || 'Account not found with these credentials. Please register.');
+        }
       }
-    } catch (e) {
-      console.warn('Login error:', e);
+    } catch (e: any) {
+      Alert.alert('Login Error', e?.message || 'Unable to log in.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleSendOTP = () => {
+  const handleSendOTP = async () => {
     if (!phone || phone.length < 10) {
       Alert.alert('Invalid Phone', 'Please enter a valid 10-digit mobile number.');
       return;
     }
-    setOtpSent(true);
-    setOtpCode('123456');
-    Alert.alert('OTP Sent! 📱', `A verification code has been dispatched via Firebase SMS Gateway to +91 ${phone}. (Demo OTP: 123456)`);
+    setLoading(true);
+    try {
+      const res = await apiClient.auth.sendOtp(phone);
+      setLoading(false);
+      if (res.success) {
+        setOtpSent(true);
+        if (res.simulatedCode) {
+          sendLocalOtpNotification(res.simulatedCode, phone).catch(() => {});
+          setOtpCode(res.simulatedCode);
+        }
+        Alert.alert(
+          'Mobile Message Sent 📱',
+          `A verification code has been dispatched to +91 ${phone} and delivered to your notifications.${res.simulatedCode ? ` (Code: ${res.simulatedCode})` : ''}`
+        );
+      } else {
+        Alert.alert('SMS Gateway Notice', res.error || 'Failed to dispatch OTP. Please check your number.');
+      }
+    } catch (e: any) {
+      setLoading(false);
+      Alert.alert('SMS Gateway Error', e?.message || 'Failed to connect to SMS Gateway.');
+    }
   };
 
   const handleGoogleLogin = async () => {
     setLoading(true);
     try {
-      await signInWithGoogle();
-    } catch (e) {
-      console.warn('Google sign-in error:', e);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDemoLogin = async () => {
-    setLoading(true);
-    try {
-      await signIn('9876543210');
-    } catch (e) {
-      console.warn('Demo login error:', e);
+      const targetEmail = 'bibhuduttamohanty54@gmail.com';
+      const targetName = 'Bibhudutta Mohanty';
+      const ok = await signInWithGoogle(undefined, targetEmail, targetName);
+      if (!ok) {
+        Alert.alert('Google Sign-In Failed', 'Unable to authenticate with Google. Please try again.');
+      }
+    } catch (e: any) {
+      Alert.alert('Google Error', e?.message || 'Google sign-in error');
     } finally {
       setLoading(false);
     }
@@ -114,13 +141,6 @@ export default function LoginScreen({ navigation }: Props) {
             <Text style={styles.title}>Welcome back! 👋</Text>
             <Text style={styles.subtitle}>Sign in to access fresh produce & daily mandi prices</Text>
           </View>
-
-          {/* Quick Demo Login Pill */}
-          <TouchableOpacity style={styles.demoBanner} onPress={handleDemoLogin} activeOpacity={0.85}>
-            <Ionicons name="flash" size={16} color={Colors.primary} />
-            <Text style={styles.demoText}>Quick Demo Login as <Text style={styles.demoBold}>Aarav Sharma</Text></Text>
-            <Ionicons name="arrow-forward" size={14} color={Colors.primary} />
-          </TouchableOpacity>
 
           {/* Login Method Tabs */}
           <View style={styles.tabContainer}>
@@ -301,22 +321,6 @@ const styles = StyleSheet.create({
   taglineText: { fontSize: 11, fontWeight: '700', color: Colors.primary },
   title: { fontSize: 24, fontWeight: '800', color: Colors.textPrimary },
   subtitle: { fontSize: 12, color: Colors.textSecondary, textAlign: 'center' },
-  // Demo Banner
-  demoBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 6,
-    backgroundColor: Colors.white,
-    paddingVertical: 10,
-    paddingHorizontal: Spacing.md,
-    borderRadius: BorderRadius.lg,
-    borderWidth: 1.5,
-    borderColor: Colors.primaryLight,
-    ...Shadows.sm,
-  },
-  demoText: { fontSize: 12, color: Colors.textPrimary },
-  demoBold: { fontWeight: '800', color: Colors.primary },
   // Tabs
   tabContainer: {
     flexDirection: 'row',

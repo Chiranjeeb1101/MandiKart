@@ -49,6 +49,7 @@ import { MKColors } from '@/constants/colors';
 import { MKShadows } from '@/constants/shadows';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
+import { apiClient } from '@/services/apiClient';
 
 type OtpMethod = 'sms' | 'whatsapp';
 type FieldTone = 'green' | 'orange' | 'neutral';
@@ -124,11 +125,25 @@ export default function SignUpScreen() {
     return Object.keys(nextErrors).length === 0;
   };
 
-  const handleSignUp = () => {
+  const handleSignUp = async () => {
     if (!validate()) return;
 
     const fullName = [firstName.trim(), middleName.trim(), lastName.trim()].filter(Boolean).join(' ');
     const normalizedPhone = `${countryCode}${mobile.trim()}`;
+    const cleanPhone = mobile.replace(/\D/g, '').slice(-10);
+
+    try {
+      await apiClient.post('/auth/signup', {
+        phone: cleanPhone,
+        fullName,
+        password,
+        method: otpMethod === 'whatsapp' ? 'whatsapp' : 'sms',
+        preferredLanguage: language,
+      });
+    } catch (e: any) {
+      console.warn('Farmer backend signup notice:', e?.message);
+    }
+
     setPhoneNumber(normalizedPhone);
     setUser({
       id: `farmer_${Date.now()}`,

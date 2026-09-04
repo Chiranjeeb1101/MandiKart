@@ -11,6 +11,7 @@ export * from './services/consent.service.js';
 export * from './services/notification.service.js';
 export * from './services/otp.service.js';
 export * from './services/weather.service.js';
+export * from './services/supabase-auth.service.js';
 export * from './services/firebase-auth.service.js';
 export * from './services/tracking-stream.service.js';
 export * from './services/analytics.service.js';

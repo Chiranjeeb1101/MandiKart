@@ -16,7 +16,7 @@ import {
   ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useRouter } from 'expo-router';
+import { useRouter, Redirect } from 'expo-router';
 import {
   ChevronLeft,
   Camera,
@@ -42,7 +42,11 @@ import { getCurrentFarmerLocation } from '@/services/locationService';
 export default function FarmerProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user, setUser } = useAuthStore();
+  const { user, setUser, isAuthenticated } = useAuthStore();
+
+  if (!isAuthenticated) {
+    return <Redirect href="/auth/login" />;
+  }
 
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);

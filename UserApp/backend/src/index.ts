@@ -50,6 +50,7 @@ app.get('/api/v1/health', (_req: Request, res: Response) => {
 // Buyer Routes
 app.use('/api/v1/auth', authRouter);
 app.use('/api/v1/catalog', catalogRouter);
+app.use('/api/v1/products', catalogRouter);
 app.use('/api/v1/orders', ordersRouter);
 app.use('/api/v1/negotiations', negotiationsRouter);
 app.use('/api/v1/consent', consentRouter);
@@ -87,8 +88,8 @@ app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log(`🛒 MandiKart Buyer Backend running on port ${PORT}`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`🛒 MandiKart Buyer Backend running on port ${PORT} (0.0.0.0)`);
   console.log(`🔗 Health Check: http://localhost:${PORT}/api/v1/health`);
 });
 

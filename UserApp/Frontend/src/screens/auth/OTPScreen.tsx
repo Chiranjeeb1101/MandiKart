@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  KeyboardAvoidingView, Platform, StatusBar, Animated,
+  KeyboardAvoidingView, Platform, StatusBar, Animated, Alert,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,6 +9,7 @@ import { AuthStackParamList } from '../../navigation/types';
 import { Colors, Spacing, BorderRadius, Shadows } from '../../theme';
 import PrimaryButton from '../../components/PrimaryButton';
 import { useAuth } from '../../context/AuthContext';
+import { apiClient } from '../../services/apiClient';
 import AuthBackground from '../../components/AuthBackground';
 
 type Props = NativeStackScreenProps<AuthStackParamList, 'OTP'>;
@@ -17,7 +18,7 @@ const OTP_LENGTH = 4;
 
 export default function OTPScreen({ navigation, route }: Props) {
   const { phone = '9876543210', mode } = route.params || {};
-  const { signIn } = useAuth();
+  const { signInWithPhoneOtp } = useAuth();
   const [otp, setOtp] = useState(Array(OTP_LENGTH).fill(''));
   const [focusedIdx, setFocusedIdx] = useState<number | null>(0);
   const [loading, setLoading] = useState(false);
@@ -94,24 +95,38 @@ export default function OTPScreen({ navigation, route }: Props) {
     }
   };
 
-  const verifyOtp = (currentOtp: string[]) => {
-    if (currentOtp.join('').length < OTP_LENGTH) return;
+  const verifyOtp = async (currentOtp: string[]) => {
+    const code = currentOtp.join('');
+    if (code.length < OTP_LENGTH) return;
     setLoading(true);
-    setTimeout(() => {
-      setLoading(false);
+    try {
       if (mode === 'forgot') {
+        setLoading(false);
         navigation.navigate('Login');
       } else {
-        signIn();
+        const res = await signInWithPhoneOtp(phone, code);
+        setLoading(false);
+        if (!res.success) {
+          Alert.alert('Verification Failed', res.error || 'Invalid OTP code. Please check and try again.');
+        }
       }
-    }, 1200);
+    } catch (e: any) {
+      setLoading(false);
+      Alert.alert('Verification Error', e?.message || 'Failed to verify code.');
+    }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (timer > 0) return;
     setTimer(30);
     setOtp(Array(OTP_LENGTH).fill(''));
     inputs.current[0]?.focus();
+    try {
+      await apiClient.auth.sendOtp(phone);
+      Alert.alert('Code Dispatched', `A new verification code was sent to +91 ${phone}`);
+    } catch (e: any) {
+      Alert.alert('Notice', 'Failed to resend code. Please check your connection.');
+    }
   };
 
   return (

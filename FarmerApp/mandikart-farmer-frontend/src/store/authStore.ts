@@ -54,19 +54,33 @@ interface AuthState {
   logout: () => void;
 }
 
+const getStoredAuth = () => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const token = localStorage.getItem('mandikart_farmer_token');
+      const user = localStorage.getItem('mandikart_farmer_user');
+      const farmer = localStorage.getItem('mandikart_farmer_data');
+      if (token && user) {
+        return {
+          isAuthenticated: true,
+          token,
+          user: JSON.parse(user),
+          farmer: farmer ? JSON.parse(farmer) : null,
+        };
+      }
+    }
+  } catch {}
+  return { isAuthenticated: false, token: null, user: null, farmer: null };
+};
+
+const initialAuth = getStoredAuth();
+
 export const useAuthStore = create<AuthState>((set) => ({
-  isAuthenticated: false,
-  isOnboarded: false,
-  farmer: null,
-  user: {
-    name: 'Ramesh Patel',
-    district: 'Nashik',
-    state: 'Maharashtra',
-    farmerType: 'Individual Farmer',
-    experience: '12 years',
-    crops: ['Onion', 'Tomato', 'Wheat'],
-  },
-  token: null,
+  isAuthenticated: initialAuth.isAuthenticated,
+  isOnboarded: initialAuth.isAuthenticated,
+  farmer: initialAuth.farmer,
+  user: initialAuth.user,
+  token: initialAuth.token,
   phoneNumber: '',
 
   setPhoneNumber: (phoneNumber) => set({ phoneNumber }),
@@ -78,16 +92,31 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   setIsAuthenticated: (isAuthenticated) => set({ isAuthenticated }),
 
-  setAuthenticated: (token, farmer) =>
+  setAuthenticated: (token, farmer) => {
+    const fAny = farmer as any;
+    const userProfile: UserProfile = {
+      id: farmer.id,
+      name: farmer.fullName,
+      phone: farmer.phone,
+      state: fAny.state,
+      district: fAny.district,
+      isVerified: farmer.isVerified,
+      role: 'FARMER',
+    };
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('mandikart_farmer_token', token);
+        localStorage.setItem('mandikart_farmer_user', JSON.stringify(userProfile));
+        localStorage.setItem('mandikart_farmer_data', JSON.stringify(farmer));
+      }
+    } catch {}
     set({
       isAuthenticated: true,
       token,
       farmer,
-      user: {
-        name: farmer.fullName,
-        phone: farmer.phone,
-      },
-    }),
+      user: userProfile,
+    });
+  },
 
   setOnboarded: (isOnboarded) => set({ isOnboarded }),
 
@@ -96,7 +125,14 @@ export const useAuthStore = create<AuthState>((set) => ({
       farmer: state.farmer ? { ...state.farmer, ...updates } : null,
     })),
 
-  logout: () =>
+  logout: () => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.removeItem('mandikart_farmer_token');
+        localStorage.removeItem('mandikart_farmer_user');
+        localStorage.removeItem('mandikart_farmer_data');
+      }
+    } catch {}
     set({
       isAuthenticated: false,
       isOnboarded: false,
@@ -104,5 +140,6 @@ export const useAuthStore = create<AuthState>((set) => ({
       user: null,
       token: null,
       phoneNumber: '',
-    }),
+    });
+  },
 }));

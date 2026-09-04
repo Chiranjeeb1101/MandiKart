@@ -146,4 +146,23 @@ export class CatalogController {
       });
     }
   }
+
+  static async getBatchById(req: Request, res: Response): Promise<void> {
+    const { id } = req.params;
+    try {
+      const supabase = getSupabaseAdmin();
+      const { data, error } = await supabase
+        .from('products')
+        .select('*, farmers(full_name, state, district)')
+        .eq('id', id)
+        .single();
+      if (error || !data) {
+        res.status(404).json({ data: null, error: { message: 'Product batch not found' } });
+        return;
+      }
+      res.status(200).json({ data, error: null });
+    } catch (err) {
+      res.status(500).json({ data: null, error: { message: (err as Error).message } });
+    }
+  }
 }
