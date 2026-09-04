@@ -6,16 +6,18 @@
  * 2. Variety & Category
  * 3. Quantity & Unit (KG, Quintal, Ton) with auto-conversion
  * 4. Quality Grade (Grade A, Grade B, Grade C, Unsorted) with visual badges & descriptions
- * 5. Harvest Date (Quick chips: Today, 3 days ago, 1 week ago, Custom)
- * 6. Storage Type & Condition (Warehouse/Chawl, Farm Shed, Cold Storage, Home)
- * 7. Photo Upload (Camera / Gallery / Curated agricultural image presets)
- * 8. Expected Price & AGMARKNET Reference Rate
- * 9. Availability Date (Immediate, Within 3 days, Within 1 week)
+ * 5. Harvest Date (Quick chips: Today, Yesterday, 3 Days Ago, 1 Week Ago)
+ * 6. Storage Type & Condition (Warehouse, Farm Shed, Cold Storage, Other)
+ * 7. Photo Upload (Camera / Gallery / Curated presets)
+ * 8. Target Price & AGMARKNET Reference Rate
+ * 9. Availability Date (Immediate, Within 3 Days, Within 1 Week)
  *
  * Post-Save Celebration:
  * Modal with 2 clear farmer pathways:
- * 1. "MERI FASAL DEKHEIN" -> router.replace('/(tabs)/produce')
- * 2. "BUYERS DHUNDHEIN" -> router.replace('/sell/best-options')
+ * 1. "VIEW MY INVENTORY" -> router.replace('/(tabs)/produce')
+ * 2. "FIND ACTIVE BUYERS" -> router.replace('/sell/best-options')
+ *
+ * Simple, professional English throughout.
  */
 
 import React, { useState } from 'react';
@@ -40,14 +42,10 @@ import {
   Image as ImageIcon,
   CheckCircle2,
   Sparkles,
-  Info,
-  Calendar,
   Building2,
   Warehouse,
-  ShieldCheck,
   Scale,
   ArrowRight,
-  TrendingUp,
 } from 'lucide-react-native';
 import { MKColors } from '@/constants/colors';
 import { useProduceStore, QualityGrade, StorageType, CropCondition } from '@/store/produceStore';
@@ -76,7 +74,7 @@ const CROP_PRESETS: CropPreset[] = [
     refPrice: 22,
     minDays: 8,
     maxDays: 12,
-    basis: 'Ventilated wooden slatted chawl, dry ambient condition',
+    basis: 'Ventilated wooden slatted storage, dry ambient condition',
     mandi: 'Nashik APMC Mandi',
   },
   {
@@ -88,7 +86,7 @@ const CROP_PRESETS: CropPreset[] = [
     refPrice: 28,
     minDays: 3,
     maxDays: 5,
-    basis: 'Plastic crates at ambient temperature',
+    basis: 'Plastic crates at ambient temperature in farm shade',
     mandi: 'Pimpalgaon Mandi',
   },
   {
@@ -100,8 +98,8 @@ const CROP_PRESETS: CropPreset[] = [
     refPrice: 18,
     minDays: 20,
     maxDays: 35,
-    basis: 'Gunny bags in cool dark ventilated shed',
-    mandi: 'Lasalgaon Mandi',
+    basis: 'Burlap bags in cool dark ventilated storage',
+    mandi: 'Lasalgaon Mandi Hub',
   },
   {
     name: 'Wheat',
@@ -112,7 +110,7 @@ const CROP_PRESETS: CropPreset[] = [
     refPrice: 26,
     minDays: 90,
     maxDays: 180,
-    basis: 'Dry gunny bags protected from moisture',
+    basis: 'Moisture-controlled sealed dry gunny bags',
     mandi: 'Kalyan Wholesale APMC',
   },
   {
@@ -124,7 +122,7 @@ const CROP_PRESETS: CropPreset[] = [
     refPrice: 46,
     minDays: 60,
     maxDays: 120,
-    basis: 'Warehouse dry storage with <10% moisture',
+    basis: 'Warehouse dry storage with <10% grain moisture',
     mandi: 'Latur APMC',
   },
   {
@@ -199,18 +197,17 @@ export default function AddProduceScreen() {
   };
 
   const handleSaveCrop = () => {
-    // Validate
     const errors: { [key: string]: string } = {};
     if (!cropName.trim()) {
-      errors.cropName = 'Fasal ka naam likhna jaruri hai';
+      errors.cropName = 'Please enter the crop name';
     }
     if (!quantityInput || parseFloat(quantityInput) <= 0) {
-      errors.quantity = 'Sahi quantity darj karein (e.g. 50)';
+      errors.quantity = 'Please enter a valid quantity (e.g. 50)';
     }
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
-      Alert.alert('Adhura Form', 'Kripya sabhi jaruri jaankari bharein.');
+      Alert.alert('Incomplete Form', 'Please fill in the required crop details.');
       return;
     }
 
@@ -231,18 +228,18 @@ export default function AddProduceScreen() {
       grade: grade,
       harvestDate:
         harvestOption === 'Today'
-          ? 'Aaj (04 Sep 2026)'
+          ? 'Today (04 Sep 2026)'
           : harvestOption === 'Yesterday'
-          ? 'Kal (03 Sep 2026)'
+          ? 'Yesterday (03 Sep 2026)'
           : harvestOption === '3 Days Ago'
           ? '01 Sep 2026'
           : '28 Aug 2026',
       availableFrom: availableFrom,
-      location: 'Khet Godam (Farm Store)',
+      location: 'Main Farm Warehouse',
       storageType: storageType,
       storageDetails: storageDetails.trim() || selectedPreset.basis,
       condition: condition,
-      conditionUpdatedAt: '04 Sep 2026',
+      conditionUpdatedAt: 'Today',
       imageUri: photoUri,
       expectedPricePerKg: expPriceNum,
 
@@ -278,7 +275,7 @@ export default function AddProduceScreen() {
         { date: '04 Sep', price: selectedPreset.refPrice },
       ],
 
-      watchTag: 'Nayi fasal darj ki gayi',
+      watchTag: 'Newly Added Harvest',
       watchUrgency: 'positive',
     });
 
@@ -302,8 +299,8 @@ export default function AddProduceScreen() {
             <ArrowLeft size={22} color={MKColors.textPrimary} />
           </Pressable>
           <View style={styles.headerTextGroup}>
-            <Text style={styles.headerSubtitle}>MandiKart Fasal Intake</Text>
-            <Text style={styles.headerTitle}>Nayi Fasal Jodein</Text>
+            <Text style={styles.headerSubtitle}>MandiKart Crop Intake</Text>
+            <Text style={styles.headerTitle}>Add New Crop</Text>
           </View>
         </View>
 
@@ -314,7 +311,7 @@ export default function AddProduceScreen() {
         >
           {/* ── Step 1: Quick Crop Selector ─────────────────────── */}
           <View style={styles.formSection}>
-            <Text style={styles.sectionLabel}>1. Fasal Chunein (Select Crop) *</Text>
+            <Text style={styles.sectionLabel}>1. Select Crop *</Text>
             <ScrollView
               horizontal
               showsHorizontalScrollIndicator={false}
@@ -345,7 +342,7 @@ export default function AddProduceScreen() {
             </ScrollView>
 
             <View style={styles.inputWrap}>
-              <Text style={styles.fieldSublabel}>Fasal ka naam:</Text>
+              <Text style={styles.fieldSublabel}>Crop Name:</Text>
               <TextInput
                 style={[styles.textInput, formErrors.cropName && styles.inputError]}
                 value={cropName}
@@ -359,7 +356,7 @@ export default function AddProduceScreen() {
             </View>
 
             <View style={styles.inputWrap}>
-              <Text style={styles.fieldSublabel}>Variety / Kism (Optional):</Text>
+              <Text style={styles.fieldSublabel}>Variety / Type (Optional):</Text>
               <TextInput
                 style={styles.textInput}
                 value={variety}
@@ -372,7 +369,7 @@ export default function AddProduceScreen() {
 
           {/* ── Step 2: Quantity & Unit ─────────────────────────── */}
           <View style={styles.formSection}>
-            <Text style={styles.sectionLabel}>2. Kul Matra (Quantity & Unit) *</Text>
+            <Text style={styles.sectionLabel}>2. Total Quantity & Unit *</Text>
 
             <View style={styles.qtyRow}>
               <TextInput
@@ -421,7 +418,7 @@ export default function AddProduceScreen() {
               <View style={styles.convertedQtyNotice}>
                 <Scale size={14} color={MKColors.primaryGreen} />
                 <Text style={styles.convertedQtyText}>
-                  Kul Matra: <Text style={{ fontWeight: '800' }}>{computedKg.toLocaleString()} KG</Text> ({unit === 'Quintal' ? `${quantityInput} Quintal` : `${(computedKg / 100).toFixed(1)} Quintal`})
+                  Total Weight: <Text style={{ fontWeight: '800' }}>{computedKg.toLocaleString()} KG</Text> ({unit === 'Quintal' ? `${quantityInput} Quintals` : `${(computedKg / 100).toFixed(1)} Quintals`})
                 </Text>
               </View>
             )}
@@ -455,12 +452,12 @@ export default function AddProduceScreen() {
                     </View>
                     <Text style={styles.gradeOptionDesc}>
                       {g === 'Grade A'
-                        ? 'Export & Premium Market Quality (Ek saman aakar)'
+                        ? 'Export & Premium Quality (Uniform size and optimal color)'
                         : g === 'Grade B'
-                        ? 'Standard Mandi Grade (Sahi rang & taazgi)'
+                        ? 'Standard Commercial Quality (Good market condition)'
                         : g === 'Grade C'
-                        ? 'Local Processing / Factory Grade'
-                        : 'Mixed / Chhanai bina (Field Run)'}
+                        ? 'Processing & Factory Grade'
+                        : 'Field Run / Mixed Unsorted (Direct from harvest)'}
                     </Text>
                   </Pressable>
                 );
@@ -470,7 +467,7 @@ export default function AddProduceScreen() {
 
           {/* ── Step 4: Harvest Date & Storage ─────────────────── */}
           <View style={styles.formSection}>
-            <Text style={styles.sectionLabel}>4. Fasal Ki Kataai (Harvest Date)</Text>
+            <Text style={styles.sectionLabel}>4. Harvest Date</Text>
             <View style={styles.harvestChipsRow}>
               {(['Today', 'Yesterday', '3 Days Ago', '1 Week Ago'] as const).map((h) => {
                 const isSelected = harvestOption === h;
@@ -489,20 +486,14 @@ export default function AddProduceScreen() {
                         isSelected && styles.harvestChipTextSelected,
                       ]}
                     >
-                      {h === 'Today'
-                        ? 'Aaj'
-                        : h === 'Yesterday'
-                        ? 'Kal'
-                        : h === '3 Days Ago'
-                        ? '3 Din Pehle'
-                        : '1 Hafte Pehle'}
+                      {h}
                     </Text>
                   </Pressable>
                 );
               })}
             </View>
 
-            <Text style={[styles.fieldSublabel, { marginTop: 12 }]}>Storage Prakar:</Text>
+            <Text style={[styles.fieldSublabel, { marginTop: 12 }]}>Storage Facility:</Text>
             <View style={styles.storageTypeRow}>
               {(['Warehouse', 'Farm', 'Cold Storage', 'Other'] as StorageType[]).map((st) => {
                 const isSelected = storageType === st;
@@ -526,7 +517,7 @@ export default function AddProduceScreen() {
                         isSelected && styles.storageChipTextSelected,
                       ]}
                     >
-                      {st === 'Farm' ? 'Khet Shed' : st}
+                      {st === 'Farm' ? 'Farm Shed' : st}
                     </Text>
                   </Pressable>
                 );
@@ -534,12 +525,12 @@ export default function AddProduceScreen() {
             </View>
 
             <View style={styles.inputWrap}>
-              <Text style={styles.fieldSublabel}>Storage Details (Optional):</Text>
+              <Text style={styles.fieldSublabel}>Storage Conditions (Optional):</Text>
               <TextInput
                 style={styles.textInput}
                 value={storageDetails}
                 onChangeText={setStorageDetails}
-                placeholder="e.g. Hawaadaar godam, sukhi jagah par rakhi hai..."
+                placeholder="e.g. Aerated warehouse with dry ambient conditions..."
                 placeholderTextColor={MKColors.textMuted}
               />
             </View>
@@ -547,7 +538,7 @@ export default function AddProduceScreen() {
 
           {/* ── Step 5: Crop Photo ──────────────────────────────── */}
           <View style={styles.formSection}>
-            <Text style={styles.sectionLabel}>5. Fasal Ki Photo (Crop Photo)</Text>
+            <Text style={styles.sectionLabel}>5. Crop Photo</Text>
             <View style={styles.photoUploadContainer}>
               <Image source={{ uri: photoUri }} style={styles.uploadedPreview} />
               <View style={styles.photoActionsCol}>
@@ -556,7 +547,7 @@ export default function AddProduceScreen() {
                   onPress={handleTakePhoto}
                 >
                   <Camera size={16} color={MKColors.primaryGreen} />
-                  <Text style={styles.photoActionText}>Camera Se Lein</Text>
+                  <Text style={styles.photoActionText}>Take Photo</Text>
                 </Pressable>
 
                 <Pressable
@@ -564,10 +555,10 @@ export default function AddProduceScreen() {
                   onPress={handlePickFromGallery}
                 >
                   <ImageIcon size={16} color={MKColors.primaryGreen} />
-                  <Text style={styles.photoActionText}>Gallery Se Chunein</Text>
+                  <Text style={styles.photoActionText}>Choose from Gallery</Text>
                 </Pressable>
                 <Text style={styles.photoHintText}>
-                  Achhi photo khareedar ka bharosa badhati hai.
+                  Clear photos build buyer trust and improve offer response rates.
                 </Text>
               </View>
             </View>
@@ -575,7 +566,7 @@ export default function AddProduceScreen() {
 
           {/* ── Step 6: Expected Price & Mandi Reference ────────── */}
           <View style={styles.formSection}>
-            <Text style={styles.sectionLabel}>6. Mandi Dar & Aapka Anumanit Daam</Text>
+            <Text style={styles.sectionLabel}>6. Mandi Benchmark & Target Price</Text>
 
             <View style={styles.mandiBenchmarkBox}>
               <Building2 size={16} color={MKColors.primaryGreen} />
@@ -584,13 +575,13 @@ export default function AddProduceScreen() {
                   {selectedPreset.mandi} Reference:
                 </Text>
                 <Text style={styles.mandiBenchmarkValue}>
-                  ₹{selectedPreset.refPrice}/kg (AGMARKNET verified)
+                  ₹{selectedPreset.refPrice}/kg (AGMARKNET verified feed)
                 </Text>
               </View>
             </View>
 
             <View style={styles.inputWrap}>
-              <Text style={styles.fieldSublabel}>Aapka Maanga Daam (₹ per KG):</Text>
+              <Text style={styles.fieldSublabel}>Your Target Price (₹ per kg, optional):</Text>
               <TextInput
                 style={styles.textInput}
                 keyboardType="numeric"
@@ -604,7 +595,7 @@ export default function AddProduceScreen() {
 
           {/* ── Step 7: Available From ──────────────────────────── */}
           <View style={styles.formSection}>
-            <Text style={styles.sectionLabel}>7. Kab Se Uplabdh Hai? (Availability)</Text>
+            <Text style={styles.sectionLabel}>7. Ready for Dispatch / Pickup</Text>
             <View style={styles.harvestChipsRow}>
               {(['Immediate', 'Within 3 Days', 'Within 1 Week'] as const).map((avail) => {
                 const isSelected = availableFrom === avail;
@@ -623,11 +614,7 @@ export default function AddProduceScreen() {
                         isSelected && styles.harvestChipTextSelected,
                       ]}
                     >
-                      {avail === 'Immediate'
-                        ? 'Turant (Aaj Se)'
-                        : avail === 'Within 3 Days'
-                        ? '3 Din Mein'
-                        : '1 Hafte Mein'}
+                      {avail}
                     </Text>
                   </Pressable>
                 );
@@ -641,7 +628,7 @@ export default function AddProduceScreen() {
             onPress={handleSaveCrop}
           >
             <CheckCircle2 size={20} color="#FFFFFF" style={{ marginRight: 8 }} />
-            <Text style={styles.submitButtonText}>Fasal List Mein Jodein</Text>
+            <Text style={styles.submitButtonText}>Save Crop to Inventory</Text>
           </Pressable>
 
           <View style={{ height: 40 }} />
@@ -661,31 +648,31 @@ export default function AddProduceScreen() {
               </View>
 
               <Text style={styles.celebrationTitle}>
-                Fasal Safaltapoorvak Add Ho Gayi!
+                Crop Added Successfully!
               </Text>
               <Text style={styles.celebrationSubtitle}>
-                Aapki {cropName} ({computedKg.toLocaleString()} KG) ab aapke Crop Intelligence Center mein shamil ho gayi hai.
+                Your {cropName} ({computedKg.toLocaleString()} kg) is now active in your Crop Intelligence Center.
               </Text>
 
               {/* Summary of what was saved */}
               <View style={styles.savedSummaryBox}>
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Fasal:</Text>
+                  <Text style={styles.summaryLabel}>Crop:</Text>
                   <Text style={styles.summaryVal}>{cropName} ({variety || 'Standard'})</Text>
                 </View>
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Kul Matra:</Text>
-                  <Text style={styles.summaryVal}>{computedKg.toLocaleString()} KG ({grade})</Text>
+                  <Text style={styles.summaryLabel}>Quantity:</Text>
+                  <Text style={styles.summaryVal}>{computedKg.toLocaleString()} kg ({grade})</Text>
                 </View>
                 <View style={styles.summaryRow}>
-                  <Text style={styles.summaryLabel}>Mandi Dar:</Text>
+                  <Text style={styles.summaryLabel}>Benchmark Price:</Text>
                   <Text style={styles.summaryVal}>₹{selectedPreset.refPrice}/kg (AGMARKNET)</Text>
                 </View>
               </View>
 
-              <Text style={styles.actionQuestion}>Aage kya karna chahte hain?</Text>
+              <Text style={styles.actionQuestion}>What would you like to do next?</Text>
 
-              {/* Action Button 1: "MERI FASAL DEKHEIN" */}
+              {/* Action Button 1: "VIEW MY INVENTORY" */}
               <Pressable
                 style={styles.decisionSecondaryBtn}
                 onPress={() => {
@@ -693,10 +680,10 @@ export default function AddProduceScreen() {
                   router.replace('/(tabs)/produce');
                 }}
               >
-                <Text style={styles.decisionSecondaryText}>MERI FASAL DEKHEIN</Text>
+                <Text style={styles.decisionSecondaryText}>VIEW MY INVENTORY</Text>
               </Pressable>
 
-              {/* Action Button 2: "BUYERS DHUNDHEIN" */}
+              {/* Action Button 2: "FIND ACTIVE BUYERS" */}
               <Pressable
                 style={styles.decisionPrimaryBtn}
                 onPress={() => {
@@ -711,7 +698,7 @@ export default function AddProduceScreen() {
                   });
                 }}
               >
-                <Text style={styles.decisionPrimaryText}>BUYERS DHUNDHEIN</Text>
+                <Text style={styles.decisionPrimaryText}>FIND ACTIVE BUYERS</Text>
                 <ArrowRight size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
               </Pressable>
             </View>

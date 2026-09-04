@@ -8,6 +8,7 @@
  * - Reference market data with verified source (AGMARKNET/e-NAM) and timestamp
  * - 7D, 30D, 90D price trend history points
  * - Crop watch and action alerts
+ * - Simple, professional English throughout
  */
 
 import { create } from 'zustand';
@@ -65,7 +66,7 @@ export interface CropItem {
   history90D: PriceHistoryPoint[];
 
   // Watch status
-  watchTag: string; // e.g. "Demand badh rahi hai"
+  watchTag: string; // e.g. "Rising Market Demand"
   watchUrgency: 'positive' | 'warning' | 'neutral';
   attentionMessage?: string;
   attentionActionLabel?: string;
@@ -79,6 +80,7 @@ interface ProduceStoreState {
   addCrop: (crop: Omit<CropItem, 'id'>) => CropItem;
   updateCropCondition: (id: string, condition: CropCondition, note?: string) => void;
   updateCropQuantity: (id: string, availableKg: number, reservedKg?: number) => void;
+  deleteCrop: (id: string) => void;
   getCropById: (id: string) => CropItem | undefined;
 }
 
@@ -110,7 +112,7 @@ const INITIAL_CROPS: CropItem[] = [
     availableFrom: 'Immediate',
     location: 'Dindori Farm Shed #2',
     storageType: 'Warehouse',
-    storageDetails: 'Ventilated wooden slatted chawl, dry ambient condition',
+    storageDetails: 'Ventilated wooden slatted storage, dry ambient condition',
     condition: 'Good',
     conditionUpdatedAt: '02 Sep 2026',
     imageUri: ONION_PHOTO_URI,
@@ -118,7 +120,7 @@ const INITIAL_CROPS: CropItem[] = [
 
     shelfLifeDaysEstMin: 8,
     shelfLifeDaysEstMax: 12,
-    shelfLifeBasis: 'Nashik garwa variety with cured neck stored in dry aerated chawl',
+    shelfLifeBasis: 'Cured neck onion stored in aerated ventilated warehouse',
 
     referencePricePerKg: 22.0,
     priceMovementPct: 8,
@@ -148,9 +150,9 @@ const INITIAL_CROPS: CropItem[] = [
       { date: '04 Sep', price: 22.0 },
     ],
 
-    watchTag: 'Demand badh rahi hai',
+    watchTag: 'Rising Buyer Demand (+8%)',
     watchUrgency: 'positive',
-    attentionMessage: 'Onion ki mandi demand pichhle 3 din mein +8% badhi hai. 18 verified buyers active hain.',
+    attentionMessage: 'Onion market price increased by +8% over the past 3 days with 18 verified buyers active.',
     attentionActionLabel: 'View Best Buyers',
     attentionActionRoute: '/sell/best-options',
   },
@@ -208,9 +210,9 @@ const INITIAL_CROPS: CropItem[] = [
       { date: '04 Sep', price: 18.0 },
     ],
 
-    watchTag: 'Freshness window kam ho raha hai',
+    watchTag: 'Short Freshness Window (3-5 Days)',
     watchUrgency: 'warning',
-    attentionMessage: 'Tomato ka estimated freshness window kam ho raha hai (3–5 din bache hain). Sell consider karein.',
+    attentionMessage: 'Estimated freshness window is 3–5 days remaining. Selling soon is recommended to protect value.',
     attentionActionLabel: 'Sell Soon',
     attentionActionRoute: '/sell/best-options',
   },
@@ -267,8 +269,11 @@ const INITIAL_CROPS: CropItem[] = [
       { date: '04 Sep', price: 20.0 },
     ],
 
-    watchTag: 'Price stable hai, stock surakshit',
+    watchTag: 'Stable Price, Safe Storage',
     watchUrgency: 'neutral',
+    attentionMessage: 'Potato stock safe in cold storage with 25–35 days remaining. Market demand remains steady.',
+    attentionActionLabel: 'View Details',
+    attentionActionRoute: '/produce/crop_3',
   },
   {
     id: 'crop_4',
@@ -323,8 +328,11 @@ const INITIAL_CROPS: CropItem[] = [
       { date: '04 Sep', price: 28.5 },
     ],
 
-    watchTag: 'Demand stable hai',
+    watchTag: 'Long Shelf Life, Stable Demand',
     watchUrgency: 'neutral',
+    attentionMessage: 'Dry grain in sealed condition with 90+ days shelf-life. High market demand.',
+    attentionActionLabel: 'View Details',
+    attentionActionRoute: '/produce/crop_4',
   },
 ];
 
@@ -332,10 +340,10 @@ export const useProduceStore = create<ProduceStoreState>((set, get) => ({
   crops: INITIAL_CROPS,
 
   addCrop: (newCropData) => {
-    const id = `crop_${Date.now()}`;
+    const newId = `crop_${Date.now()}`;
     const newCrop: CropItem = {
       ...newCropData,
-      id,
+      id: newId,
     };
 
     set((state) => ({
@@ -347,31 +355,40 @@ export const useProduceStore = create<ProduceStoreState>((set, get) => ({
 
   updateCropCondition: (id, condition, note) => {
     set((state) => ({
-      crops: state.crops.map((c) =>
-        c.id === id
-          ? {
-              ...c,
-              condition,
-              conditionNote: note || c.conditionNote,
-              conditionUpdatedAt: 'Today',
-            }
-          : c
-      ),
+      crops: state.crops.map((c) => {
+        if (c.id === id) {
+          return {
+            ...c,
+            condition,
+            conditionNote: note !== undefined ? note : c.conditionNote,
+            conditionUpdatedAt: 'Today',
+          };
+        }
+        return c;
+      }),
     }));
   },
 
   updateCropQuantity: (id, availableKg, reservedKg) => {
     set((state) => ({
-      crops: state.crops.map((c) =>
-        c.id === id
-          ? {
-              ...c,
-              availableKg,
-              reservedKg: reservedKg !== undefined ? reservedKg : c.reservedKg,
-              totalKg: availableKg + (reservedKg !== undefined ? reservedKg : c.reservedKg) + c.soldKg,
-            }
-          : c
-      ),
+      crops: state.crops.map((c) => {
+        if (c.id === id) {
+          const res = reservedKg !== undefined ? reservedKg : c.reservedKg;
+          return {
+            ...c,
+            availableKg,
+            reservedKg: res,
+            totalKg: availableKg + res + c.soldKg,
+          };
+        }
+        return c;
+      }),
+    }));
+  },
+
+  deleteCrop: (id) => {
+    set((state) => ({
+      crops: state.crops.filter((c) => c.id !== id),
     }));
   },
 

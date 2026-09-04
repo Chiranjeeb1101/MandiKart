@@ -7,9 +7,11 @@
  * 3. Market Intelligence & Reference Price (AGMARKNET verified source & timestamp)
  * 4. Interactive 7D / 30D / 90D Price Trend Chart (SVG Polyline)
  * 5. Estimated Total Market Value calculation
- * 6. Paas Ki Mandi (Nearby Mandi Preview)
- * 7. Update Condition Modal
- * 8. Primary CTA: "Sell This Fasal" -> /sell/best-options
+ * 6. Nearby Mandi Preview (Distance, typical transit time, arrival volume)
+ * 7. Update Condition Modal & Stock Adjustment Modal
+ * 8. Primary CTA: "Sell This Crop" -> /sell/best-options
+ *
+ * Simple, professional English throughout.
  */
 
 import React, { useState, useMemo } from 'react';
@@ -47,6 +49,8 @@ import {
   ArrowRight,
   X,
   HelpCircle,
+  Trash2,
+  PlusCircle,
 } from 'lucide-react-native';
 import { MKColors } from '@/constants/colors';
 import {
@@ -65,6 +69,8 @@ export default function CropDetailsScreen() {
 
   const crops = useProduceStore((state) => state.crops);
   const updateCropCondition = useProduceStore((state) => state.updateCropCondition);
+  const updateCropQuantity = useProduceStore((state) => state.updateCropQuantity);
+  const deleteCrop = useProduceStore((state) => state.deleteCrop);
 
   // Find crop
   const crop = crops.find((c) => c.id === id);
@@ -79,6 +85,12 @@ export default function CropDetailsScreen() {
   );
   const [conditionNote, setConditionNote] = useState(crop?.conditionNote || '');
 
+  // Stock Adjustment Modal
+  const [stockModalVisible, setStockModalVisible] = useState(false);
+  const [availableStockInput, setAvailableStockInput] = useState(
+    crop ? crop.availableKg.toString() : '0'
+  );
+
   // Freshness Info Modal
   const [freshnessInfoModalVisible, setFreshnessInfoModalVisible] = useState(false);
 
@@ -86,15 +98,15 @@ export default function CropDetailsScreen() {
     return (
       <View style={[styles.notFoundContainer, { paddingTop: insets.top }]}>
         <AlertCircle size={48} color={MKColors.accentOrange} />
-        <Text style={styles.notFoundTitle}>Fasal Nahi Mili</Text>
+        <Text style={styles.notFoundTitle}>Crop Not Found</Text>
         <Text style={styles.notFoundSubtitle}>
-          Ye fasal inventory mein maujood nahi hai ya hata di gayi hai.
+          This crop is no longer available in your inventory.
         </Text>
         <Pressable
           style={styles.backHomeBtn}
           onPress={() => router.replace('/(tabs)/produce')}
         >
-          <Text style={styles.backHomeBtnText}>Wapas Produce Par Jayein</Text>
+          <Text style={styles.backHomeBtnText}>Back to My Produce</Text>
         </Pressable>
       </View>
     );
@@ -118,28 +130,57 @@ export default function CropDetailsScreen() {
   const handleSaveCondition = () => {
     updateCropCondition(crop.id, selectedCondition, conditionNote);
     setConditionModalVisible(false);
-    Alert.alert('Condition Updated', 'Fasal ki sthiti safaltapoorvak update ho gayi.');
+    Alert.alert('Condition Updated', 'Crop condition has been updated successfully.');
+  };
+
+  const handleSaveStock = () => {
+    const newQty = parseFloat(availableStockInput);
+    if (isNaN(newQty) || newQty < 0) {
+      Alert.alert('Invalid Quantity', 'Please enter a valid stock weight in kg.');
+      return;
+    }
+    updateCropQuantity(crop.id, newQty);
+    setStockModalVisible(false);
+    Alert.alert('Stock Updated', `Available stock updated to ${newQty.toLocaleString()} kg.`);
+  };
+
+  const handleDeleteCrop = () => {
+    Alert.alert(
+      'Remove Crop',
+      `Are you sure you want to remove ${crop.cropName} from your active inventory?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Remove',
+          style: 'destructive',
+          onPress: () => {
+            deleteCrop(crop.id);
+            router.replace('/(tabs)/produce');
+          },
+        },
+      ]
+    );
   };
 
   const getConditionBadge = (cond: CropCondition) => {
     switch (cond) {
       case 'Good':
         return {
-          label: 'Achhi Sthiti (Good)',
+          label: 'Good Condition',
           color: MKColors.primaryGreen,
           bg: MKColors.primaryGreenSurface,
           icon: CheckCircle2,
         };
       case 'Needs Attention':
         return {
-          label: 'Dhyan Dein (Attention)',
+          label: 'Needs Attention',
           color: MKColors.accentOrange,
           bg: MKColors.accentOrangeSurface,
           icon: AlertTriangle,
         };
       case 'Deteriorating':
         return {
-          label: 'Kharab Ho Rahi Hai',
+          label: 'Deteriorating',
           color: '#DC2626',
           bg: '#FEE2E2',
           icon: AlertCircle,
@@ -193,21 +234,17 @@ export default function CropDetailsScreen() {
           <ArrowLeft size={22} color={MKColors.textPrimary} />
         </Pressable>
         <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerSubtitle}>Fasal Intelligence</Text>
+          <Text style={styles.headerSubtitle}>Crop Intelligence</Text>
           <Text style={styles.headerTitle} numberOfLines={1}>
             {crop.cropName}
           </Text>
         </View>
         <Pressable
-          style={styles.updateConditionIconBtn}
-          onPress={() => {
-            setSelectedCondition(crop.condition);
-            setConditionNote(crop.conditionNote || '');
-            setConditionModalVisible(true);
-          }}
-          accessibilityLabel="Update Condition"
+          style={styles.deleteIconBtn}
+          onPress={handleDeleteCrop}
+          accessibilityLabel="Remove Crop"
         >
-          <Edit3 size={18} color={MKColors.primaryGreen} />
+          <Trash2 size={18} color="#DC2626" />
         </Pressable>
       </View>
 
@@ -241,7 +278,7 @@ export default function CropDetailsScreen() {
 
             {crop.conditionUpdatedAt && (
               <Text style={styles.lastCheckedText}>
-                Akhiri jaanch: {crop.conditionUpdatedAt}
+                Last inspected: {crop.conditionUpdatedAt}
               </Text>
             )}
 
@@ -259,7 +296,17 @@ export default function CropDetailsScreen() {
         <View style={styles.sectionCard}>
           <View style={styles.sectionCardHeader}>
             <Scale size={18} color={MKColors.primaryGreen} />
-            <Text style={styles.sectionCardTitle}>Kul Stock Vivaran</Text>
+            <Text style={styles.sectionCardTitle}>Stock Allocation</Text>
+            <Pressable
+              style={styles.editStockBtn}
+              onPress={() => {
+                setAvailableStockInput(crop.availableKg.toString());
+                setStockModalVisible(true);
+              }}
+            >
+              <Edit3 size={13} color={MKColors.primaryGreen} style={{ marginRight: 4 }} />
+              <Text style={styles.editStockBtnText}>Adjust Stock</Text>
+            </Pressable>
           </View>
 
           {/* Multi-segment progress bar */}
@@ -295,7 +342,7 @@ export default function CropDetailsScreen() {
               <Text style={styles.stockStatNum}>
                 {crop.totalKg.toLocaleString()} kg
               </Text>
-              <Text style={styles.stockStatLabel}>Kul Stock (Total)</Text>
+              <Text style={styles.stockStatLabel}>Total Stock</Text>
             </View>
 
             <View style={styles.stockStatCol}>
@@ -304,7 +351,7 @@ export default function CropDetailsScreen() {
               </Text>
               <View style={styles.colorDotLabel}>
                 <View style={[styles.smallDot, { backgroundColor: MKColors.primaryGreen }]} />
-                <Text style={styles.stockStatLabel}>Uplabdh (Available)</Text>
+                <Text style={styles.stockStatLabel}>Available</Text>
               </View>
             </View>
 
@@ -325,9 +372,9 @@ export default function CropDetailsScreen() {
           <View style={styles.sectionCardHeader}>
             <Clock
               size={18}
-              color={crop.shelfLifeDaysEstMax <= 4 ? '#DC2626' : MKColors.primaryGreen}
+              color={crop.shelfLifeDaysEstMax <= 5 ? '#DC2626' : MKColors.primaryGreen}
             />
-            <Text style={styles.sectionCardTitle}>Anumanit Freshness Window</Text>
+            <Text style={styles.sectionCardTitle}>Estimated Freshness Window</Text>
             <Pressable
               onPress={() => setFreshnessInfoModalVisible(true)}
               hitSlop={8}
@@ -339,20 +386,20 @@ export default function CropDetailsScreen() {
 
           <View style={styles.freshnessHighlightBox}>
             <Text style={styles.freshnessDaysText}>
-              Approx. {crop.shelfLifeDaysEstMin} se {crop.shelfLifeDaysEstMax} din
+              Approx. {crop.shelfLifeDaysEstMin} to {crop.shelfLifeDaysEstMax} days
             </Text>
             <Text style={styles.freshnessSubText}>
-              Kataai: {crop.harvestDate} • Storage: {crop.storageType}
+              Harvested: {crop.harvestDate} • Storage: {crop.storageType}
             </Text>
           </View>
 
           <Text style={styles.shelfLifeBasisText}>
-            📌 Aadhar: {crop.shelfLifeBasis}
+            📌 Basis: {crop.shelfLifeBasis}
           </Text>
 
           {crop.storageDetails ? (
             <Text style={styles.storageDetailsSub}>
-              Godam Vivaran: {crop.storageDetails}
+              Facility: {crop.storageDetails}
             </Text>
           ) : null}
         </View>
@@ -361,12 +408,12 @@ export default function CropDetailsScreen() {
         <View style={styles.sectionCard}>
           <View style={styles.sectionCardHeader}>
             <Building2 size={18} color={MKColors.primaryGreen} />
-            <Text style={styles.sectionCardTitle}>Mandi Market Intelligence</Text>
+            <Text style={styles.sectionCardTitle}>Market Intelligence</Text>
           </View>
 
           <View style={styles.marketPriceRow}>
             <View>
-              <Text style={styles.marketRateLabel}>Sandarbh Mandi Bhav (Ref Price):</Text>
+              <Text style={styles.marketRateLabel}>Reference Mandi Rate:</Text>
               <Text style={styles.marketRateValue}>
                 ₹{crop.referencePricePerKg}
                 <Text style={styles.perKgUnit}> / kg</Text>
@@ -396,8 +443,8 @@ export default function CropDetailsScreen() {
                   ]}
                 >
                   {crop.priceMovementPct > 0
-                    ? `+${crop.priceMovementPct}% (7 din)`
-                    : `${crop.priceMovementPct}% (7 din)`}
+                    ? `+${crop.priceMovementPct}% (7D)`
+                    : `${crop.priceMovementPct}% (7D)`}
                 </Text>
               </View>
               <Text style={styles.demandBadgeText}>
@@ -409,20 +456,20 @@ export default function CropDetailsScreen() {
           <View style={styles.sourceVerifiedRow}>
             <ShieldCheck size={13} color={MKColors.primaryGreen} />
             <Text style={styles.sourceVerifiedText}>
-              Srot: {crop.marketName} ({crop.marketSource}) • {crop.marketLastUpdated}
+              Source: {crop.marketName} ({crop.marketSource}) • {crop.marketLastUpdated}
             </Text>
           </View>
 
           {/* Estimated Total Market Value */}
           <View style={styles.estimatedValueBox}>
             <Text style={styles.estValueLabel}>
-              Uplabdh Stock Ka Anumanit Mandi Mulya:
+              Estimated Available Market Value:
             </Text>
             <Text style={styles.estValueNum}>
               ₹{estimatedMarketValue.toLocaleString('en-IN')}
             </Text>
             <Text style={styles.estValueDisclaimer}>
-              ({crop.availableKg} kg × ₹{crop.referencePricePerKg}/kg). Asli praapti khareedar aur grading par tay hogi.
+              Calculated as {crop.availableKg.toLocaleString()} kg × ₹{crop.referencePricePerKg}/kg. Final payout depends on buyer contract, grading, and logistics.
             </Text>
           </View>
         </View>
@@ -431,7 +478,7 @@ export default function CropDetailsScreen() {
         <View style={styles.sectionCard}>
           <View style={styles.sectionCardHeader}>
             <TrendingUp size={18} color={MKColors.primaryGreen} />
-            <Text style={styles.sectionCardTitle}>Mandi Bhav Trend (AGMARKNET)</Text>
+            <Text style={styles.sectionCardTitle}>Price Trend History (AGMARKNET)</Text>
           </View>
 
           {/* Interval Switcher */}
@@ -454,10 +501,10 @@ export default function CropDetailsScreen() {
                     ]}
                   >
                     {interval === '7D'
-                      ? 'Pichle 7 Din'
+                      ? 'Past 7 Days'
                       : interval === '30D'
-                      ? '30 Din'
-                      : '3 Mahine'}
+                      ? 'Past 30 Days'
+                      : 'Past 3 Months'}
                   </Text>
                 </Pressable>
               );
@@ -542,21 +589,21 @@ export default function CropDetailsScreen() {
           </View>
         </View>
 
-        {/* ── Paas Ki Mandi (Nearby Mandi Preview) ────────────────── */}
+        {/* ── Nearby Mandi Preview ───────────────────────────────── */}
         <View style={styles.sectionCard}>
           <View style={styles.sectionCardHeader}>
             <MapPin size={18} color={MKColors.primaryGreen} />
-            <Text style={styles.sectionCardTitle}>Paas Ki Mandi (Nearby APMC)</Text>
+            <Text style={styles.sectionCardTitle}>Nearest APMC Mandi</Text>
           </View>
 
           <View style={styles.nearbyMandiCard}>
             <View style={{ flex: 1 }}>
               <Text style={styles.nearbyMandiName}>{crop.marketName}</Text>
               <Text style={styles.nearbyMandiDist}>
-                📍 Approx. {crop.marketDistanceKm} km door • 45 min drive
+                📍 Approx. {crop.marketDistanceKm} km away • 45 min transit
               </Text>
               <Text style={styles.nearbyArrivalText}>
-                Aaj ka aamad: ~1,200 Quintal darj hui
+                Today's recorded arrivals: ~1,200 Quintals
               </Text>
             </View>
             <ChevronRight size={20} color={MKColors.textSecondary} />
@@ -575,7 +622,7 @@ export default function CropDetailsScreen() {
               })
             }
           >
-            <Text style={styles.compareMandiBtnText}>Dusri Mandiyan Compare Karein</Text>
+            <Text style={styles.compareMandiBtnText}>Compare Other Regional Markets</Text>
             <ArrowRight size={14} color={MKColors.primaryGreen} />
           </Pressable>
         </View>
@@ -584,7 +631,7 @@ export default function CropDetailsScreen() {
         <View style={{ height: 90 }} />
       </ScrollView>
 
-      {/* ── Sticky Bottom Action Bar: "Sell This Fasal" ─────────── */}
+      {/* ── Sticky Bottom Action Bar: "Sell This Crop" ─────────── */}
       <View style={[styles.bottomActionBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
         <Pressable
           style={({ pressed }) => [
@@ -603,7 +650,7 @@ export default function CropDetailsScreen() {
           }
         >
           <Text style={styles.primarySellButtonText}>
-            Is Fasal Ko Sell Karein ({crop.availableKg} kg)
+            Sell This Crop ({crop.availableKg.toLocaleString()} kg available)
           </Text>
           <ArrowRight size={20} color="#FFFFFF" style={{ marginLeft: 8 }} />
         </Pressable>
@@ -619,7 +666,7 @@ export default function CropDetailsScreen() {
         <View style={styles.modalOverlay}>
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>Fasal Ki Sthiti Update Karein</Text>
+              <Text style={styles.modalTitle}>Update Crop Condition</Text>
               <Pressable
                 onPress={() => setConditionModalVisible(false)}
                 hitSlop={10}
@@ -629,7 +676,7 @@ export default function CropDetailsScreen() {
             </View>
 
             <Text style={styles.modalSubtitle}>
-              {crop.cropName} ki vartamaan sthiti chunein:
+              Select the current physical condition of your {crop.cropName}:
             </Text>
 
             {(['Good', 'Needs Attention', 'Deteriorating'] as CropCondition[]).map((c) => {
@@ -666,13 +713,13 @@ export default function CropDetailsScreen() {
             })}
 
             <Text style={[styles.modalFieldLabel, { marginTop: 14 }]}>
-              Koi dhyan dene yogya baat (Note):
+              Inspection Note (Optional):
             </Text>
             <TextInput
               style={styles.modalNoteInput}
               value={conditionNote}
               onChangeText={setConditionNote}
-              placeholder="e.g. Sahi dhoop lagi hai / Nami thodi badh rahi hai..."
+              placeholder="e.g. Moderate humidity observed, good natural aeration..."
               placeholderTextColor={MKColors.textMuted}
               multiline
             />
@@ -681,7 +728,56 @@ export default function CropDetailsScreen() {
               style={styles.modalSaveBtn}
               onPress={handleSaveCondition}
             >
-              <Text style={styles.modalSaveBtnText}>Sthiti Save Karein</Text>
+              <Text style={styles.modalSaveBtnText}>Save Condition</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Stock Adjustment Modal ───────────────────────────────── */}
+      <Modal
+        visible={stockModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setStockModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContainer}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Adjust Available Stock</Text>
+              <Pressable
+                onPress={() => setStockModalVisible(false)}
+                hitSlop={10}
+              >
+                <X size={20} color={MKColors.textSecondary} />
+              </Pressable>
+            </View>
+
+            <Text style={styles.modalSubtitle}>
+              Update remaining available stock for {crop.cropName} (in kilograms):
+            </Text>
+
+            <View style={styles.stockInputRow}>
+              <TextInput
+                style={styles.stockNumericInput}
+                keyboardType="numeric"
+                value={availableStockInput}
+                onChangeText={setAvailableStockInput}
+                placeholder="e.g. 1000"
+                placeholderTextColor={MKColors.textMuted}
+              />
+              <Text style={styles.stockUnitText}>KG</Text>
+            </View>
+
+            <Text style={styles.stockHelperText}>
+              Note: Reserved stock ({crop.reservedKg} kg) remains allocated for active buyer bookings.
+            </Text>
+
+            <Pressable
+              style={styles.modalSaveBtn}
+              onPress={handleSaveStock}
+            >
+              <Text style={styles.modalSaveBtnText}>Save Stock</Text>
             </Pressable>
           </View>
         </View>
@@ -698,7 +794,7 @@ export default function CropDetailsScreen() {
           <View style={styles.modalContainer}>
             <View style={styles.modalHeader}>
               <Clock size={22} color={MKColors.primaryGreen} />
-              <Text style={styles.modalTitle}>Freshness Window Jankari</Text>
+              <Text style={styles.modalTitle}>Freshness Window Guidelines</Text>
               <Pressable
                 onPress={() => setFreshnessInfoModalVisible(false)}
                 hitSlop={10}
@@ -709,7 +805,7 @@ export default function CropDetailsScreen() {
 
             <View style={styles.estimateBanner}>
               <Text style={styles.estimateBannerTitle}>
-                Approx. {crop.shelfLifeDaysEstMin} se {crop.shelfLifeDaysEstMax} din theek rahegi
+                Approx. {crop.shelfLifeDaysEstMin} to {crop.shelfLifeDaysEstMax} days remaining
               </Text>
               <Text style={styles.estimateBannerSub}>
                 Storage: {crop.storageType} ({crop.storageDetails || 'Standard'})
@@ -717,20 +813,20 @@ export default function CropDetailsScreen() {
             </View>
 
             <Text style={styles.disclaimerPoint}>
-              • Ye koi guarantee nahi hai, balki kataai ki taarikh ({crop.harvestDate}) evam {crop.storageType} storage ki anukul sthiti par aadharit anuman hai.
+              • This estimate is calculated based on your harvest date ({crop.harvestDate}) and proper storage conditions.
             </Text>
             <Text style={styles.disclaimerPoint}>
-              • Mausam ki nami, tapman ya keede lagne se ye samay kam ho sakta hai.
+              • Changes in environmental temperature, humidity, or ventilation can alter actual shelf-life.
             </Text>
             <Text style={styles.disclaimerPoint}>
-              • Har do din mein fasal ka nirikshan karein aur zaroorat padne par 'Condition Update' karein.
+              • Regularly inspect your crops and update their condition status to keep buyers informed.
             </Text>
 
             <Pressable
               style={styles.modalSaveBtn}
               onPress={() => setFreshnessInfoModalVisible(false)}
             >
-              <Text style={styles.modalSaveBtnText}>Theek Hai, Samajh Gaya</Text>
+              <Text style={styles.modalSaveBtnText}>Got it, Thank you</Text>
             </Pressable>
           </View>
         </View>
@@ -812,11 +908,11 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: MKColors.textPrimary,
   },
-  updateConditionIconBtn: {
+  deleteIconBtn: {
     width: 44,
     height: 44,
     borderRadius: 22,
-    backgroundColor: '#E8F5E9',
+    backgroundColor: '#FEE2E2',
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -921,6 +1017,20 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: MKColors.textPrimary,
     marginLeft: 8,
+  },
+  editStockBtn: {
+    marginLeft: 'auto',
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#E8F5E9',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  editStockBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: MKColors.primaryGreen,
   },
 
   // Stock Visual
@@ -1254,6 +1364,34 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: MKColors.textPrimary,
     textAlignVertical: 'top',
+    marginBottom: 16,
+  },
+  stockInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FAFAF8',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: MKColors.border,
+    paddingHorizontal: 12,
+    height: 50,
+    marginBottom: 8,
+  },
+  stockNumericInput: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '800',
+    color: MKColors.textPrimary,
+  },
+  stockUnitText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: MKColors.textSecondary,
+  },
+  stockHelperText: {
+    fontSize: 11,
+    color: MKColors.textMuted,
+    lineHeight: 15,
     marginBottom: 16,
   },
   modalSaveBtn: {

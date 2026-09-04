@@ -1,13 +1,15 @@
 /**
  * MandiKart — Produce Screen ("My Crop Intelligence Center")
  *
- * Core Farmer Mental Model:
- * "MERE PAAS KYA HAI? -> KITNA HAI? -> CONDITION KYA HAI? -> KITNE DIN THEEK RAHEGA? -> MARKET KYA HAI? -> SELL KARNA HAI TO SELL PAR JAO"
+ * Core Farmer Workflow:
+ * WHAT DO I HAVE? -> HOW MUCH? -> CROP CONDITION -> HOW MANY DAYS REMAINING?
+ * -> MARKET DEMAND & PRICE -> WHICH CROP NEEDS ATTENTION? -> READY TO SELL
  *
  * Designed with UI UX Pro Max standards:
- * - Clean semantic typography, warm MK palette
- * - 48px+ touch targets
- * - Verified AGMARKNET / e-NAM data citation (no fake live claims)
+ * - Proper simple English throughout
+ * - Fully interactive top summary metric cards that filter crops dynamically
+ * - Visual active state feedback
+ * - Strict AGMARKNET/e-NAM data integrity
  * - Freshness estimation with clear disclaimers
  * - Direct routing to /produce/add, /produce/[id], and /sell/best-options
  */
@@ -39,7 +41,6 @@ import {
   Building2,
   Info,
   X,
-  SlidersHorizontal,
   ChevronRight,
   Sparkles,
   PackageCheck,
@@ -47,6 +48,8 @@ import {
   Warehouse,
   Bell,
   HelpCircle,
+  Layers,
+  Lock,
 } from 'lucide-react-native';
 import { MKColors } from '@/constants/colors';
 import { useProduceStore, CropItem, CropCondition } from '@/store/produceStore';
@@ -58,8 +61,8 @@ export default function ProduceScreen() {
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedFilter, setSelectedFilter] = useState<'all' | 'attention' | 'available' | 'high_demand'>('all');
-  const [freshnessInfoModalVisible, setFreshnessInfoModalVisible] = useState(false);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'available' | 'reserved' | 'attention' | 'high_demand'>('all');
+  const [freshnessModalVisible, setFreshnessModalVisible] = useState(false);
   const [selectedCropForInfo, setSelectedCropForInfo] = useState<CropItem | null>(null);
 
   // Derived Metrics for Summary Strip
@@ -67,10 +70,10 @@ export default function ProduceScreen() {
   const totalAvailableKg = crops.reduce((sum, c) => sum + c.availableKg, 0);
   const totalReservedKg = crops.reduce((sum, c) => sum + c.reservedKg, 0);
   const attentionCropsCount = crops.filter(
-    (c) => c.condition !== 'Good' || c.shelfLifeDaysEstMax <= 4
+    (c) => c.condition !== 'Good' || c.shelfLifeDaysEstMax <= 5
   ).length;
 
-  // Filtered crops
+  // Filtered crops based on active search and activeFilter
   const filteredCrops = useMemo(() => {
     return crops.filter((crop) => {
       const matchesSearch =
@@ -80,51 +83,54 @@ export default function ProduceScreen() {
 
       if (!matchesSearch) return false;
 
-      if (selectedFilter === 'attention') {
-        return crop.condition !== 'Good' || crop.shelfLifeDaysEstMax <= 4;
+      if (activeFilter === 'attention') {
+        return crop.condition !== 'Good' || crop.shelfLifeDaysEstMax <= 5;
       }
-      if (selectedFilter === 'available') {
+      if (activeFilter === 'available') {
         return crop.availableKg > 0;
       }
-      if (selectedFilter === 'high_demand') {
+      if (activeFilter === 'reserved') {
+        return crop.reservedKg > 0;
+      }
+      if (activeFilter === 'high_demand') {
         return crop.marketDemand === 'High';
       }
       return true;
     });
-  }, [crops, searchQuery, selectedFilter]);
+  }, [crops, searchQuery, activeFilter]);
 
   // Urgent attention crops
   const urgentCrops = useMemo(() => {
-    return crops.filter((c) => c.condition !== 'Good' || c.shelfLifeDaysEstMax <= 4);
+    return crops.filter((c) => c.condition !== 'Good' || c.shelfLifeDaysEstMax <= 5);
   }, [crops]);
 
   const formatQuantity = (kg: number) => {
     if (kg >= 1000) {
       const quintals = kg / 100;
-      return `${quintals % 1 === 0 ? quintals : quintals.toFixed(1)} Qtl (${kg} kg)`;
+      return `${quintals % 1 === 0 ? quintals : quintals.toFixed(1)} Qtl (${kg.toLocaleString()} kg)`;
     }
-    return `${kg} kg`;
+    return `${kg.toLocaleString()} kg`;
   };
 
   const getConditionConfig = (condition: CropCondition) => {
     switch (condition) {
       case 'Good':
         return {
-          label: 'Achhi Sthiti (Good)',
+          label: 'Good Condition',
           color: MKColors.primaryGreen,
           bg: MKColors.primaryGreenSurface,
           icon: CheckCircle2,
         };
       case 'Needs Attention':
         return {
-          label: 'Dhyan Dein (Attention)',
+          label: 'Needs Attention',
           color: MKColors.accentOrange,
           bg: MKColors.accentOrangeSurface,
           icon: AlertTriangle,
         };
       case 'Deteriorating':
         return {
-          label: 'Kharab Ho Rahi Hai',
+          label: 'Deteriorating',
           color: '#DC2626',
           bg: '#FEE2E2',
           icon: AlertCircle,
@@ -144,8 +150,8 @@ export default function ProduceScreen() {
       {/* ── Top Header ────────────────────────────────────────────── */}
       <View style={styles.headerRow}>
         <View style={styles.headerTextGroup}>
-          <Text style={styles.headerSubtitle}>MandiKart Fasal Prabandhan</Text>
-          <Text style={styles.headerTitle}>Merī Fasal (Produce)</Text>
+          <Text style={styles.headerSubtitle}>MandiKart Inventory & Intel</Text>
+          <Text style={styles.headerTitle}>My Produce</Text>
         </View>
         <Pressable
           style={styles.headerIconButton}
@@ -162,33 +168,69 @@ export default function ProduceScreen() {
         contentContainerStyle={styles.screenScrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Summary Strip: 4 Key Metrics ────────────────────────── */}
+        {/* ── Interactive Summary Strip: 4 Key Metric Cards ────────── */}
         <View style={styles.summaryStrip}>
-          <View style={styles.metricCard}>
+          {/* Card 1: Total Crops */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.metricCard,
+              activeFilter === 'all' && styles.metricCardActive,
+              pressed && styles.pressedMetric,
+            ]}
+            onPress={() => setActiveFilter('all')}
+          >
             <View style={[styles.metricIconWrap, { backgroundColor: '#E8F5E9' }]}>
               <PackageCheck size={18} color={MKColors.primaryGreen} />
             </View>
             <Text style={styles.metricValue}>{totalCropsCount}</Text>
-            <Text style={styles.metricLabel}>Kul Faslein</Text>
-          </View>
+            <Text style={styles.metricLabel}>Total Crops</Text>
+            {activeFilter === 'all' && <View style={styles.activeBar} />}
+          </Pressable>
 
-          <View style={styles.metricCard}>
+          {/* Card 2: Available Stock */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.metricCard,
+              activeFilter === 'available' && styles.metricCardActive,
+              pressed && styles.pressedMetric,
+            ]}
+            onPress={() => setActiveFilter('available')}
+          >
             <View style={[styles.metricIconWrap, { backgroundColor: '#FFF3E0' }]}>
               <Scale size={18} color={MKColors.accentOrange} />
             </View>
             <Text style={styles.metricValue}>{(totalAvailableKg / 100).toFixed(0)} Qtl</Text>
-            <Text style={styles.metricLabel}>Uplabdh Stock</Text>
-          </View>
+            <Text style={styles.metricLabel}>Available</Text>
+            {activeFilter === 'available' && <View style={styles.activeBar} />}
+          </Pressable>
 
-          <View style={styles.metricCard}>
+          {/* Card 3: Reserved Stock */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.metricCard,
+              activeFilter === 'reserved' && styles.metricCardActive,
+              pressed && styles.pressedMetric,
+            ]}
+            onPress={() => setActiveFilter('reserved')}
+          >
             <View style={[styles.metricIconWrap, { backgroundColor: '#F0F9FF' }]}>
               <Warehouse size={18} color="#0284C7" />
             </View>
             <Text style={styles.metricValue}>{(totalReservedKg / 100).toFixed(0)} Qtl</Text>
             <Text style={styles.metricLabel}>Reserved</Text>
-          </View>
+            {activeFilter === 'reserved' && <View style={styles.activeBar} />}
+          </Pressable>
 
-          <View style={[styles.metricCard, attentionCropsCount > 0 && styles.metricCardAlert]}>
+          {/* Card 4: Needs Attention */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.metricCard,
+              attentionCropsCount > 0 && styles.metricCardAlert,
+              activeFilter === 'attention' && styles.metricCardActiveAlert,
+              pressed && styles.pressedMetric,
+            ]}
+            onPress={() => setActiveFilter('attention')}
+          >
             <View
               style={[
                 styles.metricIconWrap,
@@ -208,11 +250,19 @@ export default function ProduceScreen() {
             >
               {attentionCropsCount}
             </Text>
-            <Text style={styles.metricLabel}>Dhyan Chahiye</Text>
-          </View>
+            <Text style={styles.metricLabel}>Attention</Text>
+            {activeFilter === 'attention' && (
+              <View
+                style={[
+                  styles.activeBar,
+                  { backgroundColor: attentionCropsCount > 0 ? '#DC2626' : MKColors.primaryGreen },
+                ]}
+              />
+            )}
+          </Pressable>
         </View>
 
-        {/* ── Primary CTA: "+ Add Fasal" ─────────────────────────── */}
+        {/* ── Primary CTA: "+ Add New Crop" ──────────────────────── */}
         <Pressable
           style={({ pressed }) => [styles.addProduceCta, pressed && styles.pressedCard]}
           onPress={() => router.push('/produce/add')}
@@ -223,14 +273,14 @@ export default function ProduceScreen() {
             </View>
             <View style={styles.addCtaTextGroup}>
               <View style={styles.addCtaBadgeRow}>
-                <Text style={styles.addCtaTitle}>+ Nayi Fasal Add Karein</Text>
+                <Text style={styles.addCtaTitle}>+ Add New Crop</Text>
                 <View style={styles.quickAddBadge}>
                   <Sparkles size={11} color="#FFFFFF" />
-                  <Text style={styles.quickAddBadgeText}>Aasan Form</Text>
+                  <Text style={styles.quickAddBadgeText}>Quick Intake</Text>
                 </View>
               </View>
               <Text style={styles.addCtaSubtitle}>
-                Apni fasal ki quantity aur photo jod kar sahi daam aur khareedar paayein
+                Add your harvest to monitor freshness, track market price, and find verified buyers
               </Text>
             </View>
             <ChevronRight size={22} color={MKColors.primaryGreen} />
@@ -243,7 +293,7 @@ export default function ProduceScreen() {
             <Search size={18} color={MKColors.textSecondary} style={{ marginRight: 8 }} />
             <TextInput
               style={styles.searchInput}
-              placeholder="Fasal ya variety khojein (e.g. Onion, Wheat)..."
+              placeholder="Search crop, variety, or category..."
               placeholderTextColor={MKColors.textMuted}
               value={searchQuery}
               onChangeText={setSearchQuery}
@@ -263,53 +313,53 @@ export default function ProduceScreen() {
             <Pressable
               style={[
                 styles.filterChip,
-                selectedFilter === 'all' && styles.filterChipActive,
+                activeFilter === 'all' && styles.filterChipActive,
               ]}
-              onPress={() => setSelectedFilter('all')}
+              onPress={() => setActiveFilter('all')}
             >
               <Text
                 style={[
                   styles.filterChipText,
-                  selectedFilter === 'all' && styles.filterChipTextActive,
+                  activeFilter === 'all' && styles.filterChipTextActive,
                 ]}
               >
-                Sabhi ({crops.length})
+                All Crops ({crops.length})
               </Text>
             </Pressable>
 
             <Pressable
               style={[
                 styles.filterChip,
-                selectedFilter === 'attention' && styles.filterChipActiveAlert,
+                activeFilter === 'attention' && styles.filterChipActiveAlert,
               ]}
-              onPress={() => setSelectedFilter('attention')}
+              onPress={() => setActiveFilter('attention')}
             >
               <AlertTriangle
                 size={13}
-                color={selectedFilter === 'attention' ? '#DC2626' : MKColors.accentOrange}
+                color={activeFilter === 'attention' ? '#DC2626' : MKColors.accentOrange}
                 style={{ marginRight: 4 }}
               />
               <Text
                 style={[
                   styles.filterChipText,
-                  selectedFilter === 'attention' && styles.filterChipTextActiveAlert,
+                  activeFilter === 'attention' && styles.filterChipTextActiveAlert,
                 ]}
               >
-                Dhyan Chahiye ({attentionCropsCount})
+                Needs Attention ({attentionCropsCount})
               </Text>
             </Pressable>
 
             <Pressable
               style={[
                 styles.filterChip,
-                selectedFilter === 'available' && styles.filterChipActive,
+                activeFilter === 'available' && styles.filterChipActive,
               ]}
-              onPress={() => setSelectedFilter('available')}
+              onPress={() => setActiveFilter('available')}
             >
               <Text
                 style={[
                   styles.filterChipText,
-                  selectedFilter === 'available' && styles.filterChipTextActive,
+                  activeFilter === 'available' && styles.filterChipTextActive,
                 ]}
               >
                 Available Stock
@@ -319,31 +369,53 @@ export default function ProduceScreen() {
             <Pressable
               style={[
                 styles.filterChip,
-                selectedFilter === 'high_demand' && styles.filterChipActive,
+                activeFilter === 'reserved' && styles.filterChipActive,
               ]}
-              onPress={() => setSelectedFilter('high_demand')}
+              onPress={() => setActiveFilter('reserved')}
             >
-              <TrendingUp
-                size={13}
-                color={selectedFilter === 'high_demand' ? '#FFFFFF' : MKColors.primaryGreen}
+              <Lock
+                size={12}
+                color={activeFilter === 'reserved' ? '#FFFFFF' : MKColors.textSecondary}
                 style={{ marginRight: 4 }}
               />
               <Text
                 style={[
                   styles.filterChipText,
-                  selectedFilter === 'high_demand' && styles.filterChipTextActive,
+                  activeFilter === 'reserved' && styles.filterChipTextActive,
                 ]}
               >
-                High Demand
+                Reserved Stock ({totalReservedKg > 0 ? `${(totalReservedKg / 100).toFixed(0)} Qtl` : '0'})
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={[
+                styles.filterChip,
+                activeFilter === 'high_demand' && styles.filterChipActive,
+              ]}
+              onPress={() => setActiveFilter('high_demand')}
+            >
+              <TrendingUp
+                size={13}
+                color={activeFilter === 'high_demand' ? '#FFFFFF' : MKColors.primaryGreen}
+                style={{ marginRight: 4 }}
+              />
+              <Text
+                style={[
+                  styles.filterChipText,
+                  activeFilter === 'high_demand' && styles.filterChipTextActive,
+                ]}
+              >
+                High Market Demand
               </Text>
             </Pressable>
           </ScrollView>
         </View>
 
-        {/* ── Section Level 1: "Merī Faslein" (My Crops) ──────────── */}
+        {/* ── Section Level 1: "My Crops" ────────────────────────── */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Merī Faslein (My Inventory)</Text>
-          <Text style={styles.sectionCountText}>{filteredCrops.length} fasal</Text>
+          <Text style={styles.sectionTitle}>My Inventory</Text>
+          <Text style={styles.sectionCountText}>{filteredCrops.length} crop{filteredCrops.length !== 1 ? 's' : ''}</Text>
         </View>
 
         {filteredCrops.length === 0 ? (
@@ -351,22 +423,26 @@ export default function ProduceScreen() {
             <View style={styles.emptyStateIcon}>
               <PackageCheck size={40} color={MKColors.textSecondary} />
             </View>
-            <Text style={styles.emptyStateTitle}>Koi fasal nahi mili</Text>
+            <Text style={styles.emptyStateTitle}>No crops found</Text>
             <Text style={styles.emptyStateSubtitle}>
               {searchQuery
-                ? `"${searchQuery}" se judi koi fasal uplabdh nahi hai.`
-                : 'Aapne abhi tak koi fasal darj nahi ki hai. Nayi fasal jodein!'}
+                ? `No crops matched your search for "${searchQuery}".`
+                : activeFilter === 'reserved'
+                ? 'No crops currently have reserved stock.'
+                : activeFilter === 'attention'
+                ? 'All your crops are in good condition!'
+                : 'You have not added any crops yet. Tap below to add your first harvest.'}
             </Text>
             <Pressable
               style={styles.emptyStateButton}
               onPress={() => {
                 setSearchQuery('');
-                setSelectedFilter('all');
+                setActiveFilter('all');
                 router.push('/produce/add');
               }}
             >
               <Plus size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.emptyStateButtonText}>Nayi Fasal Jodein</Text>
+              <Text style={styles.emptyStateButtonText}>Add New Crop</Text>
             </Pressable>
           </View>
         ) : (
@@ -410,7 +486,7 @@ export default function ProduceScreen() {
                     <Text style={styles.stockStatusLabel}>
                       Available: <Text style={styles.stockHighlight}>{formatQuantity(crop.availableKg)}</Text>
                     </Text>
-                    <Text style={styles.stockTotalLabel}>Kul: {formatQuantity(crop.totalKg)}</Text>
+                    <Text style={styles.stockTotalLabel}>Total: {formatQuantity(crop.totalKg)}</Text>
                   </View>
                   <View style={styles.progressBarTrack}>
                     <View
@@ -426,7 +502,7 @@ export default function ProduceScreen() {
                   </View>
                   {crop.reservedKg > 0 && (
                     <Text style={styles.reservedSubtext}>
-                      🔒 {crop.reservedKg} kg khareedar ke liye reserved hai
+                      🔒 {crop.reservedKg.toLocaleString()} kg reserved for confirmed buyer orders
                     </Text>
                   )}
                 </View>
@@ -438,20 +514,20 @@ export default function ProduceScreen() {
                     style={styles.intelligencePill}
                     onPress={() => {
                       setSelectedCropForInfo(crop);
-                      setFreshnessInfoModalVisible(true);
+                      setFreshnessModalVisible(true);
                     }}
                   >
                     <Clock
                       size={14}
-                      color={crop.shelfLifeDaysEstMax <= 4 ? '#DC2626' : MKColors.textSecondary}
+                      color={crop.shelfLifeDaysEstMax <= 5 ? '#DC2626' : MKColors.textSecondary}
                     />
                     <Text
                       style={[
                         styles.intelligenceText,
-                        crop.shelfLifeDaysEstMax <= 4 && { color: '#DC2626', fontWeight: '700' },
+                        crop.shelfLifeDaysEstMax <= 5 && { color: '#DC2626', fontWeight: '700' },
                       ]}
                     >
-                      Approx. {crop.shelfLifeDaysEstMin}–{crop.shelfLifeDaysEstMax} din
+                      Approx. {crop.shelfLifeDaysEstMin}–{crop.shelfLifeDaysEstMax} days
                     </Text>
                     <Info size={12} color={MKColors.textMuted} style={{ marginLeft: 2 }} />
                   </Pressable>
@@ -495,7 +571,7 @@ export default function ProduceScreen() {
                 <View style={styles.sourceVerifiedRow}>
                   <ShieldCheck size={12} color={MKColors.primaryGreen} />
                   <Text style={styles.sourceVerifiedText}>
-                    Mandi Bhav: {crop.marketName} ({crop.marketSource}) • {crop.marketLastUpdated}
+                    Benchmark: {crop.marketName} ({crop.marketSource}) • {crop.marketLastUpdated}
                   </Text>
                 </View>
 
@@ -508,7 +584,7 @@ export default function ProduceScreen() {
                     ]}
                     onPress={() => router.push(`/produce/${crop.id}` as any)}
                   >
-                    <Text style={styles.detailsButtonText}>Details Dekhein</Text>
+                    <Text style={styles.detailsButtonText}>View Details</Text>
                   </Pressable>
 
                   <Pressable
@@ -527,7 +603,7 @@ export default function ProduceScreen() {
                       })
                     }
                   >
-                    <Text style={styles.sellCropButtonText}>Sell Karein</Text>
+                    <Text style={styles.sellCropButtonText}>Sell This Crop</Text>
                     <ArrowRight size={16} color="#FFFFFF" style={{ marginLeft: 6 }} />
                   </Pressable>
                 </View>
@@ -536,9 +612,9 @@ export default function ProduceScreen() {
           })
         )}
 
-        {/* ── Section Level 2: "Abhi Kya Dhyan Dein" (Action Alerts) ── */}
+        {/* ── Section Level 2: "Action Alerts" ───────────────────── */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Abhi Kya Dhyan Dein (Action Alerts)</Text>
+          <Text style={styles.sectionTitle}>Action Alerts & Quality Reminders</Text>
         </View>
 
         {urgentCrops.length > 0 ? (
@@ -547,11 +623,11 @@ export default function ProduceScreen() {
               <View style={styles.alertCardHeader}>
                 <AlertTriangle size={18} color={MKColors.accentOrange} />
                 <Text style={styles.alertCardTitle}>
-                  {crop.cropName}: {crop.attentionMessage || 'Nirakshan ki aavashyakta'}
+                  {crop.cropName}: {crop.attentionMessage || 'Attention Required'}
                 </Text>
               </View>
               <Text style={styles.alertCardDesc}>
-                Storage sthiti: {crop.storageDetails || crop.storageType}. Anumanit samay {crop.shelfLifeDaysEstMin}–{crop.shelfLifeDaysEstMax} din bacha hai.
+                Storage location: {crop.storageDetails || crop.storageType}. Estimated shelf-life window is {crop.shelfLifeDaysEstMin}–{crop.shelfLifeDaysEstMax} days remaining.
               </Text>
               <View style={styles.alertActionRow}>
                 <Pressable
@@ -567,14 +643,14 @@ export default function ProduceScreen() {
                     })
                   }
                 >
-                  <Text style={styles.alertActionText}>Abhi Sell Karein</Text>
+                  <Text style={styles.alertActionText}>Sell Now</Text>
                   <ArrowRight size={14} color={MKColors.primaryGreen} />
                 </Pressable>
                 <Pressable
                   style={styles.alertSecondaryButton}
                   onPress={() => router.push(`/produce/${crop.id}` as any)}
                 >
-                  <Text style={styles.alertSecondaryText}>Sthiti Update Karein</Text>
+                  <Text style={styles.alertSecondaryText}>Update Condition</Text>
                 </Pressable>
               </View>
             </View>
@@ -583,22 +659,26 @@ export default function ProduceScreen() {
           <View style={styles.allSafeBanner}>
             <CheckCircle2 size={20} color={MKColors.primaryGreen} style={{ marginRight: 10 }} />
             <View style={{ flex: 1 }}>
-              <Text style={styles.allSafeTitle}>Sabhi fasal surakshit hain!</Text>
+              <Text style={styles.allSafeTitle}>All crops are in good condition!</Text>
               <Text style={styles.allSafeSubtitle}>
-                Aapki sabhi faslein sahi condition aur regular monitoring mein hain.
+                Your inventory is safely stored and regular quality checks are up to date.
               </Text>
             </View>
           </View>
         )}
 
-        {/* ── Section Level 2: "Aapki Fasal Par Nazar" (My Crop Watch) ─ */}
+        {/* ── Section Level 2: "Crop Market Watch" ───────────────── */}
         <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionTitle}>Aapki Fasal Par Nazar (Crop Watch)</Text>
+          <Text style={styles.sectionTitle}>My Crop Market Watch</Text>
         </View>
 
         <View style={styles.watchContainer}>
           {crops.map((crop) => (
-            <View key={`watch_${crop.id}`} style={styles.watchRow}>
+            <Pressable
+              key={`watch_${crop.id}`}
+              style={({ pressed }) => [styles.watchRow, pressed && { backgroundColor: '#F8FAFC' }]}
+              onPress={() => router.push(`/produce/${crop.id}` as any)}
+            >
               <View style={styles.watchCropBadge}>
                 <Text style={styles.watchCropName}>{crop.cropName}</Text>
               </View>
@@ -609,7 +689,7 @@ export default function ProduceScreen() {
                 </Text>
               </View>
               <ChevronRight size={16} color={MKColors.textSecondary} />
-            </View>
+            </Pressable>
           ))}
         </View>
 
@@ -617,7 +697,7 @@ export default function ProduceScreen() {
         <View style={styles.disclaimerContainer}>
           <Info size={15} color={MKColors.textSecondary} style={{ marginRight: 8, marginTop: 2 }} />
           <Text style={styles.disclaimerText}>
-            Mandi dar evam shelf-life ke aakde AGMARKNET evan Krishi vigyan kendra ke standard adhar par anumanit hain. Asli bikri mulya fasal ki gunvatta, grading aur khareedar ke sath tay hota hai.
+            Mandi rates and freshness estimates are benchmarked against official AGMARKNET feeds and agricultural standards. Realized selling prices depend on actual crop quality, grading, and buyer negotiation.
           </Text>
         </View>
 
@@ -627,18 +707,18 @@ export default function ProduceScreen() {
 
       {/* ── Freshness Information Disclaimer Modal ─────────────────── */}
       <Modal
-        visible={freshnessInfoModalVisible}
+        visible={freshnessModalVisible}
         transparent
         animationType="fade"
-        onRequestClose={() => setFreshnessInfoModalVisible(false)}
+        onRequestClose={() => setFreshnessModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
           <View style={styles.modalBox}>
             <View style={styles.modalHeader}>
               <Clock size={22} color={MKColors.primaryGreen} />
-              <Text style={styles.modalTitle}>Freshness Window (Shelf-Life)</Text>
+              <Text style={styles.modalTitle}>Estimated Freshness Window</Text>
               <Pressable
-                onPress={() => setFreshnessInfoModalVisible(false)}
+                onPress={() => setFreshnessModalVisible(false)}
                 hitSlop={12}
               >
                 <X size={20} color={MKColors.textSecondary} />
@@ -651,29 +731,29 @@ export default function ProduceScreen() {
 
             <View style={styles.modalEstimatePill}>
               <Text style={styles.modalEstimateValue}>
-                Approx. {selectedCropForInfo?.shelfLifeDaysEstMin} se {selectedCropForInfo?.shelfLifeDaysEstMax} din
+                Approx. {selectedCropForInfo?.shelfLifeDaysEstMin} to {selectedCropForInfo?.shelfLifeDaysEstMax} days
               </Text>
               <Text style={styles.modalEstimateSubtitle}>
-                (Sahi storage condition mein surakshit)
+                Safe under proper storage conditions
               </Text>
             </View>
 
-            <Text style={styles.modalSectionHeading}>Kyon jaruri hai ye janna?</Text>
+            <Text style={styles.modalSectionHeading}>How is this calculated?</Text>
             <Text style={styles.modalBodyText}>
-              • Ye koi guarantee nahi hai, balki aapki harvest date aur storage prakar ({selectedCropForInfo?.storageType}) ke aadhar par anumanit avadhi hai.
+              • This is an approximate guidance based on your harvest date and storage type ({selectedCropForInfo?.storageType}).
             </Text>
             <Text style={styles.modalBodyText}>
-              • Storage basis: {selectedCropForInfo?.shelfLifeBasis || 'Dry standard storage'}.
+              • Storage basis: {selectedCropForInfo?.shelfLifeBasis || 'Standard ambient warehouse storage'}.
             </Text>
             <Text style={styles.modalBodyText}>
-              • Agar fasal ka rang ya nami badal rahi ho, to kripya Crop Details screen par jaakar 'Condition Update' karein.
+              • If you observe changes in humidity, color, or texture, update the crop's condition on the Crop Details screen.
             </Text>
 
             <Pressable
               style={styles.modalDismissBtn}
-              onPress={() => setFreshnessInfoModalVisible(false)}
+              onPress={() => setFreshnessModalVisible(false)}
             >
-              <Text style={styles.modalDismissBtnText}>Samajh Gaya</Text>
+              <Text style={styles.modalDismissBtnText}>Understood</Text>
             </Pressable>
           </View>
         </View>
@@ -744,7 +824,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#DC2626',
   },
 
-  // ── Summary Strip ─────────────────────────────────────────────────
+  // ── Interactive Summary Strip ─────────────────────────────────────
   summaryStrip: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -753,22 +833,46 @@ const styles = StyleSheet.create({
   metricCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 12,
+    borderRadius: 14,
     paddingVertical: 10,
-    paddingHorizontal: 8,
+    paddingHorizontal: 6,
     marginHorizontal: 3,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: MKColors.border,
     alignItems: 'center',
-    elevation: 1,
+    position: 'relative',
+    overflow: 'hidden',
+    elevation: 2,
     shadowColor: '#000',
-    shadowOpacity: 0.04,
+    shadowOpacity: 0.05,
     shadowRadius: 4,
     shadowOffset: { width: 0, height: 2 },
+  },
+  metricCardActive: {
+    borderColor: MKColors.primaryGreen,
+    backgroundColor: '#F0FDF4',
+    transform: [{ scale: 1.02 }],
   },
   metricCardAlert: {
     borderColor: '#FCA5A5',
     backgroundColor: '#FFF5F5',
+  },
+  metricCardActiveAlert: {
+    borderColor: '#DC2626',
+    backgroundColor: '#FEE2E2',
+    transform: [{ scale: 1.02 }],
+  },
+  pressedMetric: {
+    opacity: 0.85,
+    transform: [{ scale: 0.98 }],
+  },
+  activeBar: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    height: 3,
+    backgroundColor: MKColors.primaryGreen,
   },
   metricIconWrap: {
     width: 32,
@@ -785,7 +889,7 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 10,
-    fontWeight: '600',
+    fontWeight: '700',
     color: MKColors.textSecondary,
     marginTop: 2,
     textAlign: 'center',
@@ -1244,6 +1348,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     borderBottomWidth: 1,
     borderBottomColor: MKColors.borderLight,
+    borderRadius: 8,
   },
   watchCropBadge: {
     backgroundColor: '#F1F5F9',
