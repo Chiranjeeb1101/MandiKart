@@ -328,7 +328,6 @@ export default function HomeScreen() {
       <View style={styles.glanceSectionContainer}>
         <View style={styles.glanceHeaderRow}>
           <Text style={styles.glanceSectionTitle}>Today at a Glance</Text>
-          <Text style={styles.glanceDateLabel}>Live Farmgate Status</Text>
         </View>
 
         <View style={styles.metricsRow}>
@@ -341,7 +340,7 @@ export default function HomeScreen() {
             ]}
           >
             <View style={[styles.metricIconCircle, { backgroundColor: '#FFF2E8' }]}>
-              <FileText size={17} color="#D9531E" strokeWidth={2.4} />
+              <FileText size={19} color="#D9531E" strokeWidth={2.4} />
             </View>
             <Text style={styles.metricBigNumber}>2</Text>
             <Text numberOfLines={1} style={styles.metricLabel}>
@@ -361,7 +360,7 @@ export default function HomeScreen() {
             ]}
           >
             <View style={[styles.metricIconCircle, { backgroundColor: '#E8F5E9' }]}>
-              <Truck size={17} color="#15803D" strokeWidth={2.4} />
+              <Truck size={19} color="#15803D" strokeWidth={2.4} />
             </View>
             <Text numberOfLines={1} style={styles.metricBigText}>
               Tomorrow
@@ -384,7 +383,7 @@ export default function HomeScreen() {
             ]}
           >
             <View style={[styles.metricIconCircle, { backgroundColor: '#E8F5E9' }]}>
-              <Wallet size={17} color="#15803D" strokeWidth={2.4} />
+              <Wallet size={19} color="#15803D" strokeWidth={2.4} />
             </View>
             <Text numberOfLines={1} style={styles.metricBigTextGreen}>
               ₹48.5k
@@ -482,16 +481,12 @@ export default function HomeScreen() {
         ]}
       >
         <View style={styles.heroSellContent}>
-          <View style={styles.heroBadge}>
-            <Sparkles size={12} color="#FFFFFF" />
-            <Text style={styles.heroBadgeText}>ZERO MIDDLEMAN FEE</Text>
-          </View>
           <Text style={styles.heroSellTitle}>What do you want{'\n'}to sell today?</Text>
           <Text style={styles.heroSellSubtitle}>
-            Connect with 45+ verified corporate buyers and get guaranteed farmgate pickup.
+            Direct corporate buyers, guaranteed pickup & same-day settlement.
           </Text>
           <View style={styles.inlineAddBtn}>
-            <Plus size={15} color="#FFFFFF" strokeWidth={2.6} />
+            <Plus size={16} color="#FFFFFF" strokeWidth={2.6} />
             <Text style={styles.inlineAddBtnText}>Add Product</Text>
           </View>
         </View>
@@ -598,46 +593,37 @@ export default function HomeScreen() {
                   <View style={styles.opportunityCardTop}>
                     <Image source={{ uri: prod.imageUri }} style={styles.oppCropThumb} />
                     <View style={styles.oppCropDetails}>
-                      <View style={styles.oppMatchPill}>
-                        <Star size={11} color="#FFFFFF" fill="#FFFFFF" />
-                        <Text style={styles.oppMatchPillText}>{prod.match}</Text>
-                      </View>
                       <Text numberOfLines={1} style={styles.oppCropTitle}>{prod.name}</Text>
                       <Text numberOfLines={1} style={styles.oppCropSub}>{prod.subname}</Text>
                     </View>
                     <View style={styles.oppDemandPill}>
-                      <Flame size={12} color="#EA580C" fill="#EA580C" />
+                      <Flame size={13} color="#EA580C" fill="#EA580C" />
                       <Text style={styles.oppDemandText}>{prod.demand}</Text>
                     </View>
                   </View>
 
-                  {/* Pricing Breakdown Grid */}
-                  <View style={styles.oppBreakdownRow}>
-                    <View style={styles.oppBreakdownCol}>
-                      <Text numberOfLines={1} style={styles.oppBreakdownLabel}>Selling Price</Text>
-                      <Text numberOfLines={1} style={styles.oppBreakdownVal}>{prod.sellingPrice}</Text>
+                  {/* Clean 2-Zone Pricing Spotlight Bar (Fixed overwriting boxes) */}
+                  <View style={styles.oppPriceBanner}>
+                    <View style={styles.oppPricePrimary}>
+                      <Text style={styles.oppPricePrimaryLabel}>Net Farmer Rate</Text>
+                      <Text style={styles.oppPricePrimaryValue}>{prod.netReturn}</Text>
                     </View>
-                    <View style={styles.oppBreakdownDivider} />
-                    <View style={styles.oppBreakdownCol}>
-                      <Text numberOfLines={1} style={styles.oppBreakdownLabel}>Transport</Text>
-                      <Text numberOfLines={1} style={styles.oppBreakdownValSub}>- {prod.transport}</Text>
-                    </View>
-                    <View style={styles.oppBreakdownDivider} />
-                    <View style={styles.oppBreakdownCol}>
-                      <Text numberOfLines={1} style={styles.oppBreakdownLabel}>Net Return</Text>
-                      <Text numberOfLines={1} style={styles.oppBreakdownValGreen}>{prod.netReturn}</Text>
+                    <View style={styles.oppPriceDivider} />
+                    <View style={styles.oppPriceSecondary}>
+                      <Text style={styles.oppPriceSecondaryLabel}>Mandi Benchmark</Text>
+                      <Text style={styles.oppPriceSecondaryValue}>{prod.sellingPrice}</Text>
                     </View>
                   </View>
 
-                  {/* Buyer Demand Pill & Action Button */}
-                  <View style={styles.oppFooterRow}>
-                    <View style={styles.oppBuyerTag}>
-                      <ShieldCheck size={14} color="#15803D" />
-                      <Text numberOfLines={1} style={styles.oppBuyerTagText}>{prod.buyers}</Text>
+                  {/* Buyer Badge & Direct Action Button */}
+                  <View style={styles.oppBottomRow}>
+                    <View style={styles.oppBuyerBadge}>
+                      <ShieldCheck size={14} color="#15803D" strokeWidth={2.4} />
+                      <Text numberOfLines={1} style={styles.oppBuyerBadgeText}>{prod.buyers}</Text>
                     </View>
                     <Pressable
                       style={({ pressed }) => [
-                        styles.oppSellActionBtn,
+                        styles.oppActionBtn,
                         pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] },
                       ]}
                       onPress={() =>
@@ -647,7 +633,7 @@ export default function HomeScreen() {
                         })
                       }
                     >
-                      <Text style={styles.oppSellActionText}>Sell This Produce</Text>
+                      <Text style={styles.oppActionBtnText}>Sell Harvest</Text>
                       <ArrowRight size={14} color="#FFFFFF" strokeWidth={2.4} />
                     </Pressable>
                   </View>
@@ -761,7 +747,7 @@ export default function HomeScreen() {
         <View style={styles.weatherHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
             <Sun size={18} color="#EA580C" />
-            <Text style={styles.weatherTitle}>Weather & Farmgate Advisory</Text>
+            <Text style={styles.weatherTitle}>Weather & Harvest Advisory</Text>
           </View>
           <View style={styles.weatherTempBadge}>
             <Text style={styles.weatherTempText}>29°C Sunny</Text>
@@ -939,7 +925,7 @@ const styles = StyleSheet.create({
 
   /* ── 2. Today at a Glance (Top Middle) ── */
   glanceSectionContainer: {
-    marginBottom: 10,
+    marginBottom: 12,
   },
   glanceHeaderRow: {
     flexDirection: 'row',
@@ -948,14 +934,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   glanceSectionTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
     color: '#1A1C1E',
-  },
-  glanceDateLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    color: '#64748B',
   },
   metricsRow: {
     flexDirection: 'row',
@@ -965,95 +946,95 @@ const styles = StyleSheet.create({
   metricCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    paddingVertical: 10,
-    paddingHorizontal: 4,
+    borderRadius: 20,
+    paddingVertical: 14,
+    paddingHorizontal: 6,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
-    minHeight: 114,
-    elevation: 2,
+    minHeight: 132,
+    elevation: 3,
     shadowColor: '#1A1C1E',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
+    shadowOpacity: 0.06,
     shadowRadius: 6,
     minWidth: 0,
   },
   metricCardLast: {},
   metricIconCircle: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   metricBigNumber: {
-    fontSize: 19,
+    fontSize: 22,
     fontWeight: '900',
     color: '#1A1C1E',
-    marginBottom: 1,
+    marginBottom: 2,
   },
   metricBigText: {
-    fontSize: 12,
+    fontSize: 13.5,
     fontWeight: '900',
     color: '#1A1C1E',
     textAlign: 'center',
-    marginBottom: 1,
+    marginBottom: 2,
   },
   metricBigTextGreen: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '900',
     color: '#15803D',
     textAlign: 'center',
-    marginBottom: 1,
+    marginBottom: 2,
   },
   metricLabel: {
-    fontSize: 10,
-    lineHeight: 13,
+    fontSize: 11,
+    lineHeight: 14,
     color: '#64748B',
     textAlign: 'center',
-    fontWeight: '600',
-    marginBottom: 4,
+    fontWeight: '700',
+    marginBottom: 5,
   },
   metricStatusPillOrange: {
     backgroundColor: '#FFEDD5',
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 5,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   metricStatusPillOrangeText: {
-    fontSize: 8.5,
+    fontSize: 9.5,
     fontWeight: '800',
     color: '#C2410C',
   },
   metricStatusPillGreen: {
     backgroundColor: '#DCFCE7',
-    paddingHorizontal: 5,
-    paddingVertical: 2,
-    borderRadius: 5,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
   },
   metricStatusPillGreenText: {
-    fontSize: 8.5,
+    fontSize: 9.5,
     fontWeight: '800',
     color: '#15803D',
   },
 
   /* ── 3. Search Bar with Voice Feature ── */
   searchBarWrapper: {
-    marginBottom: 10,
+    marginBottom: 12,
   },
   searchBarInner: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
-    paddingHorizontal: 12,
-    height: 46,
-    shadowColor: '#000',
+    paddingHorizontal: 14,
+    height: 48,
+    shadowColor: '#1A1C1E',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.04,
     shadowRadius: 4,
@@ -1074,15 +1055,15 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   voiceMicBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
     backgroundColor: '#15803D',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#15803D',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
+    shadowOpacity: 0.25,
     shadowRadius: 3,
     elevation: 2,
   },
@@ -1173,8 +1154,8 @@ const styles = StyleSheet.create({
   heroSellCard: {
     width: '100%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 12,
+    borderRadius: 20,
+    padding: 16,
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
     elevation: 3,
@@ -1182,7 +1163,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
-    minHeight: 120,
+    minHeight: 140,
     overflow: 'hidden',
     marginBottom: 12,
     flexDirection: 'row',
@@ -1190,65 +1171,52 @@ const styles = StyleSheet.create({
   },
   heroSellContent: {
     flex: 1,
-    paddingRight: 6,
+    paddingRight: 8,
     minWidth: 0,
   },
-  heroBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#15803D',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 5,
-    alignSelf: 'flex-start',
-    marginBottom: 4,
-  },
-  heroBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 0.4,
-  },
   heroSellTitle: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 17,
+    fontWeight: '900',
     color: '#1A1C1E',
-    marginBottom: 2,
-    lineHeight: 19,
+    marginBottom: 4,
+    lineHeight: 22,
   },
   heroSellSubtitle: {
-    fontSize: 11,
-    color: '#5F6368',
-    marginBottom: 8,
-    lineHeight: 15,
+    fontSize: 11.5,
+    color: '#4B5563',
+    marginBottom: 10,
+    lineHeight: 16,
   },
   inlineAddBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#15803D',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 7,
     alignSelf: 'flex-start',
     gap: 5,
-    elevation: 1,
+    elevation: 2,
+    shadowColor: '#15803D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
   },
   inlineAddBtnText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '800',
     color: '#FFFFFF',
   },
   heroBasketImage: {
-    width: 78,
-    height: 78,
+    width: 88,
+    height: 88,
     resizeMode: 'contain',
     flexShrink: 0,
   },
 
   /* ── 5. Best Opportunity 2-Sided Segmented Section ── */
   opportunitySectionWrap: {
-    marginBottom: 10,
+    marginBottom: 12,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
@@ -1257,7 +1225,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sectionHeadingTitle: {
-    fontSize: 15.5,
+    fontSize: 16,
     fontWeight: '800',
     color: '#1A1C1E',
   },
@@ -1267,16 +1235,16 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   viewAllBtnText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '700',
     color: '#15803D',
   },
   segmentedTabContainer: {
     flexDirection: 'row',
     backgroundColor: '#EFE8DC',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 3,
-    marginBottom: 10,
+    marginBottom: 12,
     gap: 4,
   },
   segmentTab: {
@@ -1284,10 +1252,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 7,
-    paddingHorizontal: 6,
-    borderRadius: 9,
-    gap: 4,
+    paddingVertical: 8,
+    paddingHorizontal: 8,
+    borderRadius: 11,
+    gap: 5,
   },
   segmentTabActive: {
     backgroundColor: '#FFFFFF',
@@ -1298,7 +1266,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   segmentTabText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '600',
     color: '#64748B',
   },
@@ -1309,7 +1277,7 @@ const styles = StyleSheet.create({
   segmentTabCountBadge: {
     backgroundColor: '#E2E8F0',
     paddingHorizontal: 5,
-    paddingVertical: 1,
+    paddingVertical: 1.5,
     borderRadius: 5,
   },
   segmentTabCountBadgeActive: {
@@ -1324,151 +1292,147 @@ const styles = StyleSheet.create({
     color: '#15803D',
   },
   opportunityCardsList: {
-    gap: 10,
+    gap: 12,
   },
   opportunityCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 12,
+    borderRadius: 20,
+    padding: 16,
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowColor: '#1A1C1E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
   },
   opportunityCardTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   oppCropThumb: {
-    width: 42,
-    height: 42,
-    borderRadius: 10,
-    marginRight: 8,
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    marginRight: 10,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   oppCropDetails: {
     flex: 1,
     minWidth: 0,
-    paddingRight: 6,
-  },
-  oppMatchPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: '#15803D',
-    paddingHorizontal: 5,
-    paddingVertical: 1.5,
-    borderRadius: 5,
-    alignSelf: 'flex-start',
-    marginBottom: 2,
-  },
-  oppMatchPillText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    paddingRight: 8,
   },
   oppCropTitle: {
-    fontSize: 14,
+    fontSize: 15.5,
     fontWeight: '800',
     color: '#1A1C1E',
   },
   oppCropSub: {
-    fontSize: 10.5,
+    fontSize: 11.5,
     color: '#64748B',
-    marginTop: 1,
+    marginTop: 2,
   },
   oppDemandPill: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
+    gap: 4,
     backgroundColor: '#FFEDD5',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
     flexShrink: 0,
   },
   oppDemandText: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '800',
     color: '#EA580C',
   },
-  oppBreakdownRow: {
+  oppPriceBanner: {
     flexDirection: 'row',
-    backgroundColor: '#F9FAFB',
-    borderRadius: 10,
-    padding: 8,
-    marginBottom: 8,
+    backgroundColor: '#F8FBF8',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 12,
+    alignItems: 'center',
     justifyContent: 'space-between',
-    alignItems: 'center',
   },
-  oppBreakdownCol: {
+  oppPricePrimary: {
     flex: 1,
-    alignItems: 'center',
-    minWidth: 0,
   },
-  oppBreakdownLabel: {
-    fontSize: 9.5,
+  oppPricePrimaryLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#15803D',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+    marginBottom: 2,
+  },
+  oppPricePrimaryValue: {
+    fontSize: 15,
+    fontWeight: '900',
+    color: '#14532D',
+  },
+  oppPriceDivider: {
+    width: 1,
+    height: 28,
+    backgroundColor: '#BBF7D0',
+    marginHorizontal: 10,
+  },
+  oppPriceSecondary: {
+    flex: 1,
+    alignItems: 'flex-end',
+  },
+  oppPriceSecondaryLabel: {
+    fontSize: 10,
     fontWeight: '600',
     color: '#64748B',
-    marginBottom: 1,
+    marginBottom: 2,
   },
-  oppBreakdownVal: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1E293B',
+  oppPriceSecondaryValue: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: '#334155',
   },
-  oppBreakdownValSub: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: '#DC2626',
-  },
-  oppBreakdownValGreen: {
-    fontSize: 13,
-    fontWeight: '900',
-    color: '#15803D',
-  },
-  oppBreakdownDivider: {
-    width: 1,
-    height: 20,
-    backgroundColor: '#E2E8F0',
-  },
-  oppFooterRow: {
+  oppBottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 6,
+    gap: 8,
   },
-  oppBuyerTag: {
+  oppBuyerBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 5,
     backgroundColor: '#F0FDF4',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
-    flex: 1,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 8,
+    flexShrink: 1,
     minWidth: 0,
   },
-  oppBuyerTagText: {
-    fontSize: 10.5,
+  oppBuyerBadgeText: {
+    fontSize: 11,
     fontWeight: '700',
     color: '#15803D',
   },
-  oppSellActionBtn: {
+  oppActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
     backgroundColor: '#15803D',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 10,
     flexShrink: 0,
+    elevation: 1,
   },
-  oppSellActionText: {
-    fontSize: 11.5,
+  oppActionBtnText: {
+    fontSize: 12,
     fontWeight: '800',
     color: '#FFFFFF',
   },
@@ -1476,21 +1440,21 @@ const styles = StyleSheet.create({
   /* ── Produce Recommendations Cards ── */
   recCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 12,
+    borderRadius: 20,
+    padding: 16,
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowColor: '#1A1C1E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 6,
+    elevation: 3,
   },
   recCardHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   recBadgePill: {
     flexDirection: 'row',
@@ -1503,11 +1467,11 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   recBadgeText: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: '800',
   },
   recCropTitle: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
     color: '#1A1C1E',
   },
@@ -1520,15 +1484,15 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   recPriceVal: {
-    fontSize: 14,
-    fontWeight: '800',
+    fontSize: 15,
+    fontWeight: '900',
     color: '#15803D',
     marginTop: 2,
   },
   recAdviceText: {
-    fontSize: 12,
+    fontSize: 12.5,
     color: '#475569',
-    lineHeight: 16,
+    lineHeight: 18,
     marginBottom: 12,
   },
   recFooterRow: {
@@ -1541,12 +1505,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     backgroundColor: '#F1F5F9',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
     borderRadius: 8,
   },
   recCycleText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '600',
     color: '#475569',
   },
@@ -1555,22 +1519,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     backgroundColor: '#E8F5E9',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#C8E6C9',
   },
   recAddProduceText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '800',
     color: '#15803D',
   },
 
   /* ── 6. APMC Mandi Rates ── */
   apmcCard: {
-    padding: 14,
-    borderRadius: 18,
+    padding: 16,
+    borderRadius: 20,
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
   },
@@ -1586,7 +1550,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   apmcTitle: {
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: '800',
     color: '#1F2937',
   },
@@ -1621,18 +1585,18 @@ const styles = StyleSheet.create({
   },
   apmcDividerV: {
     width: 1,
-    height: 36,
+    height: 38,
     backgroundColor: '#E5E7EB',
   },
   apmcCrop: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: '#6B7280',
     fontWeight: '600',
     marginBottom: 2,
   },
   apmcPrice: {
-    fontSize: 15,
-    fontWeight: '800',
+    fontSize: 16,
+    fontWeight: '900',
     color: '#111827',
   },
   apmcUnit: {
@@ -1641,7 +1605,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   apmcTrend: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: '700',
     marginTop: 2,
   },
@@ -1649,8 +1613,8 @@ const styles = StyleSheet.create({
   /* ── 7. Weather Card ── */
   weatherCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 14,
+    borderRadius: 20,
+    padding: 16,
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
     marginTop: 12,
@@ -1662,9 +1626,9 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   weatherTitle: {
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: '800',
-    color: '#1F2937',
+    color: '#1A1C1E',
   },
   weatherTempBadge: {
     backgroundColor: '#FFEDD5',
