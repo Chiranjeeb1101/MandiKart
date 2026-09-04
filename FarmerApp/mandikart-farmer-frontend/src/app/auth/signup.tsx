@@ -44,7 +44,7 @@ import {
   User,
   X,
 } from 'lucide-react-native';
-import { MKBackground } from '@/components/ui';
+import { MKBackground, MKGoogleButton } from '@/components/ui';
 import { MKColors } from '@/constants/colors';
 import { MKShadows } from '@/constants/shadows';
 import { useAppStore } from '@/store/appStore';
@@ -75,7 +75,7 @@ const COUNTRY_CODES = [
 export default function SignUpScreen() {
   const router = useRouter();
   const { language } = useAppStore();
-  const { setPhoneNumber, setUser } = useAuthStore();
+  const { setPhoneNumber, setUser, setIsAuthenticated } = useAuthStore();
   const { t } = useTranslation();
 
   const [firstName, setFirstName] = useState('');
@@ -92,7 +92,36 @@ export default function SignUpScreen() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  const handleGoogleSignUp = () => {
+    setGoogleLoading(true);
+    setTimeout(() => {
+      const googleUser = {
+        id: `farmer_google_${Date.now()}`,
+        name: 'Ramesh Patil',
+        fullName: 'Ramesh Patil',
+        firstName: 'Ramesh',
+        lastName: 'Patil',
+        phone: '+91 98234 56789',
+        email: 'ramesh.patil.farmer@gmail.com',
+        isEmailVerified: true,
+        language: 'en',
+        state: 'Maharashtra',
+        district: 'Nashik',
+        village: 'Dindori',
+        farmSizeAcres: 8,
+        isVerified: true,
+        role: 'FARMER',
+      };
+      setPhoneNumber('+919823456789');
+      setUser(googleUser);
+      setIsAuthenticated(true);
+      setGoogleLoading(false);
+      router.replace('/(tabs)/home');
+    }, 600);
+  };
 
   const selectedLanguage = languageLabels[language] ?? 'English';
   const selectedCountry = COUNTRY_CODES.find((c) => c.code === countryCode) || COUNTRY_CODES[0];
@@ -407,6 +436,21 @@ export default function SignUpScreen() {
                 </View>
               </LinearGradient>
             </Pressable>
+
+            {/* Divider */}
+            <View style={styles.googleDividerRow}>
+              <View style={styles.googleDividerLine} />
+              <Text style={styles.googleDividerText}>OR</Text>
+              <View style={styles.googleDividerLine} />
+            </View>
+
+            {/* Google Authentication Button */}
+            <MKGoogleButton
+              mode="signup"
+              loading={googleLoading}
+              onPress={handleGoogleSignUp}
+              style={{ marginBottom: 6 }}
+            />
 
             <View style={styles.signInRow}>
               <View style={styles.signInLine} />
@@ -993,6 +1037,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
+  },
+  googleDividerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 18,
+    marginBottom: 14,
+  },
+  googleDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: '#EEECE5',
+  },
+  googleDividerText: {
+    paddingHorizontal: 12,
+    fontSize: 12,
+    color: '#9AA0A6',
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   signInRow: {
     marginTop: 21,

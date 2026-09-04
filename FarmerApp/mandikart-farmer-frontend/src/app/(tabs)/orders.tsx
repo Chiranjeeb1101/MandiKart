@@ -442,32 +442,40 @@ export default function OrdersScreen() {
               {/* Inline Live Transit Badge for Active Dispatch */}
               {order.statusType === 'en_route' && (
                 <View style={styles.inlineLiveTransitBanner}>
-                  <View style={styles.inlineTransitLeft}>
-                    <View style={styles.inlineRadarDot} />
-                    <Truck size={14} color="#15803D" strokeWidth={2.4} />
-                    <Text style={styles.inlineTransitText}>
-                      Live Transit • Driver ETA {order.etaMins} mins
+                  <View style={styles.inlineTransitTopRow}>
+                    <View style={styles.inlineTransitLeft}>
+                      <View style={styles.inlineRadarDot} />
+                      <Truck size={13} color="#15803D" strokeWidth={2.4} />
+                      <Text numberOfLines={1} style={styles.inlineTransitText}>
+                        Live Transit • Driver ETA {order.etaMins} mins
+                      </Text>
+                    </View>
+                    <View style={styles.onRoadPill}>
+                      <Text style={styles.onRoadPillText}>ON ROAD</Text>
+                    </View>
+                  </View>
+                  <View style={styles.inlineTransitVehicleRow}>
+                    <Navigation size={11} color="#64748B" />
+                    <Text numberOfLines={1} style={styles.inlineTransitSub}>
+                      {order.vehicleModel} • {order.vehicleNumber}
                     </Text>
                   </View>
-                  <Text style={styles.inlineTransitSub}>
-                    {order.vehicleModel} ({order.vehicleNumber})
-                  </Text>
                 </View>
               )}
 
               {/* Crop & Buyer Info */}
               <View style={styles.cropInfoRow}>
                 <Image source={{ uri: order.cropImage }} style={styles.cropThumb} />
-                <View style={{ flex: 1, minWidth: 0 }}>
-                  <Text numberOfLines={1} style={styles.cropNameTitle}>
+                <View style={{ flex: 1, minWidth: 0, justifyContent: 'center' }}>
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={styles.cropNameTitle}>
                     {order.cropName} • {order.grade}
                   </Text>
-                  <Text numberOfLines={1} style={styles.cropVarietySub}>
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={styles.cropVarietySub}>
                     {order.quantity} • {order.ratePerKg}
                   </Text>
                   <View style={styles.buyerInlineRow}>
                     <Building2 size={12} color="#64748B" />
-                    <Text numberOfLines={1} style={styles.buyerInlineName}>
+                    <Text numberOfLines={1} ellipsizeMode="tail" style={styles.buyerInlineName}>
                       {order.buyerName}
                     </Text>
                     <CheckCircle2 size={12} color="#15803D" fill="#DCFCE7" />
@@ -487,7 +495,7 @@ export default function OrdersScreen() {
                           : styles.stepperDotGreen,
                       ]}
                     />
-                    <Text numberOfLines={1} style={styles.stepperHeaderText}>
+                    <Text numberOfLines={1} ellipsizeMode="tail" style={styles.stepperHeaderText}>
                       {order.statusLabel}
                     </Text>
                   </View>
@@ -497,16 +505,16 @@ export default function OrdersScreen() {
                     <View style={[styles.progressTrack, { width: `${(order.stepIndex / 4) * 100}%` }]} />
                   </View>
                   <View style={styles.progressLabelsRow}>
-                    <Text style={[styles.progressStepLabel, order.stepIndex >= 1 && styles.progressStepLabelActive]}>
+                    <Text numberOfLines={1} style={[styles.progressStepLabel, order.stepIndex >= 1 && styles.progressStepLabelActive]}>
                       Confirmed
                     </Text>
-                    <Text style={[styles.progressStepLabel, order.stepIndex >= 2 && styles.progressStepLabelActive]}>
+                    <Text numberOfLines={1} style={[styles.progressStepLabel, order.stepIndex >= 2 && styles.progressStepLabelActive]}>
                       Pickup Set
                     </Text>
-                    <Text style={[styles.progressStepLabel, order.stepIndex >= 3 && styles.progressStepLabelActive]}>
+                    <Text numberOfLines={1} style={[styles.progressStepLabel, order.stepIndex >= 3 && styles.progressStepLabelActive]}>
                       In Transit
                     </Text>
-                    <Text style={[styles.progressStepLabel, order.stepIndex >= 4 && styles.progressStepLabelActive]}>
+                    <Text numberOfLines={1} style={[styles.progressStepLabel, order.stepIndex >= 4 && styles.progressStepLabelActive]}>
                       Delivered
                     </Text>
                   </View>
@@ -514,7 +522,7 @@ export default function OrdersScreen() {
                   {/* Pickup Slot Brief */}
                   <View style={styles.pickupBriefRow}>
                     <Calendar size={13} color="#64748B" />
-                    <Text numberOfLines={1} style={styles.pickupBriefText}>
+                    <Text numberOfLines={1} ellipsizeMode="tail" style={styles.pickupBriefText}>
                       {order.pickupDate} ({order.pickupTime})
                     </Text>
                   </View>
@@ -543,7 +551,7 @@ export default function OrdersScreen() {
                       onPress={() => setSelectedOrderDetails(order)}
                     >
                       <Eye size={14} color="#374151" />
-                      <Text style={styles.seeDetailsBtnText}>See Orders</Text>
+                      <Text numberOfLines={1} style={styles.seeDetailsBtnText}>See Orders</Text>
                     </Pressable>
 
                     <Pressable
@@ -554,7 +562,7 @@ export default function OrdersScreen() {
                       onPress={() => router.push('/orders/track-vehicle')}
                     >
                       <Truck size={14} color="#FFFFFF" strokeWidth={2.4} />
-                      <Text style={styles.trackVehicleActionText}>Track Order</Text>
+                      <Text numberOfLines={1} style={styles.trackVehicleActionText}>Track Order</Text>
                       <ArrowRight size={13} color="#FFFFFF" strokeWidth={2.4} />
                     </Pressable>
                   </>
@@ -570,7 +578,7 @@ export default function OrdersScreen() {
                       onPress={() => setSelectedOrderDetails(order)}
                     >
                       <Eye size={14} color="#374151" />
-                      <Text style={styles.seeDetailsBtnText}>Details</Text>
+                      <Text numberOfLines={1} style={styles.seeDetailsBtnText}>Details</Text>
                     </Pressable>
 
                     <Pressable
@@ -580,7 +588,7 @@ export default function OrdersScreen() {
                       ]}
                       onPress={() => handleCounterOffer(order)}
                     >
-                      <Text style={styles.counterBtnText}>Counter</Text>
+                      <Text numberOfLines={1} style={styles.counterBtnText}>Counter</Text>
                     </Pressable>
 
                     <Pressable
@@ -591,7 +599,7 @@ export default function OrdersScreen() {
                       onPress={() => handleAcceptOffer(order.id)}
                     >
                       <Check size={14} color="#FFFFFF" strokeWidth={2.5} />
-                      <Text style={styles.acceptBtnText}>Accept Offer</Text>
+                      <Text numberOfLines={1} style={styles.acceptBtnText}>Accept Offer</Text>
                     </Pressable>
                   </>
                 )}
@@ -606,7 +614,7 @@ export default function OrdersScreen() {
                       onPress={() => setSelectedOrderDetails(order)}
                     >
                       <Eye size={14} color="#374151" />
-                      <Text style={styles.seeDetailsBtnText}>See Orders</Text>
+                      <Text numberOfLines={1} style={styles.seeDetailsBtnText}>See Orders</Text>
                     </Pressable>
 
                     <Pressable
@@ -619,7 +627,7 @@ export default function OrdersScreen() {
                       }
                     >
                       <Download size={14} color="#15803D" />
-                      <Text style={styles.invoiceBtnText}>Invoice & Receipt</Text>
+                      <Text numberOfLines={1} style={styles.invoiceBtnText}>Invoice & Receipt</Text>
                     </Pressable>
                   </>
                 )}
@@ -641,11 +649,11 @@ export default function OrdersScreen() {
             <View style={styles.modalSheet}>
               {/* Modal Top Bar */}
               <View style={styles.modalTopBar}>
-                <View>
-                  <Text style={styles.modalOrderTitle}>
+                <View style={{ flex: 1, marginRight: 10 }}>
+                  <Text numberOfLines={1} style={styles.modalOrderTitle}>
                     Order {selectedOrderDetails.orderNumber}
                   </Text>
-                  <Text style={styles.modalOrderSub}>{selectedOrderDetails.statusLabel}</Text>
+                  <Text numberOfLines={1} style={styles.modalOrderSub}>{selectedOrderDetails.statusLabel}</Text>
                 </View>
                 <Pressable
                   onPress={() => setSelectedOrderDetails(null)}
@@ -662,11 +670,11 @@ export default function OrdersScreen() {
                     source={{ uri: selectedOrderDetails.cropImage }}
                     style={styles.modalCropImg}
                   />
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.modalCropName}>{selectedOrderDetails.cropName}</Text>
-                    <Text style={styles.modalCropSub}>{selectedOrderDetails.cropVariety}</Text>
+                  <View style={{ flex: 1, minWidth: 0 }}>
+                    <Text numberOfLines={1} style={styles.modalCropName}>{selectedOrderDetails.cropName}</Text>
+                    <Text numberOfLines={1} style={styles.modalCropSub}>{selectedOrderDetails.cropVariety}</Text>
                     <View style={styles.modalQtyBadge}>
-                      <Text style={styles.modalQtyText}>
+                      <Text numberOfLines={1} style={styles.modalQtyText}>
                         {selectedOrderDetails.quantity} • {selectedOrderDetails.grade}
                       </Text>
                     </View>
@@ -696,7 +704,7 @@ export default function OrdersScreen() {
                   </View>
                   <View style={styles.paymentModeBox}>
                     <CreditCard size={14} color="#15803D" />
-                    <Text style={styles.paymentModeText}>{selectedOrderDetails.paymentMode}</Text>
+                    <Text numberOfLines={1} style={styles.paymentModeText}>{selectedOrderDetails.paymentMode}</Text>
                   </View>
                 </View>
 
@@ -704,12 +712,12 @@ export default function OrdersScreen() {
                 <View style={styles.modalSectionCard}>
                   <Text style={styles.modalSectionHeading}>Buyer Information</Text>
                   <View style={styles.modalBuyerRow}>
-                    <View style={{ flex: 1 }}>
+                    <View style={{ flex: 1, minWidth: 0 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Text style={styles.modalBuyerName}>{selectedOrderDetails.buyerName}</Text>
+                        <Text numberOfLines={1} style={styles.modalBuyerName}>{selectedOrderDetails.buyerName}</Text>
                         <CheckCircle2 size={15} color="#15803D" fill="#DCFCE7" />
                       </View>
-                      <Text style={styles.modalBuyerType}>{selectedOrderDetails.buyerType}</Text>
+                      <Text numberOfLines={1} style={styles.modalBuyerType}>{selectedOrderDetails.buyerType}</Text>
                     </View>
                     <Pressable
                       style={styles.modalCallBtn}
@@ -727,14 +735,14 @@ export default function OrdersScreen() {
                   <View style={styles.modalSectionCard}>
                     <Text style={styles.modalSectionHeading}>Assigned Vehicle & Driver</Text>
                     <View style={styles.driverBox}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.driverNameText}>{selectedOrderDetails.driverName}</Text>
-                        <Text style={styles.driverVehicleText}>
+                      <View style={{ flex: 1, minWidth: 0 }}>
+                        <Text numberOfLines={1} style={styles.driverNameText}>{selectedOrderDetails.driverName}</Text>
+                        <Text numberOfLines={1} style={styles.driverVehicleText}>
                           {selectedOrderDetails.vehicleModel} • {selectedOrderDetails.vehicleNumber}
                         </Text>
                         <View style={styles.driverLocationRow}>
                           <MapPin size={13} color="#64748B" />
-                          <Text style={styles.driverLocationText}>
+                          <Text numberOfLines={1} style={styles.driverLocationText}>
                             {selectedOrderDetails.statusLabel}
                           </Text>
                         </View>
@@ -860,16 +868,20 @@ const styles = StyleSheet.create({
 
   /* ── Inline Live Transit Banner inside Order Card ── */
   inlineLiveTransitBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
     backgroundColor: '#F0FDF4',
     borderRadius: 12,
-    paddingHorizontal: 10,
-    paddingVertical: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
     borderWidth: 1,
     borderColor: '#BBF7D0',
     marginBottom: 10,
+    gap: 4,
+  },
+  inlineTransitTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
   },
   inlineTransitLeft: {
     flexDirection: 'row',
@@ -888,11 +900,31 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     fontWeight: '800',
     color: '#15803D',
+    flex: 1,
+  },
+  onRoadPill: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  onRoadPillText: {
+    fontSize: 9,
+    fontWeight: '800',
+    color: '#15803D',
+    letterSpacing: 0.4,
+  },
+  inlineTransitVehicleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingLeft: 2,
   },
   inlineTransitSub: {
     fontSize: 11,
-    fontWeight: '700',
+    fontWeight: '600',
     color: '#475569',
+    flex: 1,
   },
 
   /* ── Summary Strip ── */
@@ -989,12 +1021,16 @@ const styles = StyleSheet.create({
   cardHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     marginBottom: 8,
+    gap: 8,
   },
   orderBadgeRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    flex: 1,
+    minWidth: 0,
     gap: 6,
   },
   badgeActive: {
@@ -1046,6 +1082,7 @@ const styles = StyleSheet.create({
   },
   orderValueWrap: {
     alignItems: 'flex-end',
+    flexShrink: 0,
   },
   orderValueAmount: {
     fontSize: 16.5,
@@ -1093,6 +1130,7 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '700',
     color: '#1F2937',
+    flexShrink: 1,
   },
 
   /* Stepper Box */
@@ -1144,6 +1182,8 @@ const styles = StyleSheet.create({
     fontSize: 9.5,
     color: '#9CA3AF',
     fontWeight: '600',
+    flex: 1,
+    textAlign: 'center',
   },
   progressStepLabelActive: {
     color: '#15803D',
@@ -1159,6 +1199,7 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#4B5563',
     fontWeight: '600',
+    flexShrink: 1,
   },
 
   /* Pending Banner */
@@ -1186,31 +1227,34 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginTop: 4,
   },
   seeDetailsBtn: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
     height: 40,
-    paddingHorizontal: 14,
+    paddingHorizontal: 8,
     borderRadius: 10,
     backgroundColor: '#F3F4F6',
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
   seeDetailsBtnText: {
-    fontSize: 12.5,
+    fontSize: 12,
     fontWeight: '700',
     color: '#374151',
   },
   trackVehicleActionBtn: {
-    flex: 1,
+    flex: 1.4,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
     height: 40,
+    paddingHorizontal: 10,
     borderRadius: 10,
     backgroundColor: '#15803D',
     elevation: 2,
@@ -1220,13 +1264,14 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   trackVehicleActionText: {
-    fontSize: 12.5,
+    fontSize: 12,
     fontWeight: '800',
     color: '#FFFFFF',
   },
   counterBtn: {
+    flex: 1,
     height: 40,
-    paddingHorizontal: 14,
+    paddingHorizontal: 8,
     borderRadius: 10,
     backgroundColor: '#FEF3C7',
     alignItems: 'center',
@@ -1235,19 +1280,20 @@ const styles = StyleSheet.create({
     borderColor: '#FDE68A',
   },
   counterBtnText: {
-    fontSize: 12.5,
+    fontSize: 12,
     fontWeight: '800',
     color: '#D97706',
   },
   acceptBtn: {
-    flex: 1,
+    flex: 1.4,
     height: 40,
+    paddingHorizontal: 8,
     borderRadius: 10,
     backgroundColor: '#15803D',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
+    gap: 4,
     elevation: 2,
     shadowColor: '#15803D',
     shadowOffset: { width: 0, height: 2 },
@@ -1255,24 +1301,25 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   acceptBtnText: {
-    fontSize: 12.5,
+    fontSize: 12,
     fontWeight: '800',
     color: '#FFFFFF',
   },
   invoiceBtn: {
-    flex: 1,
+    flex: 1.4,
     height: 40,
     borderRadius: 10,
     backgroundColor: '#DCFCE7',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 5,
+    paddingHorizontal: 8,
     borderWidth: 1,
     borderColor: '#BBF7D0',
   },
   invoiceBtnText: {
-    fontSize: 12.5,
+    fontSize: 11.5,
     fontWeight: '800',
     color: '#15803D',
   },

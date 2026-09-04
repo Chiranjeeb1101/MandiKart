@@ -17,8 +17,8 @@ import {
   Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Sprout, Phone, Lock, Eye, EyeOff, ArrowRight, KeyRound } from 'lucide-react-native';
-import { MKBackground, MKButton, MKInput, MKHeader } from '@/components/ui';
+import { Sprout, Lock, Eye, EyeOff, ArrowRight, KeyRound } from 'lucide-react-native';
+import { MKBackground, MKButton, MKInput, MKHeader, MKGoogleButton } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
 
 export default function LoginScreen() {
@@ -28,7 +28,35 @@ export default function LoginScreen() {
   const [mobile, setMobile] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+
+  const handleGoogleLogin = () => {
+    setGoogleLoading(true);
+    setTimeout(() => {
+      setUser({
+        id: `farmer_google_${Date.now()}`,
+        name: 'Ramesh Patil',
+        fullName: 'Ramesh Patil',
+        firstName: 'Ramesh',
+        lastName: 'Patil',
+        phone: '+91 98234 56789',
+        email: 'ramesh.patil.farmer@gmail.com',
+        isEmailVerified: true,
+        language: 'en',
+        state: 'Maharashtra',
+        district: 'Nashik',
+        village: 'Dindori',
+        farmSizeAcres: 8,
+        isVerified: true,
+        role: 'FARMER',
+      });
+      setPhoneNumber('+919823456789');
+      setIsAuthenticated(true);
+      setGoogleLoading(false);
+      router.replace('/(tabs)/home');
+    }, 600);
+  };
 
   const validate = () => {
     const errs: { [key: string]: string } = {};
@@ -156,6 +184,14 @@ export default function LoginScreen() {
                 <Text style={styles.dividerText}>OR</Text>
                 <View style={styles.dividerLine} />
               </View>
+
+              {/* Google Authentication Button */}
+              <MKGoogleButton
+                mode="signin"
+                loading={googleLoading}
+                onPress={handleGoogleLogin}
+                style={{ marginBottom: 12 }}
+              />
 
               {/* Login with OTP Button */}
               <MKButton
