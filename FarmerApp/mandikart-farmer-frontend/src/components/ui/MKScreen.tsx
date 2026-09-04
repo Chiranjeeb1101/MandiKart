@@ -36,11 +36,8 @@ export const MKScreen: React.FC<MKScreenProps> = ({
 }) => {
   const insets = useSafeAreaInsets();
 
-  const topPadding = Math.max(insets.top + 22, 58);
-  const bottomPadding = Math.max(
-    insets.bottom + MKLayout.bottomTabHeight + MKLayout.bottomContentClearance + bottomClearanceExtra,
-    110
-  );
+  const topPadding = MKLayout.getTopHeaderPadding(insets);
+  const bottomPadding = MKLayout.getBottomTabClearance(insets, bottomClearanceExtra);
 
   return (
     <MKBackground disableSafeArea style={styles.background}>

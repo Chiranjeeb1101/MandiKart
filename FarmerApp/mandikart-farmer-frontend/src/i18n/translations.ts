@@ -33,6 +33,9 @@ export interface TranslationSchema {
   farmDetailsTitle: string;
   mobileNumberLabel: string;
   fullNameLabel: string;
+  firstNameLabel: string;
+  middleNameLabel: string;
+  lastNameLabel: string;
   villageLabel: string;
   stateLabel: string;
   districtLabel: string;
@@ -46,6 +49,77 @@ export interface TranslationSchema {
   tabSell: string;
   tabOrders: string;
   tabMore: string;
+
+  // Home Screen
+  namaste: string;
+  whatSellToday: string;
+  findBestBuyers: string;
+  addProduce: string;
+  todayGlance: string;
+  activeOrders: string;
+  pickupSchedule: string;
+  monthlyEarning: string;
+  tomorrow: string;
+  bestOpportunity: string;
+  viewAll: string;
+  estimatedNetReturn: string;
+  sellingPrice: string;
+  transportCost: string;
+  demand: string;
+  highDemand: string;
+  recommended: string;
+
+  // Produce Screen
+  myProduce: string;
+  manageCropsOffers: string;
+  totalValue: string;
+  totalQuantity: string;
+  sold: string;
+  listCropGetOffers: string;
+  available: string;
+  listed: string;
+  partiallySold: string;
+  buyersFound: string;
+  viewOptions: string;
+  edit: string;
+
+  // Sell Screen
+  whatWantToSell: string;
+  quantityKg: string;
+  qualityGrade: string;
+  nashikMarket: string;
+  activeBuyers: string;
+  topMatchForYou: string;
+  findBestSellingOptions: string;
+  addNew: string;
+  addAnotherCrop: string;
+
+  // Orders Screen
+  myOrders: string;
+  trackSalesPickup: string;
+  all: string;
+  active: string;
+  pending: string;
+  completed: string;
+  activeOrder: string;
+  orderValue: string;
+  trackVehicleLive: string;
+  invoice: string;
+  pendingOffer: string;
+  waitingBuyerResponse: string;
+  cancelRequest: string;
+  modifyOffer: string;
+  relistProduce: string;
+
+  // More Screen
+  moreTitle: string;
+  moreSubtitle: string;
+  profileComplete: string;
+  viewProfile: string;
+  yourAccount: string;
+  appSettings: string;
+  helpSupport: string;
+  logout: string;
 }
 
 export const translations: Record<LanguageCode, TranslationSchema> = {
@@ -73,6 +147,9 @@ export const translations: Record<LanguageCode, TranslationSchema> = {
     farmDetailsTitle: 'Farm & Crop Details',
     mobileNumberLabel: 'Mobile Number',
     fullNameLabel: 'Full Name',
+    firstNameLabel: 'First Name',
+    middleNameLabel: 'Middle Name (Optional)',
+    lastNameLabel: 'Last Name',
     villageLabel: 'Village / Town',
     stateLabel: 'State',
     districtLabel: 'District',
@@ -85,7 +162,79 @@ export const translations: Record<LanguageCode, TranslationSchema> = {
     tabSell: 'Sell Produce',
     tabOrders: 'Orders',
     tabMore: 'More',
+
+    // Home Screen
+    namaste: 'Namaste',
+    whatSellToday: 'What do you want to\nsell today?',
+    findBestBuyers: 'Find best buyers and get\nbetter returns',
+    addProduce: 'Add Produce',
+    todayGlance: 'Today at a Glance',
+    activeOrders: 'Active\nOrders',
+    pickupSchedule: 'Pickup\nSchedule',
+    monthlyEarning: 'Monthly\nEarning',
+    tomorrow: 'Tomorrow',
+    bestOpportunity: 'Best Opportunity for You',
+    viewAll: 'View all',
+    estimatedNetReturn: 'Estimated Net Return',
+    sellingPrice: 'Selling Price',
+    transportCost: 'Transport Cost',
+    demand: 'Demand',
+    highDemand: 'High',
+    recommended: 'RECOMMENDED',
+
+    // Produce Screen
+    myProduce: 'My Produce',
+    manageCropsOffers: 'Manage crops, active listings & buyer offers',
+    totalValue: 'TOTAL VALUE',
+    totalQuantity: 'TOTAL QUANTITY',
+    sold: 'SOLD',
+    listCropGetOffers: 'List your crop and get best buyer offers',
+    available: 'Available',
+    listed: 'Listed',
+    partiallySold: 'PARTIALLY SOLD',
+    buyersFound: 'buyers found',
+    viewOptions: 'VIEW BEST OPTIONS',
+    edit: 'Edit',
+
+    // Sell Screen
+    whatWantToSell: 'What do you want to sell?',
+    quantityKg: 'Quantity (KG)',
+    qualityGrade: 'Quality Grade',
+    nashikMarket: 'Nashik Market',
+    activeBuyers: 'active buyers',
+    topMatchForYou: 'TOP MATCH FOR YOU',
+    findBestSellingOptions: 'FIND BEST SELLING OPTIONS',
+    addNew: 'Add\nNew',
+    addAnotherCrop: 'Add Another Crop',
+
+    // Orders Screen
+    myOrders: 'My Orders',
+    trackSalesPickup: 'Track sales, pickup schedules & payouts',
+    all: 'All',
+    active: 'Active',
+    pending: 'Pending',
+    completed: 'Completed',
+    activeOrder: 'ACTIVE ORDER',
+    orderValue: 'Order Value',
+    trackVehicleLive: 'Track Vehicle Live',
+    invoice: 'Invoice',
+    pendingOffer: 'PENDING OFFER',
+    waitingBuyerResponse: 'Waiting for Buyer Response',
+    cancelRequest: 'Cancel Request',
+    modifyOffer: 'Modify Offer',
+    relistProduce: 'Re-list Produce',
+
+    // More Screen
+    moreTitle: 'More',
+    moreSubtitle: 'Manage your account, farm and preferences',
+    profileComplete: 'Profile Complete',
+    viewProfile: 'View Profile',
+    yourAccount: 'Your Account',
+    appSettings: 'App Settings',
+    helpSupport: 'Help & Support',
+    logout: 'Log Out',
   },
+
   hi: {
     welcomeTitle: 'मंडीकार्ट के साथ समझदारी से बेचें',
     welcomeSubtitle: 'खरीदारों से सीधे जुड़ें और अपनी कृषि आय अधिकतम करें।',
@@ -110,6 +259,9 @@ export const translations: Record<LanguageCode, TranslationSchema> = {
     farmDetailsTitle: 'खेत और फसल का विवरण',
     mobileNumberLabel: 'मोबाइल नंबर',
     fullNameLabel: 'पूरा नाम',
+    firstNameLabel: 'पहला नाम',
+    middleNameLabel: 'मध्य नाम (वैकल्पिक)',
+    lastNameLabel: 'अंतिम नाम',
     villageLabel: 'गांव / शहर',
     stateLabel: 'राज्य',
     districtLabel: 'जिला',
@@ -122,7 +274,79 @@ export const translations: Record<LanguageCode, TranslationSchema> = {
     tabSell: 'बेचें',
     tabOrders: 'ऑर्डर',
     tabMore: 'अधिक',
+
+    // Home Screen
+    namaste: 'नमस्ते',
+    whatSellToday: 'आज आप क्या\nबेचना चाहते हैं?',
+    findBestBuyers: 'सर्वोत्तम खरीदार खोजें और\nअधिक लाभ कमाएं',
+    addProduce: 'उपज जोड़ें',
+    todayGlance: 'आज की मुख्य झलक',
+    activeOrders: 'सक्रिय\nऑर्डर',
+    pickupSchedule: 'पिकअप\nशेड्यूल',
+    monthlyEarning: 'मासिक\nकमाई',
+    tomorrow: 'कल',
+    bestOpportunity: 'आपके लिए सर्वोत्तम अवसर',
+    viewAll: 'सभी देखें',
+    estimatedNetReturn: 'अनुमानित शुद्ध आय',
+    sellingPrice: 'विक्रय मूल्य',
+    transportCost: 'परिवहन लागत',
+    demand: 'मांग',
+    highDemand: 'उच्च',
+    recommended: 'सुझाया गया',
+
+    // Produce Screen
+    myProduce: 'मेरी उपज',
+    manageCropsOffers: 'फसलें, लिस्टिंग और खरीदार ऑफर प्रबंधित करें',
+    totalValue: 'कुल मूल्य',
+    totalQuantity: 'कुल मात्रा',
+    sold: 'बिका हुआ',
+    listCropGetOffers: 'अपनी फसल सूचीबद्ध करें और सर्वोत्तम ऑफर प्राप्त करें',
+    available: 'उपलब्ध',
+    listed: 'सूचीबद्ध',
+    partiallySold: 'आंशिक बिका',
+    buyersFound: 'खरीदार मिले',
+    viewOptions: 'सर्वोत्तम विकल्प देखें',
+    edit: 'संपादित करें',
+
+    // Sell Screen
+    whatWantToSell: 'आप क्या बेचना चाहते हैं?',
+    quantityKg: 'मात्रा (किग्रा)',
+    qualityGrade: 'गुणवत्ता ग्रेड',
+    nashikMarket: 'नासिक मंडी बाजार',
+    activeBuyers: 'सक्रिय खरीदार',
+    topMatchForYou: 'सर्वश्रेष्ठ मैच आपके लिए',
+    findBestSellingOptions: 'सर्वोत्तम बिक्री विकल्प खोजें',
+    addNew: 'नया\nजोड़ें',
+    addAnotherCrop: 'अन्य फसल जोड़ें',
+
+    // Orders Screen
+    myOrders: 'मेरे ऑर्डर',
+    trackSalesPickup: 'बिक्री, पिकअप शेड्यूल और भुगतान ट्रैक करें',
+    all: 'सभी',
+    active: 'सक्रिय',
+    pending: 'लंबित',
+    completed: 'पूर्ण',
+    activeOrder: 'सक्रिय ऑर्डर',
+    orderValue: 'ऑर्डर मूल्य',
+    trackVehicleLive: 'वाहन लाइव ट्रैक करें',
+    invoice: 'चालान (इनवॉइस)',
+    pendingOffer: 'लंबित प्रस्ताव',
+    waitingBuyerResponse: 'खरीदार की प्रतिक्रिया की प्रतीक्षा',
+    cancelRequest: 'अनुरोध रद्द करें',
+    modifyOffer: 'प्रस्ताव बदलें',
+    relistProduce: 'उपज पुनः सूचीबद्ध करें',
+
+    // More Screen
+    moreTitle: 'अधिक',
+    moreSubtitle: 'अपना खाता, खेत और प्राथमिकताएं प्रबंधित करें',
+    profileComplete: 'प्रोफ़ाइल पूर्ण',
+    viewProfile: 'प्रोफ़ाइल देखें',
+    yourAccount: 'आपका खाता',
+    appSettings: 'ऐप सेटिंग्स',
+    helpSupport: 'सहायता एवं समर्थन',
+    logout: 'लॉग आउट',
   },
+
   or: {
     welcomeTitle: 'ମଣ୍ଡିକାର୍ଟ ସହିତ ସହଜରେ ବିକ୍ରି କରନ୍ତୁ',
     welcomeSubtitle: 'ସିଧାସଳଖ କ୍ରେତାଙ୍କ ସହ ଯୋଡି ହୁଅନ୍ତୁ ଏବଂ ଅଧିକ ଲାଭ ଅର୍ଜନ କରନ୍ତୁ।',
@@ -147,6 +371,9 @@ export const translations: Record<LanguageCode, TranslationSchema> = {
     farmDetailsTitle: 'ଜମି ଓ ଫସଲ ବିବରଣୀ',
     mobileNumberLabel: 'ମୋବାଇଲ୍ ନମ୍ବର',
     fullNameLabel: 'ପୂରା ନାମ',
+    firstNameLabel: 'ପ୍ରଥମ ନାମ',
+    middleNameLabel: 'ମଝି ନାମ (ଇଚ୍ଛାଧୀନ)',
+    lastNameLabel: 'ଶେଷ ନାମ (ସାଙ୍ଗିଆ)',
     villageLabel: 'ଗାଁ / ସହର',
     stateLabel: 'ରାଜ୍ୟ',
     districtLabel: 'ଜିଲ୍ଲା',
@@ -159,7 +386,79 @@ export const translations: Record<LanguageCode, TranslationSchema> = {
     tabSell: 'ବିକ୍ରି କରନ୍ତୁ',
     tabOrders: 'ଅର୍ଡର',
     tabMore: 'ଅଧିକ',
+
+    // Home Screen
+    namaste: 'ନମସ୍କାର',
+    whatSellToday: 'ଆଜି ଆପଣ କଣ\nବିକ୍ରି କରିବାକୁ ଚାହାଁନ୍ତି?',
+    findBestBuyers: 'ଉତ୍ତମ କ୍ରେତା ଖୋଜନ୍ତୁ ଏବଂ\nଅଧିକ ଲାଭ ପାଆନ୍ତୁ',
+    addProduce: 'ଫସଲ ଯୋଡ଼ନ୍ତୁ',
+    todayGlance: 'ଆଜିର ମୁଖ୍ୟ ବିବରଣୀ',
+    activeOrders: 'ଚାଲୁଥିବା\nଅର୍ଡର',
+    pickupSchedule: 'ପିକଅପ୍\nସମୟସାରଣୀ',
+    monthlyEarning: 'ମାସିକ\nଆୟ',
+    tomorrow: 'ଆସନ୍ତାକାଲି',
+    bestOpportunity: 'ଆପଣଙ୍କ ପାଇଁ ସର୍ବୋତ୍ତମ ସୁଯୋଗ',
+    viewAll: 'ସବୁ ଦେଖନ୍ତୁ',
+    estimatedNetReturn: 'ଆନୁମାନିକ ନିଟ୍ ମୂଲ୍ୟ',
+    sellingPrice: 'ବିକ୍ରି ମୂଲ୍ୟ',
+    transportCost: 'ପରିବହନ ଖର୍ଚ୍ଚ',
+    demand: 'ଚାହିଦା',
+    highDemand: 'ଅଧିକ',
+    recommended: 'ପ୍ରସ୍ତାବିତ',
+
+    // Produce Screen
+    myProduce: 'ମୋର ଫସଲ',
+    manageCropsOffers: 'ଫସଲ, ସୂଚୀ ଏବଂ କ୍ରେତାଙ୍କ ପ୍ରସ୍ତାବ ପରିଚାଳନା କରନ୍ତୁ',
+    totalValue: 'ମୋଟ ମୂଲ୍ୟ',
+    totalQuantity: 'ମୋଟ ପରିମାଣ',
+    sold: 'ବିକ୍ରି ହୋଇଛି',
+    listCropGetOffers: 'ଆପଣଙ୍କ ଫସଲ ଯୋଡ଼ି ଉତ୍ତମ କ୍ରେତା ପ୍ରସ୍ତାବ ପାଆନ୍ତୁ',
+    available: 'ଉପଲବ୍ଧ',
+    listed: 'ତାଲିକାଭୁକ୍ତ',
+    partiallySold: 'ଆଂଶିକ ବିକ୍ରି ହୋଇଛି',
+    buyersFound: 'ଜଣ କ୍ରେତା ପ୍ରସ୍ତୁତ',
+    viewOptions: 'ସର୍ବୋତ୍ତମ ବିକଳ୍ପ ଦେଖନ୍ତୁ',
+    edit: 'ସମ୍ପାଦନ',
+
+    // Sell Screen
+    whatWantToSell: 'ଆପଣ କଣ ବିକ୍ରି କରିବାକୁ ଚାହାଁନ୍ତି?',
+    quantityKg: 'ପରିମାଣ (କେଜି)',
+    qualityGrade: 'ଗୁଣବତ୍ତା ମାନ',
+    nashikMarket: 'ମଣ୍ଡି ବଜାର ଦର',
+    activeBuyers: 'ଜଣ ସକ୍ରିୟ କ୍ରେତା',
+    topMatchForYou: 'ଆପଣଙ୍କ ପାଇଁ ସର୍ବୋତ୍ତମ କ୍ରେତା',
+    findBestSellingOptions: 'ସର୍ବୋତ୍ତମ ବିକ୍ରି ବିକଳ୍ପ ଖୋଜନ୍ତୁ',
+    addNew: 'ନୂଆ\nଯୋଡ଼ନ୍ତୁ',
+    addAnotherCrop: 'ଅନ୍ୟ ଏକ ଫସଲ ଯୋଡ଼ନ୍ତୁ',
+
+    // Orders Screen
+    myOrders: 'ମୋର ଅର୍ଡରଗୁଡ଼ିକ',
+    trackSalesPickup: 'ବିକ୍ରି, ପିକଅପ୍ ଏବଂ ପେମେଣ୍ଟ ଟ୍ରାକ୍ କରନ୍ତୁ',
+    all: 'ସମସ୍ତ',
+    active: 'ଚାଲୁଥିବା',
+    pending: 'ବାକି ଥିବା',
+    completed: 'ସମ୍ପୂର୍ଣ୍ଣ',
+    activeOrder: 'ସକ୍ରିୟ ଅର୍ଡର',
+    orderValue: 'ଅର୍ଡର ମୂଲ୍ୟ',
+    trackVehicleLive: 'ଗାଡ଼ି ଲାଇଭ୍ ଟ୍ରାକ୍ କରନ୍ତୁ',
+    invoice: 'ଇନଭଏସ୍',
+    pendingOffer: 'ବାକି ଥିବା ପ୍ରସ୍ତାବ',
+    waitingBuyerResponse: 'କ୍ରେତାଙ୍କ ଉତ୍ତରକୁ ଅପେକ୍ଷା',
+    cancelRequest: 'ଅନୁରୋଧ ବାତିଲ୍ କରନ୍ତୁ',
+    modifyOffer: 'ପ୍ରସ୍ତାବ ସଂଶୋଧନ କରନ୍ତୁ',
+    relistProduce: 'ଫସଲ ପୁଣି ତାଲିକାଭୁକ୍ତ କରନ୍ତୁ',
+
+    // More Screen
+    moreTitle: 'ଅଧିକ',
+    moreSubtitle: 'ଆପଣଙ୍କ ଆକାଉଣ୍ଟ, ଫାର୍ମ ଏବଂ ପସନ୍ଦ ପରିଚାଳନା କରନ୍ତୁ',
+    profileComplete: 'ପ୍ରୋଫାଇଲ୍ ସମ୍ପୂର୍ଣ୍ଣ',
+    viewProfile: 'ପ୍ରୋଫାଇଲ୍ ଦେଖନ୍ତୁ',
+    yourAccount: 'ଆପଣଙ୍କ ଆକାଉଣ୍ଟ',
+    appSettings: 'ଆପ୍ ସେଟିଂସ',
+    helpSupport: 'ସହାୟତା ଏବଂ ସମର୍ଥନ',
+    logout: 'ଲଗ୍ ଆଉଟ୍',
   },
+
   mr: {
     welcomeTitle: 'मंडीकार्ट सोबत हुशारीने विक्री करा',
     welcomeSubtitle: 'थेट खरेदीदारांशी जोडा आणि आपला शेती नफा वाढवा.',
@@ -184,6 +483,9 @@ export const translations: Record<LanguageCode, TranslationSchema> = {
     farmDetailsTitle: 'शेती व पिकांचा तपशील',
     mobileNumberLabel: 'मोबाईल नंबर',
     fullNameLabel: 'पूर्ण नाव',
+    firstNameLabel: 'पहिले नाव',
+    middleNameLabel: 'मधले नाव (पर्यायी)',
+    lastNameLabel: 'आडनाव',
     villageLabel: 'गाव / शहर',
     stateLabel: 'राज्य',
     districtLabel: 'जिल्हा',
@@ -196,227 +498,91 @@ export const translations: Record<LanguageCode, TranslationSchema> = {
     tabSell: 'विक्री करा',
     tabOrders: 'ऑर्डर्स',
     tabMore: 'अधिक',
+
+    // Home Screen
+    namaste: 'नमस्कार',
+    whatSellToday: 'आज आपण काय\nविक्री करू इच्छिता?',
+    findBestBuyers: 'सर्वोत्तम खरेदीदार शोधा आणि\nजास्त नफा मिळवा',
+    addProduce: 'पीक जोडा',
+    todayGlance: 'आजचा थोडक्यात आढावा',
+    activeOrders: 'सक्रिय\nऑर्डर्स',
+    pickupSchedule: 'पिकअप\nवेळापत्रक',
+    monthlyEarning: 'मासिक\nकमाई',
+    tomorrow: 'उद्या',
+    bestOpportunity: 'आपल्यासाठी उत्तम संधी',
+    viewAll: 'सर्व पहा',
+    estimatedNetReturn: 'अंदाजे निव्वळ परतावा',
+    sellingPrice: 'विक्री किंमत',
+    transportCost: 'वाहतूक खर्च',
+    demand: 'मागणी',
+    highDemand: 'उच्च',
+    recommended: 'शिफारस केलेले',
+
+    // Produce Screen
+    myProduce: 'माझी पिके',
+    manageCropsOffers: 'पिके, लिस्टिंग व खरेदीदार ऑफर्स व्यवस्थापित करा',
+    totalValue: 'एकूण मूल्य',
+    totalQuantity: 'एकूण प्रमाण',
+    sold: 'विक्री झालेले',
+    listCropGetOffers: 'आपले पीक नोंदवा व सर्वोत्तम ऑफर मिळवा',
+    available: 'उपलब्ध',
+    listed: 'नोंदणीकृत',
+    partiallySold: 'अंशतः विकले',
+    buyersFound: 'खरेदीदार उपलब्ध',
+    viewOptions: 'सर्वोत्तम पर्याय पहा',
+    edit: 'संपादित करा',
+
+    // Sell Screen
+    whatWantToSell: 'आपण काय विकू इच्छिता?',
+    quantityKg: 'प्रमाण (किलो)',
+    qualityGrade: 'गुणवत्ता प्रतवारी',
+    nashikMarket: 'नाशिक बाजार भाव',
+    activeBuyers: 'सक्रिय खरेदीदार',
+    topMatchForYou: 'आपल्यासाठी सर्वोत्तम खरेदीदार',
+    findBestSellingOptions: 'सर्वोत्तम विक्री पर्याय शोधा',
+    addNew: 'नवीन\nजोडा',
+    addAnotherCrop: 'दुसरे पीक जोडा',
+
+    // Orders Screen
+    myOrders: 'माझ्या ऑर्डर्स',
+    trackSalesPickup: 'विक्री, पिकअप वेळापत्रक आणि पेमेंट्स ट्रॅक करा',
+    all: 'सर्व',
+    active: 'सक्रिय',
+    pending: 'प्रलंबित',
+    completed: 'पूर्ण',
+    activeOrder: 'सक्रिय ऑर्डर',
+    orderValue: 'ऑर्डर मूल्य',
+    trackVehicleLive: 'वाहन थेट ट्रॅक करा',
+    invoice: 'चालान (इनव्हॉइस)',
+    pendingOffer: 'प्रलंबित ऑफर',
+    waitingBuyerResponse: 'खरेदीदाराच्या प्रतिसादाची प्रतीक्षा',
+    cancelRequest: 'विनंती रद्द करा',
+    modifyOffer: 'ऑफर बदला',
+    relistProduce: 'पीक पुन्हा लिस्ट करा',
+
+    // More Screen
+    moreTitle: 'अधिक',
+    moreSubtitle: 'आपले खाते, शेती आणि प्राधान्ये व्यवस्थापित करा',
+    profileComplete: 'प्रोफाइल पूर्ण',
+    viewProfile: 'प्रोफाइल पहा',
+    yourAccount: 'आपले खाते',
+    appSettings: 'अॅप सेटिंग्ज',
+    helpSupport: 'मदत आणि सहाय्य',
+    logout: 'लॉग आउट',
   },
-  pa: {
-    welcomeTitle: 'ਮੰਡੀਕਾਰਟ ਨਾਲ ਸਮਝਦਾਰੀ ਨਾਲ ਵੇਚੋ',
-    welcomeSubtitle: 'ਖਰੀਦਦਾਰਾਂ ਨਾਲ ਸਿੱਧੇ ਜੁੜੋ ਅਤੇ ਆਪਣੀ ਖੇਤੀ ਆਮਦਨ ਵਧਾਓ।',
-    getStarted: 'ਸ਼ੁਰੂ ਕਰੋ',
-    pillYourProduce: 'ਤੁਹਾਡੀ ਫਸਲ',
-    pillMarketOpportunities: 'ਮੰਡੀ ਭਾਅ',
-    pillDirectBuyers: 'ਸਿੱਧੇ ਖਰੀਦਦਾਰ',
-    typingText1: 'ਸਿੱਧੇ ਖਰੀਦਦਾਰ ਨਾਲ ਜੁੜੋ...',
-    typingText2: 'ਫਸਲ ਦਾ ਪੂਰਾ ਮੁੱਲ...',
-    typingText3: 'ਬਿਨਾਂ ਵਿਚੋਲੇ ਵਪਾਰ...',
-    typingText4: 'ਤੁਰੰਤ ਰੋਜ਼ਾਨਾ ਭੁਗਤਾਨ...',
 
-    chooseLanguage: 'ਆਪਣੀ ਭਾਸ਼ਾ ਚੁਣੋ',
-    selectComfortableLang: 'ਉਹ ਭਾਸ਼ਾ ਚੁਣੋ ਜਿਸ ਵਿੱਚ ਤੁਸੀਂ ਸਹਿਜ ਹੋ',
-    continueBtn: 'ਅੱਗੇ ਵਧੋ',
-    languageNote: 'ਤੁਸੀਂ ਬਾਅਦ ਵਿੱਚ ਸੈਟਿੰਗਾਂ ਵਿੱਚ ਭਾਸ਼ਾ ਬਦਲ ਸਕਦੇ ਹੋ।',
-
-    signUpTitle: 'ਕਿਸਾਨ ਖਾਤਾ ਬਣਾਓ',
-    loginTitle: 'ਜੀ ਆਇਆਂ ਨੂੰ ਕਿਸਾਨ ਵੀਰੋ',
-    verifyOtpTitle: 'ਮੋਬਾਈਲ ਨੰਬਰ ਦੀ ਜਾਂਚ ਕਰੋ',
-    farmerProfileTitle: 'ਕਿਸਾਨ ਪ੍ਰੋਫਾਈਲ ਵੇਰਵਾ',
-    farmDetailsTitle: 'ਖੇਤ ਅਤੇ ਫਸਲ ਦਾ ਵੇਰਵਾ',
-    mobileNumberLabel: 'ਮੋਬਾਈਲ ਨੰਬਰ',
-    fullNameLabel: 'ਪੂਰਾ ਨਾਮ',
-    villageLabel: 'ਪਿੰਡ / ਸ਼ਹਿਰ',
-    stateLabel: 'ਸੂਬਾ',
-    districtLabel: 'ਜ਼ਿਲ੍ਹਾ',
-    cropLabel: 'ਮੁੱਖ ਫਸਲਾਂ',
-    farmSizeLabel: 'ਖੇਤ ਦਾ ਆਕਾਰ (ਏਕੜ)',
-    submitBtn: 'ਜਮ੍ਹਾਂ ਕਰੋ',
-
-    tabHome: 'ਹੋਮ',
-    tabProduce: 'ਫਸਲ',
-    tabSell: 'ਵੇਚੋ',
-    tabOrders: 'ਆਰਡਰ',
-    tabMore: 'ਹੋਰ',
-  },
-  ta: {
-    welcomeTitle: 'மண்டிகார்ட் மூலம் சிறந்த விற்பனை',
-    welcomeSubtitle: 'நேரடி வாங்குபவர்களுடன் இணைந்து உங்கள் விவசாய வருமானத்தை உயர்த்துங்கள்.',
-    getStarted: 'தொடங்குங்கள்',
-    pillYourProduce: 'உங்கள் விளைச்சல்',
-    pillMarketOpportunities: 'சந்தை விலை',
-    pillDirectBuyers: 'நேரடி வாங்குபவர்',
-    typingText1: 'நேரடி வாங்குபவர் இணைப்பு...',
-    typingText2: 'உயர்ந்த விற்பனை விலை...',
-    typingText3: 'தரகர் இல்லாத வியாபாரம்...',
-    typingText4: 'உடனடி தினசரி பணம்...',
-
-    chooseLanguage: 'உங்கள் மொழியைத் தேர்ந்தெடுக்கவும்',
-    selectComfortableLang: 'உங்களுக்கு விருப்பமான மொழியைத் தேர்ந்தெடுக்கவும்',
-    continueBtn: 'தொடரவும்',
-    languageNote: 'அமைப்புகளில் உங்கள் மொழியை பின்னர் மாற்றலாம்.',
-
-    signUpTitle: 'விவசாயி கணக்கு তৈরি',
-    loginTitle: 'வரவேற்கிறோம் விவசாயி',
-    verifyOtpTitle: 'மொபைல் எண்ணை உறுதிசெய்க',
-    farmerProfileTitle: 'விவசாயி விவரங்கள்',
-    farmDetailsTitle: 'பண்ணை & பயிர் விவரங்கள்',
-    mobileNumberLabel: 'மொபைல் எண்',
-    fullNameLabel: 'முழு பெயர்',
-    villageLabel: 'கிராமம் / நகரம்',
-    stateLabel: 'மாநிலம்',
-    districtLabel: 'மாவட்டம்',
-    cropLabel: 'முக்கிய பயிர்கள்',
-    farmSizeLabel: 'பண்ணை அளவு (ஏக்கர்)',
-    submitBtn: 'சமர்ப்பிக்கவும்',
-
-    tabHome: 'முகப்பு',
-    tabProduce: 'விளைச்சல்',
-    tabSell: 'விற்க',
-    tabOrders: 'ஆர்டர்கள்',
-    tabMore: 'மேலும்',
-  },
-  te: {
-    welcomeTitle: 'మండికార్ట్‌తో తెలివిగా విక్రయించండి',
-    welcomeSubtitle: 'నేరుగా కొనుగోలుదారులతో కనెక్ట్ అవ్వండి మరియు మీ లాభాలను పెంచుకోండి.',
-    getStarted: 'ప్రారంభించండి',
-    pillYourProduce: 'మీ పంట',
-    pillMarketOpportunities: 'మార్కెట్ ధరలు',
-    pillDirectBuyers: 'నేరుగా కొనుగోలుదారులు',
-    typingText1: 'నేరుగా కొనుగోలుదారుల కనెక్ట్...',
-    typingText2: 'పంటకు గరిష్ట ధర...',
-    typingText3: 'దళారులు లేని వ్యాపారం...',
-    typingText4: 'వెంటనే దినసరి చెల్లింపులు...',
-
-    chooseLanguage: 'మీ భాషను ఎంచుకోండి',
-    selectComfortableLang: 'మీకు అనుకూలమైన భాషను ఎంచుకోండి',
-    continueBtn: 'కొనసాగించండి',
-    languageNote: 'మీరు సెట్టింగ్స్ లో భాషను మార్చుకోవచ్చు.',
-
-    signUpTitle: 'రైతు ఖాతా సృష్టించండి',
-    loginTitle: 'స్వాగతం రైతు సోదరా',
-    verifyOtpTitle: 'మొబైల్ నంబర్ సరిచూడండి',
-    farmerProfileTitle: 'రైతు ప్రొఫైల్ వివరాలు',
-    farmDetailsTitle: 'పొలం మరియు పంట వివరాలు',
-    mobileNumberLabel: 'మొబైల్ నంబర్',
-    fullNameLabel: 'పూర్తి పేరు',
-    villageLabel: 'గ్రామం / పట్టణం',
-    stateLabel: 'రాష్ట్రం',
-    districtLabel: 'జిల్లా',
-    cropLabel: 'ప్రధాన పంటలు',
-    farmSizeLabel: 'పొలం పరిమాణం (ఎకరాలు)',
-    submitBtn: 'సమర్పించండి',
-
-    tabHome: 'హోమ్',
-    tabProduce: 'పంటలు',
-    tabSell: 'అమ్మకం',
-    tabOrders: 'ఆర్డర్లు',
-    tabMore: 'మరిన్ని',
-  },
-  bn: {
-    welcomeTitle: 'মান্ডিকার্ট দিয়ে বুদ্ধিমত্তার সাথে বিক্রি করুন',
-    welcomeSubtitle: 'সরাসরি ক্রেতাদের সাথে যুক্ত হন এবং আপনার কৃষিজ আয় বৃদ্ধি করুন।',
-    getStarted: 'শুরু করুন',
-    pillYourProduce: 'আপনার ফসল',
-    pillMarketOpportunities: 'বাজার দর',
-    pillDirectBuyers: 'সরাসরি ক্রেতা',
-    typingText1: 'সরাসরি ক্রেতার সাথে সংযোগ...',
-    typingText2: 'ফসলের সর্বোচ্চ দাম...',
-    typingText3: 'মধ্যস্বত্বভোগীমুক্ত সেবা...',
-    typingText4: 'তাৎক্ষণিক দৈনিক পেমেন্ট...',
-
-    chooseLanguage: 'আপনার ভাষা নির্বাচন করুন',
-    selectComfortableLang: 'আপনার সুবিধাজনক ভাষা বেছে নিন',
-    continueBtn: 'এগিয়ে যান',
-    languageNote: 'আপনি পরে সেটিংসে ভাষা পরিবর্তন করতে পারবেন।',
-
-    signUpTitle: 'কৃষক অ্যাকাউন্ট তৈরি করুন',
-    loginTitle: 'স্বাগতম কৃষক বন্ধু',
-    verifyOtpTitle: 'মোবাইল নম্বর যাচাই করুন',
-    farmerProfileTitle: 'কৃষক প্রোফাইল তথ্য',
-    farmDetailsTitle: 'জমি ও ফসলের তথ্য',
-    mobileNumberLabel: 'মোবাইল নম্বর',
-    fullNameLabel: 'সম্পূর্ণ নাম',
-    villageLabel: 'গ্রাম / শহর',
-    stateLabel: 'রাজ্য',
-    districtLabel: 'জেলা',
-    cropLabel: 'প্রধান ফসল',
-    farmSizeLabel: 'জমির পরিমাণ (একর)',
-    submitBtn: 'জমা দিন',
-
-    tabHome: 'হোম',
-    tabProduce: 'ফসল',
-    tabSell: 'বিক্রি করুন',
-    tabOrders: 'অর্ডার',
-    tabMore: 'আরও',
-  },
-  gu: {
-    welcomeTitle: 'મંડીકાર્ટ સાથે સમજદારીથી વેચો',
-    welcomeSubtitle: 'સીધા ખરીદદારો સાથે જોડાઓ અને તમારી કૃષિ આવક વધારો.',
-    getStarted: 'શરૂ કરો',
-    pillYourProduce: 'તમારી ઉપજ',
-    pillMarketOpportunities: 'બજાર ભાવ',
-    pillDirectBuyers: 'સીધા ખરીદદાર',
-    typingText1: 'સીધા ખરીદદાર સાથે જોડાણ...',
-    typingText2: 'પાકના મહત્તમ ભાવ...',
-    typingText3: 'વચેટિયા વગર વેચાણ...',
-    typingText4: 'ત્વરિત દૈનિક ચૂકવણી...',
-
-    chooseLanguage: 'તમારી ભાષા પસંદ કરો',
-    selectComfortableLang: 'તમને અનુકૂળ ભાષા પસંદ કરો',
-    continueBtn: 'આગળ વધો',
-    languageNote: 'તમે પછીથી સેટિંગ્સમાં ભાષા બદલી શકો છો.',
-
-    signUpTitle: 'ખેડૂત ખાતું બનાવો',
-    loginTitle: 'સ્વાગત છે ખેડૂત મિત્ર',
-    verifyOtpTitle: 'મોબાઇલ નંબર ચકાસો',
-    farmerProfileTitle: 'ખેડૂત પ્રોફાઇલ વિગત',
-    farmDetailsTitle: 'જમીન અને પાક વિગત',
-    mobileNumberLabel: 'મોબાઇલ નંબર',
-    fullNameLabel: 'પૂરું નામ',
-    villageLabel: 'ગામ / શહેર',
-    stateLabel: 'રાજ્ય',
-    districtLabel: 'જિલ્લો',
-    cropLabel: 'મુખ્ય પાક',
-    farmSizeLabel: 'જમીનનું માપ (એકર)',
-    submitBtn: 'સબમિટ કરો',
-
-    tabHome: 'હોમ',
-    tabProduce: 'ઉપજ',
-    tabSell: 'વેચો',
-    tabOrders: 'ઓર્ડર',
-    tabMore: 'વધુ',
-  },
-  kn: {
-    welcomeTitle: 'ಮಂಡಿಕಾರ್ಟ್‌ನೊಂದಿಗೆ ಬುದ್ಧಿವಂತಿಕೆಯಿಂದ ಮಾರಾಟ ಮಾಡಿ',
-    welcomeSubtitle: 'ನೇರವಾಗಿ ಖರೀದಿದಾರರೊಂದಿಗೆ ಸಂಪರ್ಕ ಸಾಧಿಸಿ ಮತ್ತು ನಿಮ್ಮ ಆದಾಯವನ್ನು ಹೆಚ್ಚಿಸಿ.',
-    getStarted: 'ಪ್ರಾರಂಭಿಸಿ',
-    pillYourProduce: 'ನಿಮ್ಮ ಬೆಳೆ',
-    pillMarketOpportunities: 'ಮಾರುಕಟ್ಟೆ ದರ',
-    pillDirectBuyers: 'ನೇರ ಖರೀದಿದಾರರು',
-    typingText1: 'ನೇರ ಖರೀದಿದಾರರ ಸಂಪರ್ಕ...',
-    typingText2: 'ಬೆಳೆಗೆ ಗರಿಷ್ಠ ಬೆಲೆ...',
-    typingText3: 'ದಳ್ಳಾಳಿಗಳಿಲ್ಲದ ವ್ಯಾಪಾರ...',
-    typingText4: 'ತ್ವರಿತ ದಿನನಿತ್ಯದ ಪಾವತಿ...',
-
-    chooseLanguage: 'ನಿಮ್ಮ ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ',
-    selectComfortableLang: 'ನಿಮಗೆ ಅನುಕೂಲಕರವಾದ ಭಾಷೆಯನ್ನು ಆಯ್ಕೆಮಾಡಿ',
-    continueBtn: 'ಮುಂದುವರಿಯಿರಿ',
-    languageNote: 'ನೀವು ನಂತರ ಸೆಟ್ಟಿಂಗ್‌ಗಳಲ್ಲಿ ಭಾಷೆಯನ್ನು ಬದಲಾಯಿಸಬಹುದು.',
-
-    signUpTitle: 'ರೈತ ಖಾತೆ ತೆರೆಯಿರಿ',
-    loginTitle: 'ಸ್ವಾಗತ ರೈತ ಮಿತ್ರ',
-    verifyOtpTitle: 'ಮೊಬೈಲ್ ಸಂಖ್ಯೆ ಪರಿಶೀಲಿಸಿ',
-    farmerProfileTitle: 'ರೈತನ ಪ್ರೊಫೈಲ್ ವಿವರಗಳು',
-    farmDetailsTitle: 'ಜಮೀನು ಮತ್ತು ಬೆಳೆ ವಿವರಗಳು',
-    mobileNumberLabel: 'ಮೊಬೈಲ್ ಸಂಖ್ಯೆ',
-    fullNameLabel: 'ಪೂರ್ಣ ಹೆಸರು',
-    villageLabel: 'ಗ್ರಾಮ / ನಗರ',
-    stateLabel: 'ರಾಜ್ಯ',
-    districtLabel: 'ಜಿಲ್ಲೆ',
-    cropLabel: 'ಮುಖ್ಯ ಬೆಳೆಗಳು',
-    farmSizeLabel: 'ಜಮೀನಿನ ಗಾತ್ರ (ಎಕರೆ)',
-    submitBtn: 'ಸಲ್ಲಿಸಿ',
-
-    tabHome: 'ಹೋಮ್',
-    tabProduce: 'ಬೆಳೆಗಳು',
-    tabSell: 'ಮಾರಾಟ',
-    tabOrders: 'ಆರ್ಡರ್‌ಗಳು',
-    tabMore: 'ಇನ್ನಷ್ಟು',
-  },
+  pa: {} as any,
+  ta: {} as any,
+  te: {} as any,
+  bn: {} as any,
+  gu: {} as any,
+  kn: {} as any,
 };
+
+// Fallback helper for other languages to default cleanly to English
+['pa', 'ta', 'te', 'bn', 'gu', 'kn'].forEach((code) => {
+  translations[code as LanguageCode] = {
+    ...translations.en,
+    ...(translations as any)[code],
+  };
+});

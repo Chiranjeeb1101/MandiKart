@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,15 +6,9 @@ import {
   StatusBar,
   Pressable,
   Image,
+  Animated,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import Animated, {
-  FadeIn,
-  FadeInUp,
-  useSharedValue,
-  useAnimatedStyle,
-  withSpring,
-} from 'react-native-reanimated';
 import { ArrowRight } from 'lucide-react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TypingText } from '@/components/ui/TypingText';
@@ -28,19 +22,15 @@ export default function WelcomeScreen() {
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
 
-  const btnScale = useSharedValue(1);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
-  const animatedBtnStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: btnScale.value }],
-  }));
-
-  const handlePressIn = () => {
-    btnScale.value = withSpring(0.94, { damping: 12, stiffness: 200 });
-  };
-
-  const handlePressOut = () => {
-    btnScale.value = withSpring(1, { damping: 12, stiffness: 200 });
-  };
+  useEffect(() => {
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 600,
+      useNativeDriver: true,
+    }).start();
+  }, [fadeAnim]);
 
   const handleGetStarted = () => {
     router.push('/language-select');
@@ -96,11 +86,8 @@ export default function WelcomeScreen() {
         <View style={styles.flexSpacer} />
 
         {/* ── Bottom Section: Title, Typing Animation & 3D CTA Button ── */}
-        <View style={styles.bottomSection}>
-          <Animated.View
-            entering={FadeIn.duration(800).delay(250)}
-            style={styles.centerBlock}
-          >
+        <Animated.View style={[styles.bottomSection, { opacity: fadeAnim }]}>
+          <View style={styles.centerBlock}>
             <Text style={styles.heroTitle}>{t.welcomeTitle}</Text>
 
             <View style={styles.typingRow}>
@@ -113,19 +100,17 @@ export default function WelcomeScreen() {
                 cursorStyle={styles.typingCursor}
               />
             </View>
-          </Animated.View>
+          </View>
 
           {/* ── 3D Cylinder Green GET STARTED Button ── */}
-          <Animated.View
-            entering={FadeInUp.duration(700).delay(450)}
-            style={styles.bottomArea}
-          >
-            <Animated.View style={[styles.getStartedBtnWrapper, animatedBtnStyle]}>
+          <View style={styles.bottomArea}>
+            <View style={styles.getStartedBtnWrapper}>
               <Pressable
                 onPress={handleGetStarted}
-                onPressIn={handlePressIn}
-                onPressOut={handlePressOut}
-                style={styles.getStartedPressable}
+                style={({ pressed }) => [
+                  styles.getStartedPressable,
+                  pressed && { transform: [{ scale: 0.95 }] },
+                ]}
               >
                 {/* Dark 3D Extrusion Shadow Base */}
                 <View style={styles.getStarted3DBase} pointerEvents="none">
@@ -157,7 +142,7 @@ export default function WelcomeScreen() {
                   </LinearGradient>
                 </View>
               </Pressable>
-            </Animated.View>
+            </View>
 
             {/* Direct Dashboard Access Button */}
             <Pressable
@@ -168,8 +153,8 @@ export default function WelcomeScreen() {
                 Open App Dashboard (Home, Produce, Orders) →
               </Text>
             </Pressable>
-          </Animated.View>
-        </View>
+          </View>
+        </Animated.View>
       </View>
     </View>
   );
