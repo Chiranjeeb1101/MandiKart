@@ -43,7 +43,7 @@ import { MKLayout } from '@/constants/layout';
 
 // ─── Design Tokens (AgroPremium Tactile) ───────────────────────────────────
 const C = {
-  background: '#fff8f5',
+  background: '#F6F1E9',
   surface: '#FFFFFF',
   surfaceContainerLow: '#fff1ea',
   surfaceVariant: '#f3ded3',
@@ -514,17 +514,17 @@ const styles = StyleSheet.create({
   blobOrange: {
     position: 'absolute',
     top: -60, left: -80, width: 300, height: 300, borderRadius: 150,
-    backgroundColor: 'rgba(239,125,26,0.12)',
+    backgroundColor: 'rgba(239,125,26,0.18)',
   },
   blobGreen: {
     position: 'absolute',
     bottom: 60, right: -80, width: 320, height: 320, borderRadius: 160,
-    backgroundColor: 'rgba(165,214,167,0.2)',
+    backgroundColor: 'rgba(27,109,36,0.16)',
   },
   blobFade: {
     position: 'absolute',
     top: 0, left: 0, right: 0, bottom: 0,
-    backgroundColor: 'rgba(249,251,249,0.84)',
+    backgroundColor: 'rgba(246,241,233,0.78)',
   },
 
   header: {

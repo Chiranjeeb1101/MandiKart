@@ -149,8 +149,46 @@ export default function SellScreen() {
   const [qtyModalOpen, setQtyModalOpen] = useState(false);
   const [gradeModalOpen, setGradeModalOpen] = useState(false);
   const [customCropName, setCustomCropName] = useState('');
+  const [customCropPhotoUri, setCustomCropPhotoUri] = useState<string | undefined>();
   const [batchPhotos, setBatchPhotos] = useState<string[]>([]);
   const [uploadingBatchPhoto, setUploadingBatchPhoto] = useState(false);
+
+  // Incoming Order Requests (Item 15)
+  const [orderRequests, setOrderRequests] = useState([
+    {
+      id: 'REQ-101',
+      buyerName: 'Reliance Retail Mandi Hub',
+      buyerType: 'Verified Corporate Buyer',
+      crop: 'Onion (Grade A)',
+      quantity: '1,000 KG',
+      offeredRate: '₹28.50 /kg',
+      totalValue: '₹28,500',
+      pickupSlot: 'Tomorrow, 08:30 AM',
+      status: 'pending',
+    },
+    {
+      id: 'REQ-102',
+      buyerName: 'Mother Dairy Fruit & Vegetable',
+      buyerType: 'National Dairy & Produce',
+      crop: 'Red Tomatoes',
+      quantity: '500 KG',
+      offeredRate: '₹23.00 /kg',
+      totalValue: '₹11,500',
+      pickupSlot: 'Tomorrow, 11:00 AM',
+      status: 'pending',
+    },
+    {
+      id: 'REQ-103',
+      buyerName: 'Nashik Kisan Traders Co-op',
+      buyerType: 'FPO Wholesale Aggregator',
+      crop: 'Fresh Potato',
+      quantity: '800 KG',
+      offeredRate: '₹22.00 /kg',
+      totalValue: '₹17,600',
+      pickupSlot: '05 Sept, 10:00 AM',
+      status: 'pending',
+    },
+  ]);
 
   const handlePickBatchPhoto = async () => {
     try {
@@ -184,14 +222,42 @@ export default function SellScreen() {
     }
   };
 
+  const handlePickCustomCropPhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Camera roll access is needed.');
+        return;
+      }
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!res.canceled && res.assets[0]?.uri) {
+        setCustomCropPhotoUri(res.assets[0].uri);
+      }
+    } catch (err) {
+      console.warn('Custom photo pick failed', err);
+    }
+  };
+
 
   const currentCrop = cropsList.find((c) => c.id === selectedCropId) || cropsList[0];
   const sellingPrice = currentCrop.price;
   const transportCost = currentCrop.transport;
   const netReturn = sellingPrice - transportCost;
+  const estimatedGross = sellingPrice * quantity;
+  const estimatedNet = netReturn * quantity;
 
-  const handleIncreaseQty = () => setQuantity((prev) => prev + 250);
-  const handleDecreaseQty = () => setQuantity((prev) => (prev > 250 ? prev - 250 : 250));
+  const handleDecreaseQty = () => {
+    setQuantity((prev) => Math.max(100, prev - 100));
+  };
+
+  const handleIncreaseQty = () => {
+    setQuantity((prev) => prev + 100);
+  };
 
   const handleAddCrop = (crop: CropItem) => {
     if (!cropsList.some((c) => c.id === crop.id)) {
@@ -202,12 +268,16 @@ export default function SellScreen() {
   };
 
   const handleAddCustomCrop = () => {
-    if (!customCropName.trim()) return;
+    if (!customCropName.trim()) {
+      Alert.alert('Crop Name Required', 'Please enter a valid crop name.');
+      return;
+    }
     const newCropItem: CropItem = {
       id: `custom_${Date.now()}`,
       name: customCropName.trim(),
       image:
-        'https://lh3.googleusercontent.com/aida-public/AB6AXuCDOJL8RKbbBEQi0du8hHGGe-fNpsnVqibsmptRi9ANv4FaE2LMboZqWH-2gppsktLNvVx7JSEyIU7uFwWEwW_oPILiWrX--jYxolR5dfUcXhKUUF-9cJbkgQ_8gyjelFWX8ZwXTeUjNw-KboozHRyg_JSSPA-o-tGFXdfyIhuXXnpbyl4_aNaN-vY2CjsppXPuL2phZuIDm3b1kNIqcfZ0gthemK3IivuhVUaf9GTfWi3xjfl-HDHjcg',
+        customCropPhotoUri ||
+        'https://lh3.googleusercontent.com/aida-public/AB6AXuAQ3ecH_gXE_S9dnNXqZtMNZsTsKwUugK5npqrXQo96EGz87CNfJWQR-HFQcD_gqEoawXV7pG5-hAyd6KZco66Pdavo3jYBsP6NadIKCnghQ8lYLYXnuyMeQuBB2LxBykis0pTs786s14moakUB0ZH0QgH7VlNElFN4Ns5uWVxgvecQv248hBqi_2ENXcSCSj6gx8CL7fz5xwRqaIpshL2s-Xue0Qb10lRmnHBlDimQ82nr7RG_vmqfBw',
       price: 25,
       transport: 2,
       marketRange: '₹22-28',
@@ -215,20 +285,34 @@ export default function SellScreen() {
     setCropsList([...cropsList, newCropItem]);
     setSelectedCropId(newCropItem.id);
     setCustomCropName('');
+    setCustomCropPhotoUri(undefined);
     setAddCropModalOpen(false);
+    Alert.alert('Crop Added', `${newCropItem.name} has been added with custom photo!`);
   };
 
   const handleFindOptions = () => {
-    Alert.alert(
-      'Purchase Request Sent! 🎉',
-      `Your offer for ${quantity.toLocaleString()} KG ${currentCrop.name} (${grade}) has been matched with ABC Foods at ₹${sellingPrice}/KG (Net Return: ₹${netReturn}/KG).`,
-      [
-        {
-          text: 'Track Order',
-          onPress: () => router.push('/(tabs)/orders'),
-        },
-      ]
+    router.push({
+      pathname: '/sell/best-options',
+      params: {
+        crop: currentCrop.name,
+        qty: `${quantity.toLocaleString()} KG`,
+        grade,
+      },
+    });
+  };
+
+  const handleAcceptRequest = (id: string) => {
+    setOrderRequests((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status: 'accepted' } : r))
     );
+    Alert.alert('Offer Accepted! 🚛', 'Pickup vehicle has been assigned. You can track it in Orders.');
+  };
+
+  const handleDeclineRequest = (id: string) => {
+    setOrderRequests((prev) =>
+      prev.map((r) => (r.id === id ? { ...r, status: 'declined' } : r))
+    );
+    Alert.alert('Offer Declined', 'Request has been removed.');
   };
 
   return (
@@ -319,7 +403,16 @@ export default function SellScreen() {
               >
                 <Minus size={15} color="#D9531E" strokeWidth={2.5} />
               </Pressable>
-              <Text style={styles.stepperText}>{quantity.toLocaleString()}</Text>
+              <TextInput
+                style={styles.stepperInput}
+                value={quantity.toString()}
+                onChangeText={(val) => {
+                  const num = parseInt(val.replace(/[^0-9]/g, ''), 10);
+                  setQuantity(isNaN(num) ? 0 : num);
+                }}
+                keyboardType="numeric"
+                maxLength={6}
+              />
               <Pressable
                 onPress={handleIncreaseQty}
                 style={({ pressed }) => [
@@ -486,6 +579,95 @@ export default function SellScreen() {
         </View>
       </View>
 
+      {/* ═══ Incoming Buyer Order Requests Section (Item 15) ═══ */}
+      <View style={styles.orderRequestsSection}>
+        <View style={styles.orderRequestsHeaderRow}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <Users size={18} color="#15803D" />
+            <Text style={styles.orderRequestsTitle}>Incoming Buyer Requests</Text>
+          </View>
+          <View style={styles.requestsBadge}>
+            <Text style={styles.requestsBadgeText}>
+              {orderRequests.filter((r) => r.status === 'pending').length} NEW
+            </Text>
+          </View>
+        </View>
+
+        <View style={styles.requestsStack}>
+          {orderRequests.map((req) => (
+            <View key={req.id} style={styles.requestCard}>
+              <View style={styles.requestCardHeader}>
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.requestBuyerName}>{req.buyerName}</Text>
+                  <Text style={styles.requestBuyerType}>{req.buyerType}</Text>
+                </View>
+                <View style={styles.requestValueBadge}>
+                  <Text style={styles.requestValueText}>{req.totalValue}</Text>
+                </View>
+              </View>
+
+              <View style={styles.requestDetailsBox}>
+                <View style={styles.requestDetailItem}>
+                  <Text style={styles.requestDetailLabel}>Crop & Qty</Text>
+                  <Text style={styles.requestDetailVal}>
+                    {req.crop} • {req.quantity}
+                  </Text>
+                </View>
+                <View style={styles.requestDetailItem}>
+                  <Text style={styles.requestDetailLabel}>Offered Rate</Text>
+                  <Text style={[styles.requestDetailVal, { color: '#15803D' }]}>
+                    {req.offeredRate}
+                  </Text>
+                </View>
+                <View style={styles.requestDetailItem}>
+                  <Text style={styles.requestDetailLabel}>Pickup</Text>
+                  <Text style={styles.requestDetailVal}>{req.pickupSlot}</Text>
+                </View>
+              </View>
+
+              {req.status === 'pending' ? (
+                <View style={styles.requestActionsRow}>
+                  <Pressable
+                    style={styles.requestDeclineBtn}
+                    onPress={() => handleDeclineRequest(req.id)}
+                  >
+                    <Text style={styles.requestDeclineText}>Decline</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.requestCounterBtn}
+                    onPress={() =>
+                      Alert.alert('Counter Offer', `Submit your expected rate for ${req.buyerName}:`)
+                    }
+                  >
+                    <Text style={styles.requestCounterText}>Counter</Text>
+                  </Pressable>
+                  <Pressable
+                    style={styles.requestAcceptBtn}
+                    onPress={() => handleAcceptRequest(req.id)}
+                  >
+                    <Check size={14} color="#FFFFFF" strokeWidth={2.5} style={{ marginRight: 4 }} />
+                    <Text style={styles.requestAcceptText}>Accept</Text>
+                  </Pressable>
+                </View>
+              ) : (
+                <View
+                  style={[
+                    styles.statusBanner,
+                    req.status === 'accepted' ? styles.statusAccepted : styles.statusDeclined,
+                  ]}
+                >
+                  <Text style={styles.statusBannerText}>
+                    {req.status === 'accepted'
+                      ? '✓ Offer Accepted • Vehicle Dispatched'
+                      : '✕ Offer Declined'}
+                  </Text>
+                </View>
+              )}
+            </View>
+          ))}
+        </View>
+      </View>
+
       {/* ── 4. Primary Action CTA ── */}
       <View style={styles.actionWrapper}>
         <Pressable
@@ -538,7 +720,31 @@ export default function SellScreen() {
             </View>
 
             <View style={styles.customCropContainer}>
-              <Text style={styles.customLabel}>Or add a custom crop name:</Text>
+              <Text style={styles.customLabel}>Or add custom crop with photo:</Text>
+              
+              {/* Photo Upload for Custom Crop */}
+              <View style={styles.customPhotoRow}>
+                {customCropPhotoUri ? (
+                  <View style={styles.customPhotoPreview}>
+                    <Image source={{ uri: customCropPhotoUri }} style={styles.customCropThumb} />
+                    <Pressable
+                      style={styles.removeCustomPhotoBtn}
+                      onPress={() => setCustomCropPhotoUri(undefined)}
+                    >
+                      <X size={12} color="#FFFFFF" />
+                    </Pressable>
+                  </View>
+                ) : (
+                  <Pressable
+                    style={styles.uploadCustomPhotoBtn}
+                    onPress={handlePickCustomCropPhoto}
+                  >
+                    <Camera size={16} color="#1E5A2A" />
+                    <Text style={styles.uploadCustomPhotoText}>Upload Photo</Text>
+                  </Pressable>
+                )}
+              </View>
+
               <View style={styles.customInputRow}>
                 <TextInput
                   style={styles.customInput}
@@ -548,7 +754,7 @@ export default function SellScreen() {
                   onChangeText={setCustomCropName}
                 />
                 <Pressable onPress={handleAddCustomCrop} style={styles.addCustomBtn}>
-                  <Text style={styles.addCustomBtnText}>Add</Text>
+                  <Text style={styles.addCustomBtnText}>Add Crop</Text>
                 </Pressable>
               </View>
             </View>
@@ -1368,5 +1574,213 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginLeft: 10,
     flexShrink: 0,
+  },
+
+  /* Stepper text input */
+  stepperInput: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1A1C1E',
+    textAlign: 'center',
+    minWidth: 60,
+    paddingVertical: 0,
+  },
+
+  /* Order Requests Section */
+  orderRequestsSection: {
+    marginTop: 18,
+    marginBottom: 16,
+    width: '100%',
+  },
+  orderRequestsHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  orderRequestsTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1A1C1E',
+  },
+  requestsBadge: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 8,
+  },
+  requestsBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#15803D',
+  },
+  requestsStack: {
+    gap: 12,
+  },
+  requestCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    padding: 14,
+    borderWidth: 1.5,
+    borderColor: '#E3DCCF',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  requestCardHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 10,
+  },
+  requestBuyerName: {
+    fontSize: 14.5,
+    fontWeight: '800',
+    color: '#1F2937',
+  },
+  requestBuyerType: {
+    fontSize: 11,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  requestValueBadge: {
+    backgroundColor: '#FEF3C7',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 10,
+  },
+  requestValueText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#92400E',
+  },
+  requestDetailsBox: {
+    flexDirection: 'row',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 12,
+    justifyContent: 'space-between',
+  },
+  requestDetailItem: {
+    flex: 1,
+  },
+  requestDetailLabel: {
+    fontSize: 10,
+    color: '#6B7280',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  requestDetailVal: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1F2937',
+  },
+  requestActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  requestDeclineBtn: {
+    flex: 1,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  requestDeclineText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  requestCounterBtn: {
+    flex: 1,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#FFF7ED',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  requestCounterText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#C2410C',
+  },
+  requestAcceptBtn: {
+    flex: 1.5,
+    height: 38,
+    borderRadius: 10,
+    backgroundColor: '#1E5A2A',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  requestAcceptText: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  statusBanner: {
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  statusAccepted: {
+    backgroundColor: '#DCFCE7',
+  },
+  statusDeclined: {
+    backgroundColor: '#FEE2E2',
+  },
+  statusBannerText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#166534',
+  },
+
+  /* Custom Crop Photo in Modal */
+  customPhotoRow: {
+    marginBottom: 10,
+  },
+  customPhotoPreview: {
+    position: 'relative',
+    width: 60,
+    height: 60,
+    borderRadius: 12,
+    overflow: 'hidden',
+  },
+  customCropThumb: {
+    width: '100%',
+    height: '100%',
+  },
+  removeCustomPhotoBtn: {
+    position: 'absolute',
+    top: 3,
+    right: 3,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  uploadCustomPhotoBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1.2,
+    borderStyle: 'dashed',
+    borderColor: '#15803D',
+    backgroundColor: '#F0FDF4',
+  },
+  uploadCustomPhotoText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#15803D',
   },
 });

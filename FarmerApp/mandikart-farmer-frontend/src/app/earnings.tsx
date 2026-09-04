@@ -361,7 +361,7 @@ export default function EarningsScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#FAF9F6',
+    backgroundColor: '#F6F1E9',
   },
   topBar: {
     flexDirection: 'row',
@@ -371,7 +371,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#E3DCCF',
   },
   backBtn: {
     width: 40,
@@ -502,7 +502,7 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     padding: 14,
     borderWidth: 1.5,
-    borderColor: '#ECEAE3',
+    borderColor: '#E3DCCF',
     gap: 12,
   },
   bankIconWrap: {
@@ -545,7 +545,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 16,
     borderWidth: 1.5,
-    borderColor: '#ECEAE3',
+    borderColor: '#E3DCCF',
   },
   chartHeader: {
     flexDirection: 'row',
@@ -594,7 +594,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 18,
     borderWidth: 1.5,
-    borderColor: '#ECEAE3',
+    borderColor: '#E3DCCF',
   },
   historyHeader: {
     flexDirection: 'row',
