@@ -1,16 +1,33 @@
 import React from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing } from '../../theme';
+import { useLanguage, SupportedLanguage } from '../../context/LanguageContext';
 
 export default function SettingsScreen({ navigation }: any) {
+  const { currentLanguageOption, setLanguage, t } = useLanguage();
+
+  const handleLanguagePress = () => {
+    Alert.alert(
+      t('selectLanguage', 'Select Language 🌐'),
+      t('chooseLanguage', 'Choose your preferred app language:'),
+      [
+        { text: 'English (IN)', onPress: () => setLanguage('en') },
+        { text: 'ଓଡ଼ିଆ (Odia)', onPress: () => setLanguage('or') },
+        { text: 'हिंदी (Hindi)', onPress: () => setLanguage('hi') },
+        { text: 'मराठी (Marathi)', onPress: () => setLanguage('mr') },
+        { text: 'Cancel', style: 'cancel' },
+      ]
+    );
+  };
+
   const sections = [
     {
       title: 'Preferences',
       items: [
         { label: 'Push Notifications', icon: 'notifications-outline', value: 'On' },
-        { label: 'Language', icon: 'language-outline', value: 'English' },
+        { label: t('appLanguage', 'Language'), icon: 'language-outline', value: currentLanguageOption.nativeName, onPress: handleLanguagePress },
       ],
     },
     {
@@ -36,7 +53,11 @@ export default function SettingsScreen({ navigation }: any) {
             <Text style={styles.secTitle}>{sec.title}</Text>
             <View style={styles.card}>
               {sec.items.map((item, i) => (
-                <TouchableOpacity key={item.label} style={[styles.itemRow, i < sec.items.length - 1 && styles.border]}>
+                <TouchableOpacity
+                  key={item.label}
+                  style={[styles.itemRow, i < sec.items.length - 1 && styles.border]}
+                  onPress={(item as any).onPress}
+                >
                   <Ionicons name={item.icon as any} size={20} color={Colors.textSecondary} />
                   <Text style={styles.itemLabel}>{item.label}</Text>
                   {(item as any).value && <Text style={styles.itemValue}>{(item as any).value}</Text>}

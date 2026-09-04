@@ -2,7 +2,7 @@
  * MandiKart — Canonical Core Interfaces & Standard API Envelope
  */
 
-import { OrderStatus, UserRole, ProduceGrade, BuyerTarget, QuantityUnit } from '../enums/orderStatus.js';
+import { OrderStatus, UserRole, ProduceGrade, BuyerTarget, QuantityUnit, DisputeStatus } from '../enums/orderStatus.js';
 
 // Standard API Response Envelope
 export interface ApiResponse<T = any> {
@@ -224,6 +224,100 @@ export interface DevicePushTokenRecord {
   lastSeenAt: string;
 }
 
+export type BuyerType = 'RETAIL' | 'BULK';
+
+export interface Buyer {
+  id: string;
+  phone: string;
+  email?: string | null;
+  fullName: string;
+  avatarUrl?: string | null;
+  buyerType: BuyerType;
+  companyName?: string | null;
+  gstin?: string | null;
+  addresses: Array<{
+    id: string;
+    street: string;
+    city: string;
+    state: string;
+    pincode: string;
+    isDefault?: boolean;
+  }>;
+  isVerified: boolean;
+  preferredLanguage: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type PaymentStatus = 'PENDING' | 'PROCESSING' | 'SUCCEEDED' | 'FAILED' | 'CANCELLED' | 'REFUNDED';
+export type EscrowStatus = 'HELD' | 'RELEASED' | 'REFUNDED' | 'DISPUTED_HOLD';
+
+export interface PaymentRecord {
+  id: string;
+  orderId: string;
+  buyerId?: string | null;
+  stripePaymentIntentId?: string | null;
+  stripeChargeId?: string | null;
+  amount: number;
+  currency: string;
+  status: PaymentStatus;
+  escrowStatus: EscrowStatus;
+  paymentMethod: string;
+  metadata?: Record<string, any>;
+  escrowReleasedAt?: string | null;
+  refundedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DisputeRecord {
+  id: string;
+  orderId: string;
+  buyerId?: string | null;
+  farmerId: string;
+  reason: string;
+  evidencePhotos: string[];
+  disputedAmount: number;
+  status: DisputeStatus;
+  adminNotes?: string | null;
+  resolvedAt?: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface FarmPlot {
+  id: string;
+  farmerId: string;
+  surveyNumber: string;
+  landAreaAcres: number;
+  ownershipType: string;
+  soilType?: string | null;
+  irrigationSource?: string | null;
+  plotImageUrl?: string | null;
+  doc712Url?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
+  isVerified: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export type OtpChannel = 'SMS' | 'EMAIL' | 'WHATSAPP';
+
+export interface OtpRecord {
+  id: string;
+  identifier: string;
+  codeHash: string;
+  channel: OtpChannel;
+  attempts: number;
+  maxAttempts: number;
+  isUsed: boolean;
+  expiresAt: string;
+  verifiedAt?: string | null;
+  createdAt: string;
+}
+
 export * from './location.types.js';
+
 
 

@@ -241,7 +241,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.white,
     alignItems: 'center',
     justifyContent: 'center',
-    ...Shadows.small,
+    ...Shadows.sm,
   },
   content: {
     alignItems: 'center',
@@ -255,7 +255,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: Spacing.md,
-    ...Shadows.small,
+    ...Shadows.sm,
   },
   iconInner: {
     width: 62,
@@ -288,7 +288,7 @@ const styles = StyleSheet.create({
     marginBottom: Spacing.lg,
     borderWidth: 1,
     borderColor: Colors.borderLight,
-    ...Shadows.small,
+    ...Shadows.sm,
   },
   phoneText: {
     fontSize: 14,
@@ -325,7 +325,7 @@ const styles = StyleSheet.create({
     color: Colors.textPrimary,
     backgroundColor: Colors.white,
     textAlign: 'center',
-    ...Shadows.small,
+    ...Shadows.sm,
   },
   otpBoxFilled: {
     borderColor: Colors.primary,
@@ -335,7 +335,7 @@ const styles = StyleSheet.create({
   otpBoxFocused: {
     borderColor: Colors.primary,
     backgroundColor: Colors.white,
-    ...Shadows.medium,
+    ...Shadows.md,
   },
   demoPill: {
     flexDirection: 'row',

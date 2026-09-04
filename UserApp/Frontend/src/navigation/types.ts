@@ -66,4 +66,5 @@ export type RootStackParamList = {
   OrderConfirmation: { orderId: string; deliveryOtp?: string };
   BulkRequirement: undefined;
   BulkMatchDiscovery: { requirementId: string; requirement?: any };
+  Analytics: undefined;
 };

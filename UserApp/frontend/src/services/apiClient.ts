@@ -21,8 +21,8 @@ import {
 } from '../types';
 import { SAMPLE_PRODUCTS, SAMPLE_CATEGORIES, SAMPLE_FARMER } from './mockData';
 
-// Configurable API base URL (can point to LAN IP for physical device testing)
-const API_BASE_URL = 'http://localhost:4001/api/v1';
+// Configurable API base URL (reads from root .env or falls back to local dev)
+const API_BASE_URL = process.env.EXPO_PUBLIC_USER_API_URL || 'http://localhost:4001/api/v1';
 const REQUEST_TIMEOUT_MS = 3500;
 
 // Internal token memory
@@ -133,6 +133,96 @@ export const apiClient = {
     async refreshSession(): Promise<boolean> {
       const res = await safeFetch('/auth/refresh-session', { method: 'POST' }, { success: true });
       return !res.error;
+    },
+
+    async loginWithGoogle(idToken?: string): Promise<{
+      token: string;
+      sessionId: string;
+      buyer: {
+        id: string;
+        fullName: string;
+        email: string;
+        phone: string;
+        buyerType: 'RETAIL' | 'BULK';
+        city: string;
+        state: string;
+        role: string;
+        avatarUrl?: string;
+      };
+      isFallback: boolean;
+    }> {
+      const fallback = {
+        token: `mock_jwt_google_${Date.now()}`,
+        sessionId: `sess_google_${Date.now()}`,
+        buyer: {
+          id: `buyer_google_${Date.now()}`,
+          fullName: 'Aarav Sharma (Google)',
+          email: 'aarav.mandi@gmail.com',
+          phone: '+91 9876543210',
+          buyerType: 'RETAIL' as const,
+          city: 'Pune',
+          state: 'Maharashtra',
+          role: 'BUYER',
+          avatarUrl: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150',
+        },
+      };
+
+      const result = await safeFetch(
+        '/auth/google',
+        {
+          method: 'POST',
+          body: JSON.stringify({ idToken: idToken || 'simulated_google_id_token' }),
+        },
+        fallback
+      );
+
+      if (result.data.token) {
+        setApiAuthToken(result.data.token);
+      }
+      return { ...result.data, isFallback: result.isFallback };
+    },
+
+    async loginWithPhoneOtp(phone: string, otp: string): Promise<{
+      token: string;
+      sessionId: string;
+      buyer: {
+        id: string;
+        fullName: string;
+        phone: string;
+        buyerType: 'RETAIL' | 'BULK';
+        city: string;
+        state: string;
+        role: string;
+      };
+      isFallback: boolean;
+    }> {
+      const fallback = {
+        token: `mock_jwt_phone_${Date.now()}`,
+        sessionId: `sess_phone_${Date.now()}`,
+        buyer: {
+          id: `buyer_phone_${Date.now()}`,
+          fullName: 'Verified Buyer',
+          phone: phone || '+91 9876543210',
+          buyerType: 'RETAIL' as const,
+          city: 'Pune',
+          state: 'Maharashtra',
+          role: 'BUYER',
+        },
+      };
+
+      const result = await safeFetch(
+        '/auth/phone-otp',
+        {
+          method: 'POST',
+          body: JSON.stringify({ phone, code: otp, otp }),
+        },
+        fallback
+      );
+
+      if (result.data.token) {
+        setApiAuthToken(result.data.token);
+      }
+      return { ...result.data, isFallback: result.isFallback };
     },
   },
 
@@ -535,4 +625,238 @@ export const apiClient = {
       return res.data.matches || fallback;
     },
   },
+
+  // Storage & Image Upload with Automatic Sharp WebP Compression
+  storage: {
+    async uploadImage(
+      fileUri: string,
+      bucket: 'avatars' | 'products' | 'land_records' | 'pod' = 'products'
+    ) {
+      const formData = new FormData();
+      const filename = fileUri.split('/').pop() || 'upload.jpg';
+      const match = /\.(\w+)$/.exec(filename);
+      const type = match ? `image/${match[1]}` : 'image/jpeg';
+
+      formData.append('bucket', bucket);
+      formData.append('image', {
+        uri: fileUri,
+        name: filename,
+        type,
+      } as any);
+
+      try {
+        const res = await fetch(`${API_BASE_URL}/storage/upload`, {
+          method: 'POST',
+          body: formData,
+          headers: {
+            Accept: 'application/json',
+          },
+        });
+        if (res.ok) {
+          const json = await res.json();
+          return json.data;
+        }
+      } catch {
+        // Fallback simulation
+      }
+      return {
+        url: fileUri,
+        key: `simulated_${Date.now()}`,
+        bucket,
+        originalSizeKb: 980,
+        compressedSizeKb: 165,
+        savingsPercent: 83,
+        mimeType: 'image/webp',
+      };
+    },
+  },
+
+  // Stripe Payment Gateway & Escrow
+  payments: {
+    async createIntent(params: {
+      orderId: string;
+      amount: number;
+      buyerId?: string;
+      currency?: string;
+    }) {
+      const res = await safeFetch<any>(
+        '/payments/create-intent',
+        {
+          method: 'POST',
+          body: JSON.stringify(params),
+        },
+        {
+          success: true,
+          data: {
+            clientSecret: `pi_mock_${Date.now()}_secret_test`,
+            paymentIntentId: `pi_mock_${Date.now()}`,
+            amount: params.amount,
+            currency: params.currency || 'INR',
+            status: 'requires_payment_method',
+            escrowStatus: 'HELD',
+            isSimulated: true,
+          },
+        }
+      );
+      return res.data?.data || res.data;
+    },
+
+    async confirm(paymentIntentId: string, orderId: string) {
+      const res = await safeFetch<any>(
+        '/payments/confirm',
+        {
+          method: 'POST',
+          body: JSON.stringify({ paymentIntentId, orderId }),
+        },
+        {
+          success: true,
+          data: {
+            status: 'SUCCEEDED',
+            escrowStatus: 'HELD',
+            orderId,
+            message: 'Payment received. Funds securely locked in MandiKart Escrow.',
+          },
+        }
+      );
+      return res.data?.data || res.data;
+    },
+  },
+
+  // Hyper-local Agricultural Weather Advisory
+  weather: {
+    async getAgriWeather(lat: number = 18.5204, lon: number = 73.8567) {
+      const fallback = {
+        temperatureC: 28,
+        humidityPercent: 55,
+        precipitationMm: 0,
+        windSpeedKmh: 12,
+        conditionText: 'Mainly Clear',
+        isDaytime: true,
+        advisory: {
+          harvestRecommendation: 'OPTIMAL',
+          pestRisk: 'LOW',
+          sprayCondition: 'FAVORABLE',
+          summary: 'Optimal weather for harvesting and mandi transit.',
+        },
+      };
+
+      const res = await safeFetch<any>(
+        `/weather?lat=${lat}&lon=${lon}`,
+        { method: 'GET' },
+        { data: fallback }
+      );
+      return res.data?.data || fallback;
+    },
+  },
+
+  // 10. Realtime Driver GPS Tracking Stream
+  tracking: {
+    async publishLocation(payload: {
+      orderId: string;
+      driverId: string;
+      driverName?: string;
+      latitude: number;
+      longitude: number;
+      speedKmH?: number;
+      heading?: number;
+      destLat?: number;
+      destLon?: number;
+    }) {
+      const res = await safeFetch(
+        '/tracking/publish',
+        { method: 'POST', body: JSON.stringify(payload) },
+        { success: true, data: payload }
+      );
+      return res.data;
+    },
+
+    async getOrderLocation(orderId: string) {
+      const fallback = {
+        orderId,
+        driverId: 'drv_001',
+        driverName: 'Ramesh Pawar',
+        coordinates: { latitude: 18.5204, longitude: 73.8567 },
+        heading: 45,
+        speedKmh: 35,
+        timestamp: new Date().toISOString(),
+        remainingDistanceKm: 4.2,
+        estimatedArrivalMinutes: 12,
+      };
+
+      const res = await safeFetch<any>(
+        `/tracking/${orderId}`,
+        { method: 'GET' },
+        fallback
+      );
+      return res.data;
+    },
+
+    async reverseGeocode(lat: number, lon: number) {
+      const res = await safeFetch<any>(
+        `/tracking/reverse-geocode?lat=${lat}&lon=${lon}`,
+        { method: 'GET' },
+        null
+      );
+      return res.data;
+    },
+  },
+
+  // 11. Platform Analytics & Performance Dashboards
+  analytics: {
+    async getDashboard() {
+      const fallback = {
+        metrics: {
+          totalGmv: 489200,
+          totalOrders: 242,
+          activeFarmers: 89,
+          activeBuyers: 310,
+          escrowLockedTotal: 124500,
+          fulfillmentPurityRate: 98.8,
+          avgDeliveryTimeMinutes: 42,
+        },
+        gmvGrowthCurve: [
+          { label: 'Mon', value: 42500, secondaryValue: 21 },
+          { label: 'Tue', value: 58200, secondaryValue: 28 },
+          { label: 'Wed', value: 61400, secondaryValue: 31 },
+          { label: 'Thu', value: 54800, secondaryValue: 26 },
+          { label: 'Fri', value: 78900, secondaryValue: 39 },
+          { label: 'Sat', value: 92400, secondaryValue: 46 },
+          { label: 'Sun', value: 114200, secondaryValue: 58 },
+        ],
+        cropVolumeBreakdown: [
+          { label: 'Nashik Onion', value: 42 },
+          { label: 'Tomato Hybrid', value: 26 },
+          { label: 'Potato Jyoti', value: 18 },
+          { label: 'Wheat Sharbati', value: 14 },
+        ],
+        regionalPriceVolatility: [
+          { label: 'Nashik APMC', value: 24, secondaryValue: 28 },
+          { label: 'Pune APMC', value: 26, secondaryValue: 30 },
+          { label: 'Vashi Mumbai', value: 31, secondaryValue: 34 },
+        ],
+        deliveryFulfillmentTrends: [
+          { label: 'Delivered On-Time', value: 94 },
+          { label: 'Weather Delay', value: 4 },
+          { label: 'Buyer Rescheduled', value: 2 },
+        ],
+      };
+
+      const res = await safeFetch<any>(
+        '/analytics/dashboard',
+        { method: 'GET' },
+        fallback
+      );
+      return res.data;
+    },
+
+    async logClientEvent(eventName: string, params?: Record<string, any>) {
+      return safeFetch(
+        '/analytics/event',
+        { method: 'POST', body: JSON.stringify({ eventName, params }) },
+        { success: true }
+      );
+    },
+  },
 };
+
+

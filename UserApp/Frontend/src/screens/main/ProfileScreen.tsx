@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, StatusBar, Alert, Switch,
+  Image, StatusBar, Alert, Switch, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -10,38 +10,93 @@ import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { RootStackParamList } from '../../navigation/types';
 import { Colors, Spacing, BorderRadius, Shadows } from '../../theme';
 import { useAuth } from '../../context/AuthContext';
+import * as ImagePicker from 'expo-image-picker';
+import { apiClient } from '../../services/apiClient';
+
+import { useLanguage, SupportedLanguage } from '../../context/LanguageContext';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ProfileScreen() {
   const navigation = useNavigation<Nav>();
   const { logout } = useAuth();
+  const { currentLanguageOption, setLanguage, t } = useLanguage();
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [selectedLanguage, setSelectedLanguage] = useState('English (IN)');
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const handlePickAvatar = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Please allow camera roll access to update your profile photo.');
+        return;
+      }
+
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.7,
+      });
+
+      if (!result.canceled && result.assets[0]?.uri) {
+        const localUri = result.assets[0].uri;
+        setAvatarUri(localUri);
+        setUploadingAvatar(true);
+
+        const uploadRes = await apiClient.storage.uploadImage(localUri, 'avatars');
+        setUploadingAvatar(false);
+        if (uploadRes?.url) {
+          setAvatarUri(uploadRes.url);
+          Alert.alert(
+            'Photo Uploaded! 📸',
+            `Your profile photo was compressed to WebP and saved securely.\nStorage saved: ${uploadRes.savingsPercent}%`
+          );
+        }
+      }
+    } catch (err: any) {
+      setUploadingAvatar(false);
+      Alert.alert('Upload Error', err?.message || 'Failed to upload profile photo');
+    }
+  };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout 🚪',
-      'Are you sure you want to logout from MandiKart?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Logout', style: 'destructive', onPress: () => logout?.() },
-      ]
-    );
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined' && window.confirm('Are you sure you want to logout from MandiKart?')) {
+        logout?.();
+      }
+    } else {
+      Alert.alert(
+        'Logout 🚪',
+        'Are you sure you want to logout from MandiKart?',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Logout', style: 'destructive', onPress: () => logout?.() },
+        ]
+      );
+    }
   };
 
   const handleLanguageChange = () => {
-    Alert.alert(
-      'Select Language 🌐',
-      'Choose your preferred app language:',
-      [
-        { text: 'English (IN)', onPress: () => setSelectedLanguage('English (IN)') },
-        { text: 'हिंदी (Hindi)', onPress: () => setSelectedLanguage('हिंदी (Hindi)') },
-        { text: 'मराठी (Marathi)', onPress: () => setSelectedLanguage('मराठी (Marathi)') },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    if (Platform.OS === 'web') {
+      const order: SupportedLanguage[] = ['en', 'or', 'hi', 'mr'];
+      const nextIdx = (order.indexOf(currentLanguageOption.code as SupportedLanguage) + 1) % order.length;
+      setLanguage(order[nextIdx]);
+    } else {
+      Alert.alert(
+        t('selectLanguage', 'Select Language 🌐'),
+        t('chooseLanguage', 'Choose your preferred app language:'),
+        [
+          { text: 'English (IN)', onPress: () => setLanguage('en') },
+          { text: 'ଓଡ଼ିଆ (Odia)', onPress: () => setLanguage('or') },
+          { text: 'हिंदी (Hindi)', onPress: () => setLanguage('hi') },
+          { text: 'मराठी (Marathi)', onPress: () => setLanguage('mr') },
+          { text: 'Cancel', style: 'cancel' },
+        ]
+      );
+    }
   };
 
   return (
@@ -62,12 +117,22 @@ export default function ProfileScreen() {
       <ScrollView contentContainerStyle={styles.scroll} showsVerticalScrollIndicator={false}>
         {/* User Hero Card */}
         <View style={styles.userHeroCard}>
-          <View style={styles.userAvatarWrap}>
-            <View style={styles.avatar}>
-              <Text style={styles.avatarText}>R</Text>
+          <TouchableOpacity
+            style={styles.userAvatarWrap}
+            onPress={handlePickAvatar}
+            activeOpacity={0.8}
+          >
+            {avatarUri ? (
+              <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+            ) : (
+              <View style={styles.avatar}>
+                <Text style={styles.avatarText}>R</Text>
+              </View>
+            )}
+            <View style={styles.cameraBadge}>
+              <Ionicons name="camera" size={11} color={Colors.white} />
             </View>
-            <View style={styles.onlineBadge} />
-          </View>
+          </TouchableOpacity>
 
           <View style={styles.userInfo}>
             <View style={styles.nameRow}>
@@ -184,6 +249,22 @@ export default function ProfileScreen() {
             <Text style={styles.menuLabel}>Farmer Messages & Chats</Text>
             <Ionicons name="chevron-forward" size={16} color={Colors.textDisabled} />
           </TouchableOpacity>
+
+          <View style={styles.menuDivider} />
+
+          <TouchableOpacity
+            style={styles.menuRow}
+            onPress={() => navigation.navigate('Analytics')}
+          >
+            <View style={[styles.menuIconBg, { backgroundColor: '#F0FDF4' }]}>
+              <Ionicons name="stats-chart" size={18} color="#16A34A" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.menuLabel}>Market Analytics & GMV Graphs</Text>
+              <Text style={{ fontSize: 11, color: '#16A34A', fontWeight: '500' }}>Live Firebase & Mandi telemetry</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={16} color={Colors.textDisabled} />
+          </TouchableOpacity>
         </View>
 
         {/* Menu Section 2: Account & Settings */}
@@ -240,8 +321,8 @@ export default function ProfileScreen() {
             <View style={styles.menuIconBg}>
               <Ionicons name="language-outline" size={18} color={Colors.primary} />
             </View>
-            <Text style={styles.menuLabel}>App Language</Text>
-            <Text style={styles.menuValueText}>{selectedLanguage}</Text>
+            <Text style={styles.menuLabel}>{t('appLanguage', 'App Language')}</Text>
+            <Text style={styles.menuValueText}>{currentLanguageOption.nativeName}</Text>
             <Ionicons name="chevron-forward" size={16} color={Colors.textDisabled} />
           </TouchableOpacity>
         </View>
@@ -317,7 +398,19 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primaryLight,
     alignItems: 'center', justifyContent: 'center',
   },
+  avatarImage: {
+    width: 60, height: 60, borderRadius: 30,
+    backgroundColor: Colors.gray100,
+  },
   avatarText: { fontSize: 26, fontWeight: '800', color: Colors.primary },
+  cameraBadge: {
+    position: 'absolute',
+    bottom: -2, right: -2,
+    width: 22, height: 22, borderRadius: 11,
+    backgroundColor: Colors.primary,
+    alignItems: 'center', justifyContent: 'center',
+    borderWidth: 2, borderColor: Colors.white,
+  },
   onlineBadge: {
     position: 'absolute',
     bottom: 2, right: 2,

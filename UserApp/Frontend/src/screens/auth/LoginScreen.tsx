@@ -15,7 +15,7 @@ type Props = NativeStackScreenProps<AuthStackParamList, 'Login'>;
 type LoginMode = 'password' | 'otp';
 
 export default function LoginScreen({ navigation }: Props) {
-  const { signIn } = useAuth();
+  const { signIn, signInWithGoogle, signInWithPhoneOtp } = useAuth();
 
   const [mode, setMode] = useState<LoginMode>('password');
   const [phone, setPhone] = useState('9876543210');
@@ -39,7 +39,16 @@ export default function LoginScreen({ navigation }: Props) {
 
     setLoading(true);
     try {
-      await signIn(phone, otpCode);
+      if (mode === 'otp') {
+        if (!otpCode || otpCode.length < 4) {
+          Alert.alert('Invalid OTP', 'Please enter the verification code sent to your phone.');
+          setLoading(false);
+          return;
+        }
+        await signInWithPhoneOtp(phone, otpCode);
+      } else {
+        await signIn(phone, password);
+      }
     } catch (e) {
       console.warn('Login error:', e);
     } finally {
@@ -53,7 +62,19 @@ export default function LoginScreen({ navigation }: Props) {
       return;
     }
     setOtpSent(true);
-    Alert.alert('OTP Sent! 📱', `A 4-digit verification code has been sent to +91 ${phone}. (Demo OTP: 1234)`);
+    setOtpCode('123456');
+    Alert.alert('OTP Sent! 📱', `A verification code has been dispatched via Firebase SMS Gateway to +91 ${phone}. (Demo OTP: 123456)`);
+  };
+
+  const handleGoogleLogin = async () => {
+    setLoading(true);
+    try {
+      await signInWithGoogle();
+    } catch (e) {
+      console.warn('Google sign-in error:', e);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleDemoLogin = async () => {
@@ -95,11 +116,11 @@ export default function LoginScreen({ navigation }: Props) {
           </View>
 
           {/* Quick Demo Login Pill */}
-          {/* <TouchableOpacity style={styles.demoBanner} onPress={handleDemoLogin} activeOpacity={0.85}>
+          <TouchableOpacity style={styles.demoBanner} onPress={handleDemoLogin} activeOpacity={0.85}>
             <Ionicons name="flash" size={16} color={Colors.primary} />
-            <Text style={styles.demoText}>Quick Demo Login as <Text style={styles.demoBold}>Ramesh Sharma</Text></Text>
+            <Text style={styles.demoText}>Quick Demo Login as <Text style={styles.demoBold}>Aarav Sharma</Text></Text>
             <Ionicons name="arrow-forward" size={14} color={Colors.primary} />
-          </TouchableOpacity> */}
+          </TouchableOpacity>
 
           {/* Login Method Tabs */}
           <View style={styles.tabContainer}>
@@ -197,15 +218,15 @@ export default function LoginScreen({ navigation }: Props) {
                 {/* OTP Mode */}
                 {otpSent ? (
                   <View style={styles.field}>
-                    <Text style={styles.label}>Enter 4-Digit OTP *</Text>
+                    <Text style={styles.label}>Enter 6-Digit Phone OTP *</Text>
                     <TextInput
                       style={[styles.input, styles.otpInput]}
                       value={otpCode}
                       onChangeText={setOtpCode}
-                      placeholder="e.g. 1234"
+                      placeholder="e.g. 123456"
                       placeholderTextColor={Colors.textDisabled}
                       keyboardType="number-pad"
-                      maxLength={4}
+                      maxLength={6}
                     />
                   </View>
                 ) : null}
@@ -237,15 +258,10 @@ export default function LoginScreen({ navigation }: Props) {
 
             {/* Social Login Buttons */}
             <View style={styles.socialRow}>
-              <TouchableOpacity style={styles.socialBtn} onPress={handleDemoLogin}>
+              <TouchableOpacity style={styles.socialBtn} onPress={handleGoogleLogin} activeOpacity={0.8}>
                 <Ionicons name="logo-google" size={18} color="#EA4335" />
-                <Text style={styles.socialText}>Google</Text>
+                <Text style={styles.socialText}>Continue with Google</Text>
               </TouchableOpacity>
-
-              {/* <TouchableOpacity style={styles.socialBtn} onPress={handleDemoLogin}>
-                <Ionicons name="logo-apple" size={18} color="#000000" />
-                <Text style={styles.socialText}>Apple</Text>
-              </TouchableOpacity> */}
             </View>
           </View>
 

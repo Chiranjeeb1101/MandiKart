@@ -12,6 +12,7 @@ export interface SessionPayload {
   userId: string;
   role: UserRole;
   phone?: string;
+  email?: string;
   issuedAt: number;     // Epoch ms
   lastActivityAt: number; // Epoch ms
   expiresAt: number;    // Epoch ms (sliding 15-day window)
@@ -22,6 +23,7 @@ export interface SessionRecord {
   userId: string;
   role: UserRole;
   phone?: string;
+  email?: string;
   lastActivityAt: number;
   expiresAt: number;
 }
@@ -43,7 +45,9 @@ export class SessionManager {
     userId: string;
     role: UserRole;
     phone?: string;
+    email?: string;
   }): { token: string; sessionId: string; expiresAt: string } {
+
     const now = Date.now();
     const ttlMs = CONSTANTS.SESSION_TTL_SECONDS * 1000;
     const expiresAtMs = now + ttlMs;
@@ -54,6 +58,7 @@ export class SessionManager {
       userId: params.userId,
       role: params.role,
       phone: params.phone,
+      email: params.email,
       issuedAt: now,
       lastActivityAt: now,
       expiresAt: expiresAtMs,
@@ -65,6 +70,7 @@ export class SessionManager {
       userId: params.userId,
       role: params.role,
       phone: params.phone,
+      email: params.email,
       lastActivityAt: now,
       expiresAt: expiresAtMs,
     });

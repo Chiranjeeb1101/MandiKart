@@ -7,11 +7,9 @@ import { getValidatedEnv } from '@mandikart/shared-config';
 import { requireIdempotency } from '@mandikart/shared-core';
 import { adminRouter } from './routes/admin.routes.js';
 
-dotenv.config();
-
 const env = getValidatedEnv();
 const app = express();
-const PORT = process.env.PORT || 4003;
+const PORT = env.ADMIN_BACKEND_PORT || 4003;
 
 app.use(helmet());
 app.use(

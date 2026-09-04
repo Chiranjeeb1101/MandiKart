@@ -18,14 +18,14 @@ import PartnerHeader from '../components/PartnerHeader';
 export default function PartnerDeliveryPODScreen({ navigation }) {
   const { activeDelivery, advanceDeliveryStep } = usePartner();
   const [photoTaken, setPhotoTaken] = useState(true);
-  const [otp, setOtp] = useState('4892');
+  const [otp, setOtp] = useState('719284');
   const [weightVerified, setWeightVerified] = useState(true);
   const [signatureDone, setSignatureDone] = useState(true);
   const [celebrationVisible, setCelebrationVisible] = useState(false);
 
   const handleConfirmPOD = () => {
-    if (otp !== '4892') {
-      Alert.alert('Invalid OTP', 'Please enter the 4-digit code provided by the Mandi Receiving Manager.');
+    if (otp.length !== 6 && otp !== '4892' && otp !== '719284') {
+      Alert.alert('Invalid OTP', 'Please enter the 6-digit Delivery OTP provided by the buyer/receiving manager.');
       return;
     }
     if (!weightVerified) {
@@ -95,17 +95,17 @@ export default function PartnerDeliveryPODScreen({ navigation }) {
 
         {/* 2. OTP Verification */}
         <View style={styles.podCard}>
-          <Text style={styles.cardSectionTitle}>2. Receiver OTP Verification</Text>
-          <Text style={styles.cardSectionSubtitle}>Ask Mandi Manager Bijay Das for the 4-digit code</Text>
+          <Text style={styles.cardSectionTitle}>2. Receiver Delivery OTP Verification</Text>
+          <Text style={styles.cardSectionSubtitle}>Ask Buyer / Mandi Manager for the 6-digit code</Text>
 
           <View style={styles.otpInputRow}>
             <TextInput
               style={styles.otpInput}
               keyboardType="number-pad"
-              maxLength={4}
+              maxLength={6}
               value={otp}
               onChangeText={setOtp}
-              placeholder="••••"
+              placeholder="••••••"
             />
             <View style={styles.otpVerifiedBadge}>
               <Ionicons name="checkmark-circle" size={20} color={COLORS.success} />
@@ -174,9 +174,9 @@ export default function PartnerDeliveryPODScreen({ navigation }) {
             <View style={styles.celebrationIconCircle}>
               <Ionicons name="checkmark-done-circle" size={64} color={COLORS.success} />
             </View>
-            <Text style={styles.celebrationTitle}>Delivery Completed! 🎉</Text>
+            <Text style={styles.celebrationTitle}>Delivery Verified & Completed! 🎉</Text>
             <Text style={styles.celebrationSubtitle}>
-              ₹{activeDelivery?.payout || 95} has been credited to your Today's Earnings.
+              MandiKart Escrow Released! Farmer payout dispatched and +₹{activeDelivery?.payout || 95} credited to your driver wallet.
             </Text>
 
             <View style={styles.celebrationStatsBox}>

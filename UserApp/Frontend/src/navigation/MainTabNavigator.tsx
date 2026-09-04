@@ -10,6 +10,7 @@ import CategoriesScreen from '../screens/main/CategoriesScreen';
 import CartScreen from '../screens/main/CartScreen';
 import OrdersNavigator from './OrdersNavigator';
 import ProfileScreen from '../screens/main/ProfileScreen';
+import { useLanguage } from '../context/LanguageContext';
 
 const Tab = createBottomTabNavigator<MainTabParamList>();
 
@@ -17,19 +18,22 @@ type TabIconName = 'home' | 'grid' | 'cart' | 'receipt' | 'person';
 
 interface TabConfig {
   name: keyof MainTabParamList;
-  label: string;
+  translationKey: string;
+  defaultLabel: string;
   icon: TabIconName;
 }
 
 const TABS: TabConfig[] = [
-  { name: 'Home', label: 'Home', icon: 'home' },
-  { name: 'Categories', label: 'Categories', icon: 'grid' },
-  { name: 'Cart', label: 'Cart', icon: 'cart' },
-  { name: 'Orders', label: 'Orders', icon: 'receipt' },
-  { name: 'Profile', label: 'Profile', icon: 'person' },
+  { name: 'Home', translationKey: 'home', defaultLabel: 'Home', icon: 'home' },
+  { name: 'Categories', translationKey: 'categories', defaultLabel: 'Categories', icon: 'grid' },
+  { name: 'Cart', translationKey: 'cart', defaultLabel: 'Cart', icon: 'cart' },
+  { name: 'Orders', translationKey: 'orders', defaultLabel: 'Orders', icon: 'receipt' },
+  { name: 'Profile', translationKey: 'profile', defaultLabel: 'Profile', icon: 'person' },
 ];
 
 export default function MainTabNavigator() {
+  const { t } = useLanguage();
+
   return (
     <Tab.Navigator
       id="main-tabs"
@@ -48,11 +52,31 @@ export default function MainTabNavigator() {
         },
       })}
     >
-      <Tab.Screen name="Home" component={HomeScreen} />
-      <Tab.Screen name="Categories" component={CategoriesScreen} />
-      <Tab.Screen name="Cart" component={CartScreen} />
-      <Tab.Screen name="Orders" component={OrdersNavigator} />
-      <Tab.Screen name="Profile" component={ProfileScreen} />
+      <Tab.Screen
+        name="Home"
+        component={HomeScreen}
+        options={{ tabBarLabel: t('home', 'Home') }}
+      />
+      <Tab.Screen
+        name="Categories"
+        component={CategoriesScreen}
+        options={{ tabBarLabel: t('categories', 'Categories') }}
+      />
+      <Tab.Screen
+        name="Cart"
+        component={CartScreen}
+        options={{ tabBarLabel: t('cart', 'Cart') }}
+      />
+      <Tab.Screen
+        name="Orders"
+        component={OrdersNavigator}
+        options={{ tabBarLabel: t('orders', 'Orders') }}
+      />
+      <Tab.Screen
+        name="Profile"
+        component={ProfileScreen}
+        options={{ tabBarLabel: t('profile', 'Profile') }}
+      />
     </Tab.Navigator>
   );
 }

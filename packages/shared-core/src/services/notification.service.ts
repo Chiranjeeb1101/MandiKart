@@ -4,6 +4,7 @@
  */
 
 import { UserRole, NotificationItem, NotificationType, DevicePushTokenRecord } from '@mandikart/shared-types';
+import { getFirebaseMessaging } from '../firebase/admin.js';
 
 // In-memory notification feeds (userId -> NotificationItem[])
 const inAppNotifications = new Map<string, NotificationItem[]>();
@@ -149,7 +150,7 @@ export class NotificationService {
   }
 
   /**
-   * Dispatches push payload to phone via Expo Push Notification API.
+   * Dispatches push payload to phone via Firebase Cloud Messaging (FCM) or Expo Push API.
    */
   private static async dispatchPhonePushNotification(payload: {
     pushToken: string;
@@ -157,29 +158,62 @@ export class NotificationService {
     body: string;
     data?: Record<string, any>;
   }): Promise<any> {
-    // If running in development with a mock token, skip outbound HTTP call
-    if (!payload.pushToken.startsWith('ExponentPushToken[') && !payload.pushToken.startsWith('FCM_')) {
-      return { status: 'mock_sent', recipient: payload.pushToken };
+    // 1. If Firebase Admin SDK is initialized and token is a native FCM device registration token
+    const messaging = getFirebaseMessaging();
+    if (messaging && !payload.pushToken.startsWith('ExponentPushToken[')) {
+      try {
+        const stringifiedData: Record<string, string> = {};
+        if (payload.data) {
+          for (const [k, v] of Object.entries(payload.data)) {
+            stringifiedData[k] = String(v);
+          }
+        }
+
+        const messageId = await messaging.send({
+          token: payload.pushToken,
+          notification: {
+            title: payload.title,
+            body: payload.body,
+          },
+          data: stringifiedData,
+          android: {
+            priority: 'high',
+            notification: {
+              channelId: 'mandikart_orders',
+              sound: 'default',
+            },
+          },
+        });
+
+        return { status: 'fcm_sent', messageId };
+      } catch (err: any) {
+        console.warn(`[NotificationService] FCM direct send failed, checking fallbacks:`, err.message);
+      }
     }
 
-    const response = await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: {
-        'Accept': 'application/json',
-        'Accept-Encoding': 'gzip, deflate',
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        to: payload.pushToken,
-        sound: 'default',
-        title: payload.title,
-        body: payload.body,
-        data: payload.data || {},
-        priority: 'high',
-        channelId: 'mandikart_orders',
-      }),
-    });
+    // 2. Expo Push Notification Service (for Expo managed mobile apps)
+    if (payload.pushToken.startsWith('ExponentPushToken[')) {
+      const response = await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: {
+          'Accept': 'application/json',
+          'Accept-Encoding': 'gzip, deflate',
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: payload.pushToken,
+          sound: 'default',
+          title: payload.title,
+          body: payload.body,
+          data: payload.data || {},
+          priority: 'high',
+          channelId: 'mandikart_orders',
+        }),
+      });
 
-    return await response.json();
+      return await response.json();
+    }
+
+    return { status: 'mock_sent', recipient: payload.pushToken };
   }
 }

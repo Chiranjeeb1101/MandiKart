@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { Alert, Platform } from 'react-native';
 import * as Location from 'expo-location';
+import { apiClient } from '../services/apiClient';
 
 export interface GeoCoordinates {
   latitude: number;
@@ -85,8 +86,20 @@ function computeHaversineDistance(
   return Math.round(R * c * 10) / 10;
 }
 
-// Local Indian Mandi geocoder
+// Local Indian Mandi geocoder with regional hub coverage
 function resolveLocalAddress(lat: number, lon: number): GeoAddress {
+  // Odisha (Bhubaneswar, Cuttack, Puri, Khordha)
+  if (lat >= 19.5 && lat <= 21.5 && lon >= 84.0 && lon <= 87.5) {
+    return {
+      formattedAddress: 'Aiginia Mandi, Khandagiri, Bhubaneswar, Odisha - 751019',
+      street: 'NH-16 Khandagiri Road',
+      area: 'Aiginia Mandi',
+      city: 'Bhubaneswar',
+      state: 'Odisha',
+      pincode: '751019',
+      country: 'India',
+    };
+  }
   // Pune corridor
   if (lat >= 18.3 && lat <= 18.7 && lon >= 73.6 && lon <= 74.1) {
     return {
@@ -123,9 +136,33 @@ function resolveLocalAddress(lat: number, lon: number): GeoAddress {
       country: 'India',
     };
   }
+  // Delhi NCR
+  if (lat >= 28.3 && lat <= 28.9 && lon >= 76.8 && lon <= 77.5) {
+    return {
+      formattedAddress: 'Azadpur Mandi, GT Karnal Road, New Delhi, Delhi - 110033',
+      street: 'GT Karnal Road',
+      area: 'Azadpur Mandi',
+      city: 'New Delhi',
+      state: 'Delhi',
+      pincode: '110033',
+      country: 'India',
+    };
+  }
+  // Bengaluru
+  if (lat >= 12.8 && lat <= 13.2 && lon >= 77.4 && lon <= 77.8) {
+    return {
+      formattedAddress: 'Yeshwanthpur APMC Yard, Tumkur Road, Bengaluru, Karnataka - 560022',
+      street: 'Tumkur Main Road',
+      area: 'Yeshwanthpur APMC',
+      city: 'Bengaluru',
+      state: 'Karnataka',
+      pincode: '560022',
+      country: 'India',
+    };
+  }
   // Generic fallback
   return {
-    formattedAddress: `${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E, Maharashtra, India`,
+    formattedAddress: `${lat.toFixed(4)}°N, ${lon.toFixed(4)}°E, Central Mandi Hub, India`,
     street: 'Main Mandi Road',
     area: 'Central District',
     city: 'Pune',
@@ -155,37 +192,23 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
   const [locationError, setLocationError] = useState<string | null>(null);
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('undetermined');
 
-  // Reverse geocode wrapper with external OpenStreetMap fallback
+  // Reverse geocode wrapper: queries backend API first (zero CORS), then falls back to local dictionary
   const reverseGeocode = async (coords: { latitude: number; longitude: number }): Promise<GeoAddress> => {
     try {
-      if (typeof fetch !== 'undefined') {
-        const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${coords.latitude}&lon=${coords.longitude}&zoom=18&addressdetails=1`;
-        const res = await Promise.race([
-          fetch(url, { headers: { 'User-Agent': 'MandiKart-MobileApp/1.0' } }),
-          new Promise<Response>((_, reject) => setTimeout(() => reject(new Error('timeout')), 2500)),
-        ]);
-        if (res.ok) {
-          const data = await res.json();
-          const addr = data.address || {};
-          const city = addr.city || addr.town || addr.village || addr.county || 'Pune';
-          const state = addr.state || 'Maharashtra';
-          const pincode = addr.postcode || '411005';
-          const street = addr.road || addr.suburb || 'FC Road';
-          const formatted = data.display_name || `${street}, ${city}, ${state} - ${pincode}`;
-
-          return {
-            formattedAddress: formatted,
-            street,
-            area: addr.suburb || addr.neighbourhood || 'Shivajinagar',
-            city,
-            state,
-            pincode,
-            country: addr.country || 'India',
-          };
-        }
+      const serverAddr = await apiClient.tracking.reverseGeocode(coords.latitude, coords.longitude);
+      if (serverAddr && serverAddr.city) {
+        return {
+          formattedAddress: serverAddr.formattedAddress,
+          street: serverAddr.street || 'Main Road',
+          area: serverAddr.area || serverAddr.city,
+          city: serverAddr.city,
+          state: serverAddr.state,
+          pincode: serverAddr.pincode,
+          country: serverAddr.country || 'India',
+        };
       }
     } catch {
-      // Fallback silently to local offline dictionary
+      // Fallback silently to local dictionary
     }
     return resolveLocalAddress(coords.latitude, coords.longitude);
   };
@@ -223,7 +246,7 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
 
         setCurrentLocation(coords);
 
-        // Native Reverse-Geocode (Free, built into OS)
+        // Native Reverse-Geocode
         try {
           const rev = await Location.reverseGeocodeAsync({
             latitude: coords.latitude,
@@ -250,40 +273,52 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
             };
             setCurrentAddress(addr);
           } else {
-            setCurrentAddress(resolveLocalAddress(coords.latitude, coords.longitude));
+            const addr = await reverseGeocode(coords);
+            setCurrentAddress(addr);
           }
         } catch {
-          setCurrentAddress(resolveLocalAddress(coords.latitude, coords.longitude));
+          const addr = await reverseGeocode(coords);
+          setCurrentAddress(addr);
         }
 
         setIsLoadingLocation(false);
         return coords;
       } else {
-        // Web fallback
+        // Web fallback with resilient two-tier accuracy and timeout
         if (typeof navigator !== 'undefined' && navigator.geolocation) {
           return new Promise((resolve) => {
+            const handleSuccess = async (position: any) => {
+              const coords: GeoCoordinates = {
+                latitude: position.coords.latitude,
+                longitude: position.coords.longitude,
+                accuracy: position.coords.accuracy,
+              };
+              setCurrentLocation(coords);
+              setPermissionStatus('granted');
+              const addr = await reverseGeocode(coords);
+              setCurrentAddress(addr);
+              setIsLoadingLocation(false);
+              resolve(coords);
+            };
+
+            const handleFallback = () => {
+              navigator.geolocation.getCurrentPosition(
+                handleSuccess,
+                () => {
+                  setPermissionStatus('denied');
+                  setCurrentLocation(DEFAULT_PUNE_COORDS);
+                  setCurrentAddress(DEFAULT_PUNE_ADDRESS);
+                  setIsLoadingLocation(false);
+                  resolve(DEFAULT_PUNE_COORDS);
+                },
+                { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
+              );
+            };
+
             navigator.geolocation.getCurrentPosition(
-              async (position) => {
-                const coords: GeoCoordinates = {
-                  latitude: position.coords.latitude,
-                  longitude: position.coords.longitude,
-                  accuracy: position.coords.accuracy,
-                };
-                setCurrentLocation(coords);
-                setPermissionStatus('granted');
-                const addr = await reverseGeocode(coords);
-                setCurrentAddress(addr);
-                setIsLoadingLocation(false);
-                resolve(coords);
-              },
-              async () => {
-                setPermissionStatus('denied');
-                setCurrentLocation(DEFAULT_PUNE_COORDS);
-                setCurrentAddress(DEFAULT_PUNE_ADDRESS);
-                setIsLoadingLocation(false);
-                resolve(DEFAULT_PUNE_COORDS);
-              },
-              { enableHighAccuracy: highAccuracy, timeout: 6000 }
+              handleSuccess,
+              handleFallback,
+              { enableHighAccuracy: highAccuracy, timeout: 4000, maximumAge: 60000 }
             );
           });
         }
@@ -298,6 +333,17 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     setIsLoadingLocation(false);
     return DEFAULT_PUNE_COORDS;
   };
+
+  // Attempt silent location check on web on mount if permission already granted
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && (navigator as any).permissions) {
+      (navigator as any).permissions.query({ name: 'geolocation' }).then((result: any) => {
+        if (result.state === 'granted') {
+          fetchCurrentLocation(false);
+        }
+      }).catch(() => {});
+    }
+  }, []);
 
   const calculateDistance = (
     from: { latitude: number; longitude: number },

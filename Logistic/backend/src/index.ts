@@ -7,11 +7,9 @@ import { getValidatedEnv } from '@mandikart/shared-config';
 import { requireIdempotency } from '@mandikart/shared-core';
 import { tasksRouter } from './routes/tasks.routes.js';
 
-dotenv.config();
-
 const env = getValidatedEnv();
 const app = express();
-const PORT = process.env.PORT || 4002;
+const PORT = env.LOGISTIC_BACKEND_PORT || 4002;
 
 app.use(helmet());
 app.use(

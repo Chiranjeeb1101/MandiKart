@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Pressable, FlatList, StatusBar, Image, Dimensions, Alert,
+  Modal, ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,9 +16,79 @@ import MarqueeTicker from '../../components/MarqueeTicker';
 import { SAMPLE_PRODUCTS, SAMPLE_CATEGORIES } from '../../services/mockData';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation } from '../../context/LocationContext';
+import { useLanguage, LANGUAGE_OPTIONS, SupportedLanguage } from '../../context/LanguageContext';
 import InteractiveMapView from '../../components/InteractiveMapView';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
+
+const POPULAR_MANDI_HUBS = [
+  {
+    id: 'pune',
+    name: 'Pune APMC Hub',
+    badge: 'Fast Dispatch',
+    area: 'Shivajinagar',
+    city: 'Pune',
+    state: 'Maharashtra',
+    pincode: '411005',
+    formattedAddress: 'Flat 402, Shivajinagar, FC Road, Pune, Maharashtra - 411005',
+    coords: { latitude: 18.5204, longitude: 73.8567 },
+  },
+  {
+    id: 'bbsr',
+    name: 'Bhubaneswar Mandi Hub',
+    badge: 'Odisha APMC',
+    area: 'Aiginia Mandi',
+    city: 'Bhubaneswar',
+    state: 'Odisha',
+    pincode: '751019',
+    formattedAddress: 'Aiginia Mandi, Khandagiri, Bhubaneswar, Odisha - 751019',
+    coords: { latitude: 20.2603, longitude: 85.7891 },
+  },
+  {
+    id: 'mumbai',
+    name: 'Navi Mumbai Vashi APMC',
+    badge: 'Bulk Terminal',
+    area: 'Vashi APMC',
+    city: 'Navi Mumbai',
+    state: 'Maharashtra',
+    pincode: '400703',
+    formattedAddress: 'Sector 19, Vashi APMC, Navi Mumbai, Maharashtra - 400703',
+    coords: { latitude: 19.0760, longitude: 72.9995 },
+  },
+  {
+    id: 'nashik',
+    name: 'Nashik Onion & Tomato Belt',
+    badge: 'Farm Direct',
+    area: 'Panchavati Mandi',
+    city: 'Nashik',
+    state: 'Maharashtra',
+    pincode: '422003',
+    formattedAddress: 'Dindori Road, APMC Mandi, Nashik, Maharashtra - 422003',
+    coords: { latitude: 19.9975, longitude: 73.7898 },
+  },
+  {
+    id: 'delhi',
+    name: 'Delhi Azadpur Mandi',
+    badge: 'North Terminal',
+    area: 'Azadpur Mandi',
+    city: 'New Delhi',
+    state: 'Delhi',
+    pincode: '110033',
+    formattedAddress: 'Azadpur Mandi, GT Karnal Road, New Delhi, Delhi - 110033',
+    coords: { latitude: 28.7041, longitude: 77.1725 },
+  },
+  {
+    id: 'bengaluru',
+    name: 'Bengaluru Yeshwanthpur',
+    badge: 'South Terminal',
+    area: 'Yeshwanthpur APMC',
+    city: 'Bengaluru',
+    state: 'Karnataka',
+    pincode: '560022',
+    formattedAddress: 'Yeshwanthpur APMC Yard, Tumkur Road, Bengaluru, Karnataka - 560022',
+    coords: { latitude: 13.0238, longitude: 77.5529 },
+  },
+];
 
 const BANNERS = [
   { id: '1', bg: '#E8F5E9', title: 'Fresh Vegetables', subtitle: 'Up to 20% off today', imageUrl: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?w=400', categoryId: 'cat-1', categoryName: 'Vegetables' },
@@ -30,34 +101,55 @@ const BANNER_WIDTH = Dimensions.get('window').width - 32;
 export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
   const { buyerMode, toggleBuyerMode, user } = useAuth();
-  const { currentAddress, fetchCurrentLocation, isLoadingLocation } = useLocation();
+  const { currentAddress, currentLocation, fetchCurrentLocation, isLoadingLocation, setManualLocation } = useLocation();
+  const { t, currentLanguageOption, setLanguage } = useLanguage();
   const [searchText, setSearchText] = useState('');
   const [wishlisted, setWishlisted] = useState<string[]>([]);
   const [showMap, setShowMap] = useState<boolean>(true);
+  const [isLocationModalVisible, setIsLocationModalVisible] = useState<boolean>(false);
+  const [isLanguageModalVisible, setIsLanguageModalVisible] = useState<boolean>(false);
+  const [isDetectingGps, setIsDetectingGps] = useState<boolean>(false);
+  const [locationNotice, setLocationNotice] = useState<string | null>(null);
   const bannerScrollRef = useRef<FlatList>(null);
   const bannerIndex = useRef(0);
 
   const handleLocationPress = () => {
-    Alert.alert(
-      'Delivery Location 📍',
-      `Current: ${currentAddress?.formattedAddress || 'Pune, Maharashtra'}\n\nWould you like to auto-detect your live GPS coordinates or enter an address?`,
-      [
-        {
-          text: 'Auto-Detect GPS 🎯',
-          onPress: async () => {
-            const loc = await fetchCurrentLocation(true);
-            if (loc) {
-              Alert.alert('GPS Updated! 📍', 'Your delivery hub has been set using your device coordinates.');
-            }
-          },
-        },
-        {
-          text: 'Add New Address 📝',
-          onPress: () => navigation.navigate('AddAddress', {}),
-        },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    setLocationNotice(null);
+    setIsLocationModalVisible(true);
+  };
+
+  const handleAutoDetectGPS = async () => {
+    setIsDetectingGps(true);
+    setLocationNotice(null);
+    try {
+      const loc = await fetchCurrentLocation(true);
+      if (loc) {
+        setLocationNotice('Live GPS coordinates locked and delivery hub updated!');
+        setTimeout(() => {
+          setIsLocationModalVisible(false);
+          setLocationNotice(null);
+        }, 1200);
+      } else {
+        setLocationNotice('Location set to default Mandi hub.');
+      }
+    } catch {
+      setLocationNotice('Unable to acquire satellite GPS. Default hub selected.');
+    } finally {
+      setIsDetectingGps(false);
+    }
+  };
+
+  const handleSelectHub = (hub: typeof POPULAR_MANDI_HUBS[0]) => {
+    setManualLocation(hub.coords, {
+      formattedAddress: hub.formattedAddress,
+      street: hub.area,
+      area: hub.area,
+      city: hub.city,
+      state: hub.state,
+      pincode: hub.pincode,
+      country: 'India',
+    });
+    setIsLocationModalVisible(false);
   };
 
   const handleBannerPress = (catId: string, catName: string) => {
@@ -103,7 +195,7 @@ export default function HomeScreen() {
 
             {/* Location */}
             <View style={styles.locationWrap}>
-              <Text style={styles.locationLabel}>Deliver to</Text>
+              <Text style={styles.locationLabel}>{t('deliveryLocation', 'Deliver to')}</Text>
               <TouchableOpacity
                 style={styles.locationRow}
                 onPress={handleLocationPress}
@@ -118,6 +210,15 @@ export default function HomeScreen() {
 
             {/* Right icons */}
             <View style={styles.headerActions}>
+              {/* Regional Language Quick Toggle Pill */}
+              <TouchableOpacity
+                style={styles.langPill}
+                onPress={() => setIsLanguageModalVisible(true)}
+              >
+                <Text style={styles.langPillFlag}>{currentLanguageOption.flag}</Text>
+                <Text style={styles.langPillText}>{currentLanguageOption.code.toUpperCase()}</Text>
+              </TouchableOpacity>
+
               <TouchableOpacity
                 style={styles.iconBtn}
                 onPress={() => navigation.navigate('Notifications')}
@@ -146,7 +247,7 @@ export default function HomeScreen() {
                 color={buyerMode === 'RETAIL' ? Colors.white : Colors.textSecondary}
               />
               <Text style={[styles.modeTabText, buyerMode === 'RETAIL' && styles.modeTabTextActive]}>
-                Household / Retail
+                {t('consumerMode', 'Household / Retail')}
               </Text>
             </TouchableOpacity>
 
@@ -160,7 +261,7 @@ export default function HomeScreen() {
                 color={buyerMode === 'BULK' ? Colors.white : Colors.textSecondary}
               />
               <Text style={[styles.modeTabText, buyerMode === 'BULK' && styles.modeTabTextActive]}>
-                Hotel & Bulk Buyer
+                {t('bulkMode', 'Hotel & Bulk Buyer')}
               </Text>
             </TouchableOpacity>
           </View>
@@ -168,6 +269,7 @@ export default function HomeScreen() {
           <SearchBar
             value={searchText}
             onChangeText={setSearchText}
+            placeholder={t('searchPlaceholder', 'Search fresh vegetables, fruits & grains...')}
             onFocus={() => navigation.navigate('ProductStack', { screen: 'Search' })}
             style={styles.searchBar}
           />
@@ -244,9 +346,9 @@ export default function HomeScreen() {
         {/* Categories */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>Categories</Text>
+            <Text style={styles.sectionTitle}>{t('categories', 'Categories')}</Text>
             <TouchableOpacity onPress={() => navigation.navigate('ProductStack', { screen: 'AllCategories' })}>
-              <Text style={styles.seeAll}>See All</Text>
+              <Text style={styles.seeAll}>{t('viewAll', 'See All')}</Text>
             </TouchableOpacity>
           </View>
           <FlatList
@@ -364,6 +466,188 @@ export default function HomeScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* ─────────────────────────────────────────────
+          LOCATION SELECTOR MODAL (Universal Web & Native)
+         ───────────────────────────────────────────── */}
+      <Modal
+        visible={isLocationModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsLocationModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalCard}>
+            {/* Header */}
+            <View style={styles.modalHeaderRow}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <View style={styles.modalIconBadge}>
+                  <Ionicons name="location" size={20} color={Colors.primary} />
+                </View>
+                <View>
+                  <Text style={styles.modalTitle}>Delivery Location</Text>
+                  <Text style={styles.modalSubtitle}>Choose mandi dispatch hub or detect GPS</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseBtn}
+                onPress={() => setIsLocationModalVisible(false)}
+              >
+                <Ionicons name="close" size={20} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            {/* Current Active Location Banner */}
+            <View style={styles.activeLocationBanner}>
+              <View style={styles.activeLocationTop}>
+                <View style={styles.activePill}>
+                  <View style={styles.greenPulseDot} />
+                  <Text style={styles.activePillText}>ACTIVE HUB</Text>
+                </View>
+                {currentLocation && (
+                  <Text style={styles.coordsText}>
+                    {currentLocation.latitude.toFixed(4)}°N, {currentLocation.longitude.toFixed(4)}°E
+                  </Text>
+                )}
+              </View>
+              <Text style={styles.activeLocationAddress}>
+                {currentAddress?.formattedAddress || 'Shivajinagar, FC Road, Pune, Maharashtra - 411005'}
+              </Text>
+            </View>
+
+            {/* Feedback Alert if detecting */}
+            {locationNotice && (
+              <View style={styles.noticeBanner}>
+                <Ionicons name="checkmark-circle" size={16} color="#15803d" />
+                <Text style={styles.noticeText}>{locationNotice}</Text>
+              </View>
+            )}
+
+            {/* Action 1: Auto-Detect GPS Button */}
+            <TouchableOpacity
+              style={[styles.detectGpsBtn, (isDetectingGps || isLoadingLocation) && { opacity: 0.8 }]}
+              onPress={handleAutoDetectGPS}
+              disabled={isDetectingGps || isLoadingLocation}
+              activeOpacity={0.85}
+            >
+              {isDetectingGps || isLoadingLocation ? (
+                <>
+                  <ActivityIndicator size="small" color={Colors.white} />
+                  <Text style={styles.detectGpsBtnText}>Locking Satellite Coordinates...</Text>
+                </>
+              ) : (
+                <>
+                  <Ionicons name="locate" size={18} color={Colors.white} />
+                  <Text style={styles.detectGpsBtnText}>Auto-Detect My Live Device GPS 🎯</Text>
+                </>
+              )}
+            </TouchableOpacity>
+
+            {/* Section 2: Popular Mandi Hubs */}
+            <Text style={styles.hubsSectionTitle}>Popular APMC Mandi Hubs (1-Tap Select)</Text>
+            <ScrollView style={styles.hubsScroll} showsVerticalScrollIndicator={false}>
+              {POPULAR_MANDI_HUBS.map((hub) => {
+                const isSelected = currentAddress?.city?.toLowerCase() === hub.city.toLowerCase() ||
+                  currentAddress?.area?.toLowerCase() === hub.area.toLowerCase();
+                return (
+                  <TouchableOpacity
+                    key={hub.id}
+                    style={[styles.hubItem, isSelected && styles.hubItemActive]}
+                    onPress={() => handleSelectHub(hub)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={[styles.hubName, isSelected && styles.hubNameActive]}>{hub.name}</Text>
+                        <View style={styles.hubBadge}>
+                          <Text style={styles.hubBadgeText}>{hub.badge}</Text>
+                        </View>
+                      </View>
+                      <Text style={styles.hubAddress} numberOfLines={1}>{hub.formattedAddress}</Text>
+                    </View>
+                    {isSelected ? (
+                      <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
+                    ) : (
+                      <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {/* Action 3: Add Custom Address Button */}
+            <TouchableOpacity
+              style={styles.addCustomAddressBtn}
+              onPress={() => {
+                setIsLocationModalVisible(false);
+                navigation.navigate('AddAddress', {});
+              }}
+              activeOpacity={0.85}
+            >
+              <Ionicons name="add-circle-outline" size={18} color={Colors.primary} />
+              <Text style={styles.addCustomAddressText}>Add New Delivery Address 📝</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ─────────────────────────────────────────────
+          LANGUAGE SELECTOR MODAL (Universal Web & Native)
+         ───────────────────────────────────────────── */}
+      <Modal
+        visible={isLanguageModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsLanguageModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={[styles.modalCard, { maxWidth: 400 }]}>
+            <View style={styles.modalHeaderRow}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Text style={{ fontSize: 24 }}>🌐</Text>
+                <View>
+                  <Text style={styles.modalTitle}>{t('selectLanguage', 'Select Language')}</Text>
+                  <Text style={styles.modalSubtitle}>{t('chooseLanguage', 'Choose your preferred app language')}</Text>
+                </View>
+              </View>
+              <TouchableOpacity
+                style={styles.modalCloseBtn}
+                onPress={() => setIsLanguageModalVisible(false)}
+              >
+                <Ionicons name="close" size={20} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <View style={{ gap: 10, marginTop: 12 }}>
+              {LANGUAGE_OPTIONS.map((lang) => {
+                const isSelected = currentLanguageOption.code === lang.code;
+                return (
+                  <TouchableOpacity
+                    key={lang.code}
+                    style={[styles.langOptionCard, isSelected && styles.langOptionCardActive]}
+                    onPress={() => {
+                      setLanguage(lang.code);
+                      setIsLanguageModalVisible(false);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={{ fontSize: 26 }}>{lang.flag}</Text>
+                    <View style={{ flex: 1, marginLeft: 10 }}>
+                      <Text style={[styles.langNativeName, isSelected && styles.langNativeNameActive]}>
+                        {lang.nativeName}
+                      </Text>
+                      <Text style={styles.langEnglishName}>{lang.name}</Text>
+                    </View>
+                    {isSelected && (
+                      <Ionicons name="checkmark-circle" size={22} color={Colors.primary} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -501,5 +785,239 @@ const styles = StyleSheet.create({
   productCardWrapper: { width: 170 },
   productGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: Spacing.md, gap: Spacing.sm },
   gridItem: { width: '48%' },
+  langPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 14,
+  },
+  langPillFlag: { fontSize: 13 },
+  langPillText: { fontSize: 11, fontWeight: '800', color: '#166534' },
+
+  // Modal Styles (Location & Language)
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.md,
+  },
+  modalCard: {
+    width: '100%',
+    maxWidth: 480,
+    maxHeight: '90%',
+    backgroundColor: Colors.white,
+    borderRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    ...Shadows.lg,
+  },
+  modalHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: Spacing.md,
+  },
+  modalIconBadge: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+  },
+  modalSubtitle: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  modalCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activeLocationBanner: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+  },
+  activeLocationTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+  },
+  activePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  greenPulseDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#16A34A',
+  },
+  activePillText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#15803D',
+  },
+  coordsText: {
+    fontSize: 11,
+    fontFamily: 'monospace',
+    color: Colors.textSecondary,
+  },
+  activeLocationAddress: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.textPrimary,
+    lineHeight: 18,
+  },
+  noticeBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#DCFCE7',
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    marginBottom: Spacing.sm,
+  },
+  noticeText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#15803D',
+    flex: 1,
+  },
+  detectGpsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: Colors.primary,
+    paddingVertical: 12,
+    borderRadius: BorderRadius.lg,
+    marginVertical: Spacing.xs,
+    ...Shadows.sm,
+  },
+  detectGpsBtnText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.white,
+  },
+  hubsSectionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginTop: Spacing.sm,
+    marginBottom: Spacing.xs,
+  },
+  hubsScroll: {
+    maxHeight: 220,
+    marginVertical: 4,
+  },
+  hubItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 6,
+    backgroundColor: '#FAFAFA',
+  },
+  hubItemActive: {
+    borderColor: Colors.primary,
+    backgroundColor: '#F0FDF4',
+  },
+  hubName: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  hubNameActive: {
+    color: Colors.primary,
+  },
+  hubBadge: {
+    backgroundColor: '#E0F2FE',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+  },
+  hubBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#0369A1',
+  },
+  hubAddress: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  addCustomAddressBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: Colors.primary,
+    borderStyle: 'dashed',
+    paddingVertical: 10,
+    borderRadius: BorderRadius.lg,
+    marginTop: Spacing.xs,
+  },
+  addCustomAddressText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  // Language Modal Options
+  langOptionCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: Spacing.md,
+    borderRadius: BorderRadius.lg,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+  },
+  langOptionCardActive: {
+    borderColor: Colors.primary,
+    backgroundColor: '#F0FDF4',
+  },
+  langNativeName: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+  },
+  langNativeNameActive: {
+    color: Colors.primary,
+  },
+  langEnglishName: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 1,
+  },
 });
 

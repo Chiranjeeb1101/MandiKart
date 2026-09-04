@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  TextInput, StatusBar, Alert, Switch,
+  TextInput, StatusBar, Alert, Switch, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -15,7 +15,7 @@ type AddressType = 'HOME' | 'WORK' | 'OTHER';
 
 export default function AddAddressScreen() {
   const navigation = useNavigation();
-  const { fetchCurrentLocation, currentAddress, isLoadingLocation } = useLocation();
+  const { fetchCurrentLocation, currentAddress, currentLocation, setManualLocation, isLoadingLocation } = useLocation();
 
   // Form State
   const [fullName, setFullName] = useState('');
@@ -51,32 +51,70 @@ export default function AddAddressScreen() {
 
   const handleSave = () => {
     if (!fullName.trim()) {
-      Alert.alert('Required Field', 'Please enter your Full Name.');
+      if (Platform.OS === 'web') {
+        window.alert('Please enter your Full Name.');
+      } else {
+        Alert.alert('Required Field', 'Please enter your Full Name.');
+      }
       return;
     }
     if (!phone.trim() || phone.length < 10) {
-      Alert.alert('Invalid Phone', 'Please enter a valid 10-digit mobile number.');
+      if (Platform.OS === 'web') {
+        window.alert('Please enter a valid 10-digit mobile number.');
+      } else {
+        Alert.alert('Invalid Phone', 'Please enter a valid 10-digit mobile number.');
+      }
       return;
     }
     if (!houseNo.trim() || !street.trim()) {
-      Alert.alert('Required Field', 'Please fill in House No and Street/Area details.');
+      if (Platform.OS === 'web') {
+        window.alert('Please fill in House No and Street/Area details.');
+      } else {
+        Alert.alert('Required Field', 'Please fill in House No and Street/Area details.');
+      }
       return;
     }
     if (!pincode.trim() || pincode.length !== 6) {
-      Alert.alert('Invalid Pincode', 'Please enter a valid 6-digit Pincode.');
+      if (Platform.OS === 'web') {
+        window.alert('Please enter a valid 6-digit Pincode.');
+      } else {
+        Alert.alert('Invalid Pincode', 'Please enter a valid 6-digit Pincode.');
+      }
       return;
     }
 
-    Alert.alert(
-      'Address Saved! 🎉',
-      `New ${addressType} delivery address added successfully.`,
-      [
-        {
-          text: 'OK',
-          onPress: () => navigation.goBack(),
-        },
-      ]
-    );
+    const newAddress = {
+      formattedAddress: `${houseNo}, ${street}, ${landmark ? landmark + ', ' : ''}${city}, ${state} - ${pincode}`,
+      street: houseNo,
+      area: street,
+      city,
+      state,
+      pincode,
+      country: 'India',
+    };
+
+    if (isDefault) {
+      setManualLocation(
+        currentLocation || { latitude: 18.5204, longitude: 73.8567 },
+        newAddress
+      );
+    }
+
+    if (Platform.OS === 'web') {
+      window.alert(`Address Saved! 🎉\nNew ${addressType} delivery address added successfully.`);
+      (navigation as any).goBack();
+    } else {
+      Alert.alert(
+        'Address Saved! 🎉',
+        `New ${addressType} delivery address added successfully.`,
+        [
+          {
+            text: 'OK',
+            onPress: () => (navigation as any).goBack(),
+          },
+        ]
+      );
+    }
   };
 
   return (

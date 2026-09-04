@@ -13,7 +13,7 @@ export interface Farmer {
   phone: string;
   email?: string;
   profileImageUrl?: string;
-  language: 'en' | 'hi' | 'mr';
+  language: 'en' | 'hi' | 'or' | 'mr' | 'pa' | 'ta' | 'te' | 'bn' | 'gu' | 'kn';
   isFPOMember: boolean;
   fpoId?: string;
   isVerified: boolean;

@@ -27,9 +27,17 @@ import {
   FileText,
   Truck,
   Wallet,
+  TrendingUp,
+  Mic,
+  MicOff,
+  Languages,
+  CheckCircle2,
 } from 'lucide-react-native';
 import { MKScreen, MKSection, MKCard, MKButton, MKStatusBadge } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
+import { useTranslation } from '@/hooks/useTranslation';
+import { useVoiceSearch } from '@/hooks/useVoiceSearch';
+import { useAppStore, LanguageCode } from '@/store/appStore';
 import { MKColors } from '@/constants/colors';
 import { MKSpacing } from '@/constants/spacing';
 
@@ -51,6 +59,17 @@ export default function HomeScreen() {
     ? `${user.district}, ${user.state}`
     : 'Nashik, Maharashtra';
 
+  const { t, language } = useTranslation();
+  const setLanguage = useAppStore((state) => state.setLanguage);
+  const { isListening, transcript, match, startListening, stopListening, resetVoiceSearch } = useVoiceSearch();
+
+  const SUPPORTED_LANGUAGES: { code: LanguageCode; label: string; nativeName: string }[] = [
+    { code: 'en', label: 'EN', nativeName: 'English' },
+    { code: 'hi', label: 'HI', nativeName: 'हिंदी' },
+    { code: 'or', label: 'OD', nativeName: 'ଓଡ଼ିଆ' },
+    { code: 'mr', label: 'MR', nativeName: 'मराठी' },
+  ];
+
   return (
     <MKScreen>
       {/* ── 1. Top App Bar ── */}
@@ -59,7 +78,7 @@ export default function HomeScreen() {
           <Image source={{ uri: FARMER_AVATAR_URI }} style={styles.avatarImage} />
           <View style={styles.greetingContainer}>
             <Text numberOfLines={1} style={styles.greetingTitle}>
-              Namaste, {farmerName} 👋
+              {language === 'or' ? `ନମସ୍କାର, ${farmerName}` : language === 'hi' ? `नमस्ते, ${farmerName}` : language === 'mr' ? `नमस्कार, ${farmerName}` : `Namaste, ${farmerName}`} 👋
             </Text>
             <View style={styles.locationRow}>
               <MapPin size={14} color={MKColors.primaryGreen} strokeWidth={2.2} />
@@ -84,6 +103,101 @@ export default function HomeScreen() {
             <Text style={styles.notificationBadgeText}>3</Text>
           </View>
         </Pressable>
+      </View>
+
+      {/* ── Vernacular Language Switcher ── */}
+      <View style={styles.langBar}>
+        <View style={styles.langBarLeft}>
+          <Languages size={14} color={MKColors.primaryGreen} strokeWidth={2.2} />
+          <Text style={styles.langBarLabel}>
+            {language === 'or' ? 'ଭାଷା:' : language === 'hi' ? 'भाषा:' : language === 'mr' ? 'भाषा:' : 'Language:'}
+          </Text>
+        </View>
+        <View style={styles.langPillsRow}>
+          {SUPPORTED_LANGUAGES.map((item) => (
+            <Pressable
+              key={item.code}
+              onPress={() => setLanguage(item.code)}
+              style={[
+                styles.langPill,
+                language === item.code && styles.langPillActive,
+              ]}
+            >
+              <Text
+                style={[
+                  styles.langPillText,
+                  language === item.code && styles.langPillTextActive,
+                ]}
+              >
+                {item.nativeName}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      </View>
+
+      {/* ── Vernacular Voice Search Bar ── */}
+      <View style={styles.voiceSearchContainer}>
+        <View style={styles.voiceSearchInputRow}>
+          <Pressable
+            onPress={isListening ? stopListening : startListening}
+            style={[styles.micButton, isListening && styles.micButtonListening]}
+            accessibilityRole="button"
+            accessibilityLabel="Voice search"
+          >
+            {isListening ? (
+              <MicOff size={18} color="#FFFFFF" strokeWidth={2.4} />
+            ) : (
+              <Mic size={18} color="#FFFFFF" strokeWidth={2.4} />
+            )}
+          </Pressable>
+          <View style={styles.voiceSearchTextContainer}>
+            <Text style={styles.voiceSearchTitle}>
+              {language === 'or'
+                ? 'ଫସଲ ନାମ କୁହନ୍ତୁ (Voice Search)...'
+                : language === 'hi'
+                ? 'फसल का नाम बोलें (Voice Search)...'
+                : language === 'mr'
+                ? 'पिकाचे नाव बोला (Voice Search)...'
+                : 'Speak or search crop name...'}
+            </Text>
+            <Text style={styles.voiceSearchSub}>
+              {isListening
+                ? language === 'or' ? 'ଶୁଣୁଛି... (Listening)...' : 'Listening now...'
+                : language === 'or' ? 'ଉଦା: "ପିଆଜ", "ବିଲାତି", "ଆଳୁ"' : language === 'hi' ? 'उदा: "प्याज", "टमाटर", "आलू"' : language === 'mr' ? 'उदा: "कांदा", "टोमॅटो", "बटाटा"' : 'e.g. "Onion", "Tomato", "Potato"'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Live Speech Recognition & Match Result Card */}
+        {(transcript || match) && (
+          <View style={styles.matchCard}>
+            <View style={styles.matchHeader}>
+              <CheckCircle2 size={16} color="#16A34A" />
+              <Text style={styles.matchHeaderText}>
+                {language === 'or' ? 'ଚିହ୍ନଟ ହୋଇଛି (Recognized):' : 'Recognized Crop:'}
+              </Text>
+            </View>
+            <Text style={styles.matchCropName}>
+              {match ? match.cropName : transcript} {match?.vernacularLabel ? `(${match.vernacularLabel})` : ''}
+            </Text>
+            <View style={styles.matchActionRow}>
+              <Pressable
+                style={styles.matchActionBtnPrimary}
+                onPress={() => router.push('/(tabs)/produce')}
+              >
+                <Text style={styles.matchActionBtnTextPrimary}>
+                  {language === 'or' ? 'ମଣ୍ଡି ଦର ଦେଖନ୍ତୁ' : language === 'hi' ? 'मंडी भाव देखें' : language === 'mr' ? 'बाजार भाव पहा' : 'View Mandi Rate'}
+                </Text>
+              </Pressable>
+              <Pressable style={styles.matchActionBtnSecondary} onPress={resetVoiceSearch}>
+                <Text style={styles.matchActionBtnTextSecondary}>
+                  {language === 'or' ? 'ପରିଷ୍କାର କରନ୍ତୁ' : 'Clear'}
+                </Text>
+              </Pressable>
+            </View>
+          </View>
+        )}
       </View>
 
       {/* ── 2. Sell Today Hero Card ── */}
@@ -178,7 +292,47 @@ export default function HomeScreen() {
         </MKCard>
       </MKSection>
 
-      {/* ── 4. Section: Today at a Glance ── */}
+      {/* ── 4. Section: Live APMC Mandi Rates Discovery ── */}
+      <MKSection
+        title="Live APMC Mandi Rates"
+        actionText="Price Trends"
+        onActionPress={() => router.push('/(tabs)/produce')}
+      >
+        <MKCard style={styles.apmcCard}>
+          <View style={styles.apmcHeader}>
+            <View style={styles.apmcTitleWrap}>
+              <TrendingUp size={18} color="#15803D" />
+              <Text style={styles.apmcTitle}>Nashik & Pune APMC Benchmark</Text>
+            </View>
+            <View style={styles.livePill}>
+              <View style={styles.livePillDot} />
+              <Text style={styles.livePillText}>Live Agmarknet</Text>
+            </View>
+          </View>
+
+          <View style={styles.apmcGrid}>
+            <View style={styles.apmcItem}>
+              <Text style={styles.apmcCrop}>Nashik Red Onion</Text>
+              <Text style={styles.apmcPrice}>₹2,450 <Text style={styles.apmcUnit}>/q</Text></Text>
+              <Text style={[styles.apmcTrend, { color: '#15803D' }]}>▲ +4.2% today</Text>
+            </View>
+            <View style={styles.apmcDividerV} />
+            <View style={styles.apmcItem}>
+              <Text style={styles.apmcCrop}>Tomato Hybrid</Text>
+              <Text style={styles.apmcPrice}>₹1,820 <Text style={styles.apmcUnit}>/q</Text></Text>
+              <Text style={[styles.apmcTrend, { color: '#B91C1C' }]}>▼ -1.5% today</Text>
+            </View>
+            <View style={styles.apmcDividerV} />
+            <View style={styles.apmcItem}>
+              <Text style={styles.apmcCrop}>Potato Jyoti</Text>
+              <Text style={styles.apmcPrice}>₹1,540 <Text style={styles.apmcUnit}>/q</Text></Text>
+              <Text style={[styles.apmcTrend, { color: '#15803D' }]}>▲ +2.1% today</Text>
+            </View>
+          </View>
+        </MKCard>
+      </MKSection>
+
+      {/* ── 5. Section: Today at a Glance ── */}
       <MKSection title="Today at a Glance">
         <View style={styles.metricsRow}>
           {/* Active Orders */}
@@ -543,9 +697,235 @@ const styles = StyleSheet.create({
   },
   metricLabel: {
     fontSize: 11,
+    lineHeight: 14,
     color: '#757575',
     textAlign: 'center',
     fontWeight: '600',
-    lineHeight: 14,
+  },
+  /* ── APMC Mandi Rates ── */
+  apmcCard: {
+    padding: 14,
+    borderRadius: 18,
+    borderWidth: 1.2,
+    borderColor: '#EFE7DC',
+  },
+  apmcHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  apmcTitleWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  apmcTitle: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#1F2937',
+  },
+  livePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 999,
+    gap: 4,
+  },
+  livePillDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#15803D',
+  },
+  livePillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  apmcGrid: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  apmcItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  apmcDividerV: {
+    width: 1,
+    height: 36,
+    backgroundColor: '#F3F4F6',
+  },
+  apmcCrop: {
+    fontSize: 11,
+    color: '#6B7280',
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  apmcPrice: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  apmcUnit: {
+    fontSize: 11,
+    color: '#9CA3AF',
+    fontWeight: '600',
+  },
+  apmcTrend: {
+    fontSize: 10,
+    fontWeight: '700',
+    marginTop: 2,
+  },
+  langBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    marginBottom: 12,
+  },
+  langBarLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  langBarLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#166534',
+  },
+  langPillsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  langPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  langPillActive: {
+    backgroundColor: '#16A34A',
+    borderColor: '#16A34A',
+  },
+  langPillText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  langPillTextActive: {
+    color: '#FFFFFF',
+  },
+  voiceSearchContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 14,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  voiceSearchInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  micButton: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#16A34A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#16A34A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  micButtonListening: {
+    backgroundColor: '#DC2626',
+    transform: [{ scale: 1.08 }],
+  },
+  voiceSearchTextContainer: {
+    flex: 1,
+  },
+  voiceSearchTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E293B',
+  },
+  voiceSearchSub: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 1,
+  },
+  matchCard: {
+    marginTop: 10,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  matchHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  matchHeaderText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#16A34A',
+    textTransform: 'uppercase',
+  },
+  matchCropName: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginTop: 2,
+  },
+  matchActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 8,
+  },
+  matchActionBtnPrimary: {
+    flex: 1,
+    backgroundColor: '#16A34A',
+    paddingVertical: 7,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  matchActionBtnTextPrimary: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  matchActionBtnSecondary: {
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+  },
+  matchActionBtnTextSecondary: {
+    color: '#64748B',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });

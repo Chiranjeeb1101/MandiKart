@@ -1,18 +1,21 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, StatusBar, Alert, Linking,
+  Image, StatusBar, Alert, Linking, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadows } from '../../theme';
 import { SAMPLE_PRODUCTS } from '../../services/mockData';
 import { apiClient } from '../../services/apiClient';
+import { supabase } from '../../services/supabaseClient';
 import { getStatusConfig } from '../../constants/orderStatusLabels';
 import InteractiveMapView from '../../components/InteractiveMapView';
 import { useLocation } from '../../context/LocationContext';
+import { useLanguage } from '../../context/LanguageContext';
 
 export default function OrderTrackingScreen({ navigation, route }: any) {
+  const { t } = useLanguage();
   const orderId = route.params?.orderId || 'MK-ORD-2026-9041';
   const paramOrder = route.params?.order;
   const order = {
@@ -25,50 +28,106 @@ export default function OrderTrackingScreen({ navigation, route }: any) {
       [SAMPLE_PRODUCTS[0], SAMPLE_PRODUCTS[2], SAMPLE_PRODUCTS[7]],
     farmerName: paramOrder?.farmerName || 'Rajan Kumar',
     estimatedDelivery: paramOrder?.estimatedDelivery || 'Today by 5:30 PM',
-    deliveryAddress: paramOrder?.deliveryAddress || 'FC Road, Shivajinagar, Pune',
-    deliveryOtp: paramOrder?.deliveryOtp || route.params?.deliveryOtp || '719284',
+    deliveryAddress: paramOrder?.deliveryAddress || 'Flat 402, Shivajinagar, Pune - 411005',
+    driverName: 'Suresh Patil',
+    driverPhone: '+91 98234 56789',
+    driverVehicle: 'MH 12 AB 4590 (EV Van)',
+    driverRating: 4.9,
+    deliveryOtp: '7412',
   };
 
-  const deliveryOtp = order.deliveryOtp || route.params?.deliveryOtp || '719284';
-  const [currentStatus, setCurrentStatus] = useState<string>(order.status || 'IN_TRANSIT');
-  const [confirming, setConfirming] = useState<boolean>(false);
-  const [selectedInstruction, setSelectedInstruction] = useState<string>('Ring Bell');
+  const [currentStatus, setCurrentStatus] = useState<string>(order.status);
+  const [deliveryOtp] = useState<string>(order.deliveryOtp || '7412');
+  const [confirming, setConfirming] = useState(false);
   const [selectedTip, setSelectedTip] = useState<number | null>(null);
+  const [selectedInstruction, setSelectedInstruction] = useState<string | null>(null);
+  const [isWsActive, setIsWsActive] = useState(false);
+
+  // Subscribe to Supabase Realtime WebSocket for live order tracking
+  useEffect(() => {
+    const channel = supabase
+      .channel(`order-tracking-${orderId}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'UPDATE',
+          schema: 'public',
+          table: 'orders',
+          filter: `id=eq.${orderId}`,
+        },
+        (payload: any) => {
+          if (payload.new?.status) {
+            setCurrentStatus(payload.new.status);
+          }
+        }
+      )
+      .subscribe((status: string) => {
+        setIsWsActive(status === 'SUBSCRIBED');
+      });
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [orderId]);
 
   const statusConfig = getStatusConfig(currentStatus);
   const isDelivered = currentStatus === 'DELIVERED' || currentStatus === 'COMPLETED';
 
+  const executeConfirmDelivery = async () => {
+    setConfirming(true);
+    try {
+      await apiClient.orders.confirmDelivery(orderId, deliveryOtp);
+      setCurrentStatus('DELIVERED');
+      if (Platform.OS === 'web') {
+        window.alert('Delivery Confirmed! 🎉\n\nFarmer payment has been unlocked via MandiKart Safe Escrow. Thank you for supporting local farmers!');
+      } else {
+        Alert.alert('Delivery Confirmed! 🎉', 'Farmer payment has been unlocked via MandiKart Safe Escrow. Thank you for supporting local farmers!');
+      }
+    } catch (err: any) {
+      setCurrentStatus('DELIVERED');
+      if (Platform.OS === 'web') {
+        window.alert('Delivery Confirmed! 🎉\n\nHandover recorded.');
+      } else {
+        Alert.alert('Delivery Confirmed! 🎉', 'Handover recorded.');
+      }
+    } finally {
+      setConfirming(false);
+    }
+  };
+
   const handleConfirmDelivery = async () => {
-    Alert.alert(
-      'Confirm Receipt 📦',
-      `Have you inspected your produce and wish to share Delivery OTP (${deliveryOtp}) with the driver?`,
-      [
-        { text: 'Cancel', style: 'cancel' },
-        {
-          text: 'Confirm Handover',
-          onPress: async () => {
-            setConfirming(true);
-            try {
-              await apiClient.orders.confirmDelivery(orderId, deliveryOtp);
-              setCurrentStatus('DELIVERED');
-              Alert.alert('Delivery Confirmed! 🎉', 'Farmer payment has been unlocked via MandiKart Safe Escrow. Thank you for supporting local farmers!');
-            } catch (err: any) {
-              setCurrentStatus('DELIVERED');
-              Alert.alert('Delivery Confirmed! 🎉', 'Handover recorded.');
-            } finally {
-              setConfirming(false);
-            }
+    if (Platform.OS === 'web') {
+      const confirmed = typeof window !== 'undefined' ? window.confirm(
+        `Confirm Receipt 📦\n\nHave you inspected your produce and wish to share Delivery OTP (${deliveryOtp}) with the driver?`
+      ) : true;
+      if (confirmed) {
+        await executeConfirmDelivery();
+      }
+    } else {
+      Alert.alert(
+        'Confirm Receipt 📦',
+        `Have you inspected your produce and wish to share Delivery OTP (${deliveryOtp}) with the driver?`,
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Confirm Handover',
+            onPress: executeConfirmDelivery,
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const handleCallDriver = () => {
-    Alert.alert('Call Delivery Executive 📞', 'Calling Suresh Patil (+91 98234 56789)...', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Call', onPress: () => Linking.openURL('tel:+919823456789') },
-    ]);
+    const phoneNumber = '+919823456789';
+    if (Platform.OS === 'web') {
+      window.open(`tel:${phoneNumber}`, '_self');
+    } else {
+      Alert.alert('Call Delivery Executive 📞', 'Calling Suresh Patil (+91 98234 56789)...', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Call', onPress: () => Linking.openURL(`tel:${phoneNumber}`) },
+      ]);
+    }
   };
 
   const handleTip = (amount: number) => {
@@ -83,26 +142,26 @@ export default function OrderTrackingScreen({ navigation, route }: any) {
 
   const timelineSteps = [
     {
-      title: 'Order Placed',
+      title: t('orderStatusPlaced', 'Order Placed'),
       time: '02:30 PM',
       desc: 'Demand registered and sent to farm partner',
       done: true,
     },
     {
-      title: 'Farm Confirmed & Packed',
+      title: t('orderStatusConfirmed', 'Farm Confirmed & Packed'),
       time: '03:00 PM',
       desc: 'Harvested and packed by Rajan Kumar',
       done: true,
     },
     {
-      title: 'Picked Up & In Transit',
+      title: t('orderStatusTransit', 'Picked Up & In Transit'),
       time: '03:15 PM',
       desc: 'Suresh Patil dispatched (EV Cold-Chain Van)',
       done: true,
       active: !isDelivered,
     },
     {
-      title: 'Delivered (OTP Verified)',
+      title: t('orderStatusDelivered', 'Delivered (OTP Verified)'),
       time: isDelivered ? '03:40 PM' : 'Est. 03:45 PM',
       desc: isDelivered ? 'Handover completed successfully' : 'Awaiting 6-digit OTP verification at doorstep',
       done: isDelivered,
@@ -136,6 +195,12 @@ export default function OrderTrackingScreen({ navigation, route }: any) {
               <View style={styles.liveTagWrap}>
                 <View style={styles.pulseDot} />
                 <Text style={styles.liveTagText}>LIVE TRACKING</Text>
+                {isWsActive && (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginLeft: 6, backgroundColor: '#DCFCE7', paddingHorizontal: 5, paddingVertical: 1, borderRadius: 4 }}>
+                    <Ionicons name="flash" size={10} color="#15803D" />
+                    <Text style={{ fontSize: 9, color: '#15803D', fontWeight: '800', marginLeft: 2 }}>REALTIME WS</Text>
+                  </View>
+                )}
               </View>
               <Text style={styles.heroEtaTitle}>Arriving in 25 mins</Text>
               <Text style={styles.heroSub}>Suresh is 1.8 km away • FC Road, Pune</Text>
@@ -158,6 +223,7 @@ export default function OrderTrackingScreen({ navigation, route }: any) {
 
         {/* Interactive Live GPS Tracking Map */}
         <InteractiveMapView
+          orderId={order.id}
           origin={{
             title: order.farmerName || 'Nashik Organic Farm',
             coordinates: { latitude: 19.9975, longitude: 73.7898 },
@@ -341,6 +407,23 @@ export default function OrderTrackingScreen({ navigation, route }: any) {
               </View>
             ))}
           </ScrollView>
+        </View>
+
+        {/* Stripe Escrow Security Guarantee */}
+        <View style={styles.card}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <Ionicons name="shield-checkmark" size={20} color="#16A34A" />
+            <Text style={styles.cardTitle}>{t('escrowProtected', 'Stripe Escrow Protected')}</Text>
+          </View>
+          <Text style={{ fontSize: 13, color: Colors.textSecondary, lineHeight: 18 }}>
+            {isDelivered ? t('escrowReleasedMsg') : t('escrowHeldMsg')}
+          </Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 10, backgroundColor: '#F0FDF4', padding: 8, borderRadius: 8 }}>
+            <Ionicons name="chatbox-ellipses-outline" size={16} color="#166534" />
+            <Text style={{ fontSize: 12, fontWeight: '600', color: '#166534' }}>
+              {t('smsNotification', 'SMS Verification Active')} • Instant alerts sent to your mobile
+            </Text>
+          </View>
         </View>
 
         {/* Need Help Button */}

@@ -4,7 +4,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import dotenv from 'dotenv';
 import { getValidatedEnv } from '@mandikart/shared-config';
-import { requireIdempotency } from '@mandikart/shared-core';
+import { requireIdempotency, ApmcSyncService } from '@mandikart/shared-core';
 import { authRouter } from './routes/auth.routes.js';
 import { farmersRouter } from './routes/farmers.routes.js';
 import { productsRouter } from './routes/products.routes.js';
@@ -15,13 +15,11 @@ import { notificationRouter } from './routes/notification.routes.js';
 import { errorHandler, sendSuccess } from './middlewares/errorHandler.js';
 import { InventoryService } from './services/inventory.service.js';
 
-dotenv.config();
-
-// Boot-time environment validation (fail-fast)
+// Boot-time environment validation (fail-fast from root .env)
 const env = getValidatedEnv();
 
 const app = express();
-const PORT = env.PORT || 4000;
+const PORT = env.FARMER_BACKEND_PORT || env.PORT || 4000;
 
 // Security & utility middlewares
 app.use(helmet());
@@ -64,6 +62,9 @@ setInterval(() => {
     console.error('Reservation cleanup error:', err);
   });
 }, 5 * 60 * 1000);
+
+// Start APMC Mandi Daily Benchmark Rate Auto-Sync Service
+ApmcSyncService.startAutomatedCron();
 
 app.listen(PORT, () => {
   console.log(`🌾 MandiKart Farmer Backend running on port ${PORT}`);

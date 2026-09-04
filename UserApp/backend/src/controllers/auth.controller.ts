@@ -5,7 +5,7 @@
 
 import { Request, Response } from 'express';
 import { UserRole } from '@mandikart/shared-types';
-import { auditLog, SessionManager } from '@mandikart/shared-core';
+import { auditLog, SessionManager, FirebaseAuthService } from '@mandikart/shared-core';
 
 export class BuyerAuthController {
   static async login(req: Request, res: Response): Promise<void> {
@@ -88,4 +88,72 @@ export class BuyerAuthController {
       error: null,
     });
   }
+
+  static async loginWithGoogle(req: Request, res: Response): Promise<void> {
+    try {
+      const { email, fullName, avatarUrl, idToken } = req.body;
+      if (!email) {
+        res.status(400).json({
+          data: null,
+          meta: null,
+          error: { code: 'VALIDATION_ERROR', message: 'Email is required for Google Sign-In' },
+        });
+        return;
+      }
+
+      const session = await FirebaseAuthService.authenticateWithGoogle({
+        email,
+        fullName: fullName || 'Google Buyer',
+        avatarUrl,
+        idToken,
+        role: UserRole.BUYER,
+      });
+
+      res.status(200).json({
+        data: session,
+        meta: null,
+        error: null,
+      });
+    } catch (err: any) {
+      res.status(500).json({
+        data: null,
+        meta: null,
+        error: { code: 'GOOGLE_AUTH_ERROR', message: err?.message || 'Google Sign-In failed' },
+      });
+    }
+  }
+
+  static async loginWithPhoneOtp(req: Request, res: Response): Promise<void> {
+    try {
+      const { phone, fullName } = req.body;
+      const code = req.body.code || req.body.otp;
+      if (!phone || !code) {
+        res.status(400).json({
+          data: null,
+          meta: null,
+          error: { code: 'VALIDATION_ERROR', message: 'Phone and OTP code are required' },
+        });
+        return;
+      }
+
+      const session = await FirebaseAuthService.authenticateWithPhoneOtp(
+        phone,
+        UserRole.BUYER,
+        fullName
+      );
+
+      res.status(200).json({
+        data: session,
+        meta: null,
+        error: null,
+      });
+    } catch (err: any) {
+      res.status(500).json({
+        data: null,
+        meta: null,
+        error: { code: 'PHONE_AUTH_ERROR', message: err?.message || 'Phone OTP login failed' },
+      });
+    }
+  }
 }
+

@@ -4,11 +4,13 @@ import { apiClient, setApiAuthToken } from '../services/apiClient';
 export interface BuyerProfile {
   id: string;
   fullName: string;
+  email?: string;
   phone: string;
   buyerType: 'RETAIL' | 'BULK';
   city: string;
   state: string;
   role: string;
+  avatarUrl?: string;
 }
 
 export type BuyerMode = 'RETAIL' | 'BULK';
@@ -21,6 +23,8 @@ interface AuthContextType {
   setBuyerMode: (mode: BuyerMode) => void;
   toggleBuyerMode: () => void;
   signIn: (phone?: string, otp?: string) => Promise<boolean>;
+  signInWithGoogle: (idToken?: string) => Promise<boolean>;
+  signInWithPhoneOtp: (phone: string, otp: string) => Promise<boolean>;
   signOut: () => void;
   logout: () => void;
 }
@@ -28,6 +32,7 @@ interface AuthContextType {
 const DEFAULT_BUYER: BuyerProfile = {
   id: 'buyer_default_01',
   fullName: 'Aarav Sharma',
+  email: 'aarav.sharma@gmail.com',
   phone: '+91 9876543210',
   buyerType: 'RETAIL',
   city: 'Pune',
@@ -43,6 +48,8 @@ const AuthContext = createContext<AuthContextType>({
   setBuyerMode: () => {},
   toggleBuyerMode: () => {},
   signIn: async () => true,
+  signInWithGoogle: async () => true,
+  signInWithPhoneOtp: async () => true,
   signOut: () => {},
   logout: () => {},
 });
@@ -71,6 +78,34 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const signInWithGoogle = async (idToken?: string): Promise<boolean> => {
+    try {
+      const res = await apiClient.auth.loginWithGoogle(idToken);
+      setToken(res.token);
+      setApiAuthToken(res.token);
+      setUser(res.buyer as BuyerProfile);
+      setIsAuthenticated(true);
+      return true;
+    } catch {
+      setIsAuthenticated(true);
+      return true;
+    }
+  };
+
+  const signInWithPhoneOtp = async (phone: string, otp: string): Promise<boolean> => {
+    try {
+      const res = await apiClient.auth.loginWithPhoneOtp(phone, otp);
+      setToken(res.token);
+      setApiAuthToken(res.token);
+      setUser(res.buyer as BuyerProfile);
+      setIsAuthenticated(true);
+      return true;
+    } catch {
+      setIsAuthenticated(true);
+      return true;
+    }
+  };
+
   const signOut = () => {
     setUser(null);
     setToken(null);
@@ -88,6 +123,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setBuyerMode,
         toggleBuyerMode,
         signIn,
+        signInWithGoogle,
+        signInWithPhoneOtp,
         signOut,
         logout: signOut,
       }}

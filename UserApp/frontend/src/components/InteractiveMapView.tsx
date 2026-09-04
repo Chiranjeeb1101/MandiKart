@@ -10,8 +10,10 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, BorderRadius, Spacing, Shadows } from '../theme';
 import { useLocation, GeoCoordinates } from '../context/LocationContext';
+import { apiClient } from '../services/apiClient';
 
 interface InteractiveMapViewProps {
+  orderId?: string;
   origin?: {
     title: string;
     coordinates: GeoCoordinates;
@@ -31,6 +33,7 @@ interface InteractiveMapViewProps {
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
 export default function InteractiveMapView({
+  orderId,
   origin = {
     title: 'Nashik Organic Farm',
     coordinates: { latitude: 19.9975, longitude: 73.7898 },
@@ -57,18 +60,37 @@ export default function InteractiveMapView({
   const [driverProgress, setDriverProgress] = useState<number>(0.65); // 65% completed
   const [driverSpeed, setDriverSpeed] = useState<number>(28);
   const [focusTarget, setFocusTarget] = useState<'driver' | 'destination'>('driver');
+  const [liveTelemetry, setLiveTelemetry] = useState<any>(null);
 
-  // Periodic driver movement along route
+  // Periodic driver movement along route and polling live telemetry if orderId present
   useEffect(() => {
-    const timer = setInterval(() => {
+    let isMounted = true;
+
+    const timer = setInterval(async () => {
+      if (orderId) {
+        try {
+          const telemetry = await apiClient.tracking.getOrderLocation(orderId);
+          if (isMounted && telemetry) {
+            setLiveTelemetry(telemetry);
+            if (telemetry.speedKmh) setDriverSpeed(telemetry.speedKmh);
+          }
+        } catch {
+          // fallback to simulated movement
+        }
+      }
+
       setDriverProgress((prev) => {
         if (prev >= 0.95) return 0.2; // loop for demo
         return prev + 0.015;
       });
       setDriverSpeed(Math.round(25 + Math.sin(Date.now() / 3000) * 8));
-    }, 2000);
-    return () => clearInterval(timer);
-  }, []);
+    }, 2500);
+
+    return () => {
+      isMounted = false;
+      clearInterval(timer);
+    };
+  }, [orderId]);
 
   const handleLocateMe = async () => {
     const coords = await fetchCurrentLocation(true);

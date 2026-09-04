@@ -16,6 +16,7 @@ import {
   Pressable,
   StatusBar,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -77,11 +78,31 @@ export default function DocumentsScreen() {
   ]);
 
   const handleUploadNew = (docName: string) => {
-    Alert.alert('Upload Document', `Select document photo for ${docName}`, [
-      { text: '📷 Open Camera', onPress: () => Alert.alert('Captured', 'Document photo captured successfully for review!') },
-      { text: '📁 Pick from Gallery', onPress: () => Alert.alert('Uploaded', 'File uploaded! Our verification team will review it.') },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+    if (Platform.OS === 'web') {
+      const option = typeof window !== 'undefined' ? window.confirm(`Upload Document: ${docName}\n\nClick OK to upload from device photo gallery, or Cancel to skip.`) : true;
+      if (option) {
+        setDocs(prev => prev.map(d => d.name === docName ? { ...d, status: 'pending', verifiedOn: 'Uploaded just now (Under Review)' } : d));
+        if (typeof window !== 'undefined') window.alert(`Document uploaded for ${docName}! 🎉\nOur verification team will review it within 2 hours.`);
+      }
+    } else {
+      Alert.alert('Upload Document', `Select document photo for ${docName}`, [
+        {
+          text: '📷 Open Camera',
+          onPress: () => {
+            setDocs(prev => prev.map(d => d.name === docName ? { ...d, status: 'pending', verifiedOn: 'Uploaded just now (Under Review)' } : d));
+            Alert.alert('Captured 🎉', 'Document photo captured successfully! Our verification team will review it.');
+          }
+        },
+        {
+          text: '📁 Pick from Gallery',
+          onPress: () => {
+            setDocs(prev => prev.map(d => d.name === docName ? { ...d, status: 'pending', verifiedOn: 'Uploaded just now (Under Review)' } : d));
+            Alert.alert('Uploaded 🎉', 'File uploaded! Our verification team will review it.');
+          }
+        },
+        { text: 'Cancel', style: 'cancel' },
+      ]);
+    }
   };
 
   const verifiedCount = docs.filter(d => d.status === 'verified').length;

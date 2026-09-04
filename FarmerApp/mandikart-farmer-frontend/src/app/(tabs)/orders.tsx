@@ -67,6 +67,11 @@ export default function OrdersScreen() {
             ]}
             accessibilityRole="button"
             accessibilityLabel="Filter"
+            onPress={() => {
+              const tabs: OrderTab[] = ['All', 'Active', 'Pending', 'Completed'];
+              const nextIndex = (tabs.indexOf(selectedTab) + 1) % tabs.length;
+              setSelectedTab(tabs[nextIndex]);
+            }}
           >
             <SlidersHorizontal size={18} color="#564336" strokeWidth={2} />
           </Pressable>
@@ -283,10 +288,36 @@ export default function OrdersScreen() {
               </View>
             </View>
 
-            {/* Waiting Status Banner */}
+            {/* Waiting Status Banner & Farmer Action CTAs */}
             <View style={styles.waitingBanner}>
               <Clock size={14} color="#D9531E" style={{ marginRight: 6 }} />
-              <Text style={styles.waitingBannerText}>Waiting for Buyer Response</Text>
+              <Text style={styles.waitingBannerText}>Active Buyer Negotiation Offer</Text>
+            </View>
+
+            <View style={styles.negotiationActions}>
+              <Pressable
+                style={({ pressed }) => [
+                  styles.counterOfferBtn,
+                  pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+                ]}
+                onPress={() => {
+                  alert('Counter-Offer Proposed: ₹25.50/kg with immediate dispatch availability.');
+                }}
+              >
+                <Text style={styles.counterOfferBtnText}>Counter-Offer</Text>
+              </Pressable>
+
+              <Pressable
+                style={({ pressed }) => [
+                  styles.acceptOfferBtn,
+                  pressed && { opacity: 0.85, transform: [{ scale: 0.98 }] },
+                ]}
+                onPress={() => {
+                  alert('Order Accepted! Advance locked in MandiKart Escrow.');
+                }}
+              >
+                <Text style={styles.acceptOfferBtnText}>Accept ₹24/kg</Text>
+              </Pressable>
             </View>
           </MKCard>
         )}
@@ -732,5 +763,39 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#6B7280',
     letterSpacing: 0.5,
+  },
+  negotiationActions: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: 12,
+    width: '100%',
+  },
+  counterOfferBtn: {
+    flex: 1,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+    borderWidth: 1.2,
+    borderColor: '#D9531E',
+    backgroundColor: '#FFF7ED',
+  },
+  counterOfferBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#D9531E',
+  },
+  acceptOfferBtn: {
+    flex: 1.2,
+    paddingVertical: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderRadius: 8,
+    backgroundColor: '#15803D',
+  },
+  acceptOfferBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
   },
 });

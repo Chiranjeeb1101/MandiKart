@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
-  StatusBar, Alert,
+  StatusBar, Alert, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -31,24 +31,37 @@ export default function WishlistScreen() {
   };
 
   const handleMoveAllToCart = () => {
-    Alert.alert(
-      'Move All to Cart 🛒',
-      `All ${items.length} items from your wishlist have been added to your cart!`,
-      [
-        {
-          text: 'View Cart',
-          onPress: () => navigation.navigate('Main', { screen: 'Cart' } as any),
-        },
-        { text: 'OK', style: 'cancel' },
-      ]
-    );
+    if (Platform.OS === 'web') {
+      navigation.navigate('Main', { screen: 'Cart' } as any);
+    } else {
+      Alert.alert(
+        'Move All to Cart 🛒',
+        `All ${items.length} items from your wishlist have been added to your cart!`,
+        [
+          {
+            text: 'View Cart',
+            onPress: () => navigation.navigate('Main', { screen: 'Cart' } as any),
+          },
+          { text: 'OK', style: 'cancel' },
+        ]
+      );
+    }
   };
 
   const handleClearWishlist = () => {
-    Alert.alert('Clear Wishlist', 'Are you sure you want to remove all saved items?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Clear All', style: 'destructive', onPress: () => setItems([]) },
-    ]);
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined') {
+        const confirmed = window.confirm('Are you sure you want to remove all saved items?');
+        if (confirmed) setItems([]);
+      } else {
+        setItems([]);
+      }
+    } else {
+      Alert.alert('Clear Wishlist', 'Are you sure you want to remove all saved items?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear All', style: 'destructive', onPress: () => setItems([]) },
+      ]);
+    }
   };
 
   if (items.length === 0) {

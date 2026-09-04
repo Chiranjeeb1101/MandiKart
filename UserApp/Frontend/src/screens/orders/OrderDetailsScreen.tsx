@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, StatusBar, Alert,
+  Image, StatusBar, Alert, Modal, Platform, TextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -27,34 +27,20 @@ export default function OrderDetailsScreen({ navigation, route }: any) {
 
   const [orderStatus, setOrderStatus] = useState<string>(initialOrder.status);
   const [disputeId, setDisputeId] = useState<string | null>(null);
+  const [isDisputeModalOpen, setIsDisputeModalOpen] = useState(false);
+  const [selectedDisputeCategory, setSelectedDisputeCategory] = useState('DAMAGED_PRODUCE');
+  const [disputeNotes, setDisputeNotes] = useState('');
 
   const handleDownloadInvoice = () => {
     Alert.alert('Download Invoice 📄', `Invoice for order ${orderId} has been downloaded to your device.`);
   };
 
   const handleRaiseDispute = () => {
-    Alert.alert(
-      'Raise Quality Dispute ⚠️',
-      'Select the reason for dispute. Escrow payment to the farm will be frozen immediately pending resolution.',
-      [
-        {
-          text: 'Rotten / Spoiled Produce',
-          onPress: () => submitDispute('Rotten or spoiled produce received upon opening package', 'SPOILAGE'),
-        },
-        {
-          text: 'Weight Shortage / Missing',
-          onPress: () => submitDispute('Delivered weight is lower than ordered quintal/kg', 'WEIGHT_SHORTAGE'),
-        },
-        {
-          text: 'Damaged / Wrong Produce',
-          onPress: () => submitDispute('Damaged packaging or wrong crop variety delivered', 'DAMAGED_PRODUCE'),
-        },
-        { text: 'Cancel', style: 'cancel' },
-      ]
-    );
+    setIsDisputeModalOpen(true);
   };
 
   const submitDispute = async (reason: string, category: string) => {
+    setIsDisputeModalOpen(false);
     try {
       const res = await apiClient.orders.raiseDispute(orderId, reason, category);
       setOrderStatus('DISPUTED');
@@ -70,24 +56,38 @@ export default function OrderDetailsScreen({ navigation, route }: any) {
   };
 
   const handleCancelOrder = () => {
-    Alert.alert(
-      'Cancel Order 🚫',
-      `Are you sure you want to cancel Order #${orderId}?\n\nA full refund of ₹${initialOrder.total} will be processed immediately to your original payment method.`,
-      [
-        { text: 'Keep Order', style: 'cancel' },
-        {
-          text: 'Yes, Cancel Order',
-          style: 'destructive',
-          onPress: () => {
-            setOrderStatus('CANCELLED');
-            if (route.params?.onCancel) {
-              route.params.onCancel();
-            }
-            Alert.alert('Order Cancelled', 'Your order has been cancelled successfully and refund initiated.');
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined') {
+        const confirmed = window.confirm(
+          `Are you sure you want to cancel Order #${orderId}?\n\nA full refund of ₹${initialOrder.total} will be processed immediately.`
+        );
+        if (confirmed) {
+          setOrderStatus('CANCELLED');
+          if (route.params?.onCancel) route.params.onCancel();
+        }
+      } else {
+        setOrderStatus('CANCELLED');
+      }
+    } else {
+      Alert.alert(
+        'Cancel Order 🚫',
+        `Are you sure you want to cancel Order #${orderId}?\n\nA full refund of ₹${initialOrder.total} will be processed immediately to your original payment method.`,
+        [
+          { text: 'Keep Order', style: 'cancel' },
+          {
+            text: 'Yes, Cancel Order',
+            style: 'destructive',
+            onPress: () => {
+              setOrderStatus('CANCELLED');
+              if (route.params?.onCancel) {
+                route.params.onCancel();
+              }
+              Alert.alert('Order Cancelled', 'Your order has been cancelled successfully and refund initiated.');
+            },
           },
-        },
-      ]
-    );
+        ]
+      );
+    }
   };
 
   const isCancelable = orderStatus === 'DISPATCHED' || orderStatus === 'PROCESSING' || orderStatus === 'CONFIRMED' || orderStatus === 'PENDING';
@@ -251,6 +251,88 @@ export default function OrderDetailsScreen({ navigation, route }: any) {
           </TouchableOpacity>
         </View>
       )}
+
+      <Modal
+        visible={isDisputeModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setIsDisputeModalOpen(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <View style={styles.modalHeaderTitleRow}>
+                <Ionicons name="shield-half" size={22} color="#D97706" />
+                <Text style={styles.modalTitle}>Raise Escrow Dispute</Text>
+              </View>
+              <TouchableOpacity onPress={() => setIsDisputeModalOpen(false)} style={styles.closeBtn}>
+                <Ionicons name="close" size={20} color={Colors.textSecondary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalSub}>
+              Select the issue experienced. MandiKart escrow protection will freeze farmer payout pending resolution.
+            </Text>
+
+            <View style={styles.categoryList}>
+              {[
+                { key: 'DAMAGED_PRODUCE', label: 'Damaged or Spoiled Produce 🥬' },
+                { key: 'WEIGHT_MISMATCH', label: 'Incorrect Weight / Missing Items ⚖️' },
+                { key: 'WRONG_ITEM', label: 'Wrong Item Delivered 📦' },
+                { key: 'QUALITY_POOR', label: 'Substandard / Low Quality 👎' },
+              ].map(cat => (
+                <TouchableOpacity
+                  key={cat.key}
+                  style={[
+                    styles.catOption,
+                    selectedDisputeCategory === cat.key && styles.catOptionSelected,
+                  ]}
+                  onPress={() => setSelectedDisputeCategory(cat.key)}
+                >
+                  <Ionicons
+                    name={selectedDisputeCategory === cat.key ? 'radio-button-on' : 'radio-button-off'}
+                    size={18}
+                    color={selectedDisputeCategory === cat.key ? Colors.primary : Colors.textDisabled}
+                  />
+                  <Text
+                    style={[
+                      styles.catOptionText,
+                      selectedDisputeCategory === cat.key && styles.catOptionTextSelected,
+                    ]}
+                  >
+                    {cat.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
+            <TextInput
+              style={styles.disputeInput}
+              placeholder="Describe the issue in detail (optional)..."
+              placeholderTextColor={Colors.textDisabled}
+              multiline
+              numberOfLines={3}
+              value={disputeNotes}
+              onChangeText={setDisputeNotes}
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setIsDisputeModalOpen(false)}
+              >
+                <Text style={styles.modalCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalSubmitBtn}
+                onPress={() => submitDispute(disputeNotes || selectedDisputeCategory, selectedDisputeCategory)}
+              >
+                <Text style={styles.modalSubmitText}>Submit Dispute</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -409,4 +491,110 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFBEB',
   },
   disputeBtnText: { fontSize: 14, fontWeight: '700', color: '#B45309' },
+  // Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: BorderRadius.xl,
+    borderTopRightRadius: BorderRadius.xl,
+    padding: Spacing.lg,
+    gap: Spacing.md,
+    maxHeight: '85%',
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  modalHeaderTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: Colors.textPrimary,
+  },
+  closeBtn: {
+    padding: 4,
+  },
+  modalSub: {
+    fontSize: 13,
+    color: Colors.textSecondary,
+    lineHeight: 18,
+  },
+  categoryList: {
+    gap: 8,
+  },
+  catOption: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    padding: Spacing.sm,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    backgroundColor: Colors.gray50,
+  },
+  catOptionSelected: {
+    borderColor: Colors.primary,
+    backgroundColor: Colors.primaryLight,
+  },
+  catOptionText: {
+    fontSize: 14,
+    color: Colors.textPrimary,
+    fontWeight: '500',
+  },
+  catOptionTextSelected: {
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  disputeInput: {
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    borderRadius: BorderRadius.md,
+    padding: Spacing.sm,
+    fontSize: 14,
+    color: Colors.textPrimary,
+    backgroundColor: Colors.white,
+    textAlignVertical: 'top',
+    minHeight: 70,
+  },
+  modalActions: {
+    flexDirection: 'row',
+    gap: Spacing.sm,
+    marginTop: Spacing.xs,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    height: 46,
+    borderRadius: BorderRadius.full,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  modalSubmitBtn: {
+    flex: 2,
+    height: 46,
+    borderRadius: BorderRadius.full,
+    backgroundColor: '#D97706',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalSubmitText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: Colors.white,
+  },
 });

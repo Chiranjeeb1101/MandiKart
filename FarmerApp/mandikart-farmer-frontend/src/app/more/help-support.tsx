@@ -3,7 +3,7 @@
  *
  * Unique Design:
  * - 24x7 Direct Kisan Support Command Center
- * - 1-Tap Toll-Free Hotline Dialer & WhatsApp Assistant
+ * - 1-Tap Toll-Free Hotline Dialer & SMS Assistant
  * - Categorized FAQ Accordion with instant expand/collapse
  */
 
@@ -16,13 +16,14 @@ import {
   Pressable,
   StatusBar,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Animated, { FadeInDown, FadeInUp } from 'react-native-reanimated';
 import {
   Headphones,
   PhoneCall,
-  MessageCircle,
+  MessageSquare,
   HelpCircle,
   ChevronDown,
   ChevronUp,
@@ -44,19 +45,19 @@ const FAQS: FAQ[] = [
   {
     id: '1',
     category: 'Payments',
-    question: 'How and when do I receive payment for my crop?',
-    answer: 'Buyer funds are locked in MandiKart Escrow before pickup. Once the driver confirms the weight receipt at your farm gate, payment is transferred directly to your bank account or UPI within 24 hours.',
+    question: 'How does MandiKart Instant Escrow Payout work?',
+    answer: 'Once your produce is verified and loaded onto the EV logistics truck at your farm gate, 100% of your earnings are instantly deposited into your verified bank account via UPI or NEFT. Zero delays, zero middlemen commissions.',
   },
   {
     id: '2',
     category: 'Logistics',
-    question: 'Do I need to arrange transport to the Mandi?',
-    answer: 'No! MandiKart assigns verified transport trucks to pick up the produce directly from your farm. You will receive live GPS tracking of the vehicle arrival.',
+    question: 'When will the EV pickup truck arrive at my farm?',
+    answer: 'Pickup timings are coordinated directly in the app. You will receive an SMS and live vehicle tracking showing the exact location and arrival ETA of your refrigerated pickup vehicle.',
   },
   {
     id: '3',
-    category: 'Quality',
-    question: 'What happens if there is a quality dispute?',
+    category: 'Quality Grading',
+    question: 'What happens if my produce grade differs from my listing?',
     answer: 'All quality grading is completed transparently at your farm gate using standard digital moisture meters and scales. Once accepted at the gate, payout is 100% guaranteed.',
   },
   {
@@ -75,11 +76,21 @@ export default function HelpSupportScreen() {
   };
 
   const handleCallSupport = () => {
-    Alert.alert('Kisan Helpline', 'Dialing MandiKart Toll-Free Helpline: 1800-123-4567\nAvailable in Odia, Hindi & English (24x7)');
+    const msg = 'Dialing MandiKart Toll-Free Helpline: 1800-123-4567\nAvailable in Odia, Hindi, Marathi & English (24x7)';
+    if (Platform.OS === 'web') {
+      window.alert(`Kisan Helpline 📞\n\n${msg}`);
+    } else {
+      Alert.alert('Kisan Helpline 📞', msg);
+    }
   };
 
-  const handleWhatsApp = () => {
-    Alert.alert('WhatsApp Assistant', 'Connecting to MandiKart Kisan Support on WhatsApp (+91 98765 43210)...');
+  const handleSmsSupport = () => {
+    const msg = 'SMS HELP to 56767 or message our Kisan officers directly.\nAvailable 24x7 in Odia, Hindi, Marathi & English.';
+    if (Platform.OS === 'web') {
+      window.alert(`SMS Kisan Helpline 💬\n\n${msg}`);
+    } else {
+      Alert.alert('SMS Kisan Helpline 💬', msg);
+    }
   };
 
   return (
@@ -107,9 +118,9 @@ export default function HelpSupportScreen() {
                 <Text style={styles.callBtnText}>Call 1800-123-4567</Text>
               </Pressable>
 
-              <Pressable onPress={handleWhatsApp} style={styles.waBtn}>
-                <MessageCircle size={16} color="#1E5A2A" />
-                <Text style={styles.waBtnText}>WhatsApp Chat</Text>
+              <Pressable onPress={handleSmsSupport} style={styles.smsBtn}>
+                <MessageSquare size={16} color="#1E5A2A" />
+                <Text style={styles.smsBtnText}>SMS Helpline (56767)</Text>
               </Pressable>
             </View>
           </Animated.View>
@@ -203,7 +214,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   callBtnText: { fontSize: 13, fontWeight: '900', color: '#FFFFFF' },
-  waBtn: {
+  smsBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
@@ -214,7 +225,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     elevation: 2,
   },
-  waBtnText: { fontSize: 13, fontWeight: '900', color: '#1E5A2A' },
+  smsBtnText: { fontSize: 13, fontWeight: '900', color: '#1E5A2A' },
 
   sectionTitle: {
     fontSize: 11,

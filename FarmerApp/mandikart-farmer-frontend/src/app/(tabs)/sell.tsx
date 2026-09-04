@@ -16,6 +16,7 @@ import {
   Alert,
   Modal,
   TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -39,10 +40,14 @@ import {
   Store,
   Users,
   Bell,
+  Camera,
+  ShieldCheck,
 } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { MKScreen, MKCard, MKButton } from '@/components/ui';
 import { MKColors } from '@/constants/colors';
 import { MKSpacing } from '@/constants/spacing';
+import { apiClient } from '@/services/apiClient';
 
 interface CropItem {
   id: string;
@@ -144,6 +149,41 @@ export default function SellScreen() {
   const [qtyModalOpen, setQtyModalOpen] = useState(false);
   const [gradeModalOpen, setGradeModalOpen] = useState(false);
   const [customCropName, setCustomCropName] = useState('');
+  const [batchPhotos, setBatchPhotos] = useState<string[]>([]);
+  const [uploadingBatchPhoto, setUploadingBatchPhoto] = useState(false);
+
+  const handlePickBatchPhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Camera roll access is needed to upload produce photos.');
+        return;
+      }
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+      });
+      if (!res.canceled && res.assets[0]?.uri) {
+        const localUri = res.assets[0].uri;
+        setUploadingBatchPhoto(true);
+        const upload = await apiClient.uploadImage(localUri, 'products');
+        setUploadingBatchPhoto(false);
+        if (upload?.url) {
+          setBatchPhotos((prev) => [...prev, upload.url]);
+          Alert.alert(
+            'Produce Photo Uploaded! 🍅',
+            `Compressed to WebP and linked with your produce batch.\nStorage saved: ${upload.savingsPercent}%`
+          );
+        }
+      }
+    } catch (err: any) {
+      setUploadingBatchPhoto(false);
+      Alert.alert('Upload Error', err?.message || 'Failed to upload crop photo');
+    }
+  };
+
 
   const currentCrop = cropsList.find((c) => c.id === selectedCropId) || cropsList[0];
   const sellingPrice = currentCrop.price;
@@ -307,6 +347,69 @@ export default function SellScreen() {
             </Pressable>
           </View>
         </View>
+      </MKCard>
+
+      {/* ── Produce Batch Photos (Sharp WebP Quality Verification) ── */}
+      <MKCard style={styles.photoCard}>
+        <View style={styles.photoCardHeader}>
+          <View style={styles.photoTitleRow}>
+            <Camera size={18} color="#1E5A2A" strokeWidth={2.2} />
+            <Text style={styles.photoCardTitle}>Produce Batch Photos</Text>
+          </View>
+          <View style={styles.verifiedBatchBadge}>
+            <ShieldCheck size={12} color="#16A34A" />
+            <Text style={styles.verifiedBatchText}>Quality Verified</Text>
+          </View>
+        </View>
+        <Text style={styles.photoCardSubtitle}>
+          Real farm photos attract 3.4× more buyers & faster commitments.
+        </Text>
+
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.photoScrollContent}
+        >
+          {/* Add Photo Button */}
+          <Pressable
+            onPress={handlePickBatchPhoto}
+            style={({ pressed }) => [
+              styles.addPhotoBtn,
+              pressed && { opacity: 0.75, transform: [{ scale: 0.95 }] },
+            ]}
+          >
+            {uploadingBatchPhoto ? (
+              <ActivityIndicator size="small" color="#1E5A2A" />
+            ) : (
+              <>
+                <View style={styles.addPhotoCircle}>
+                  <Camera size={20} color="#1E5A2A" strokeWidth={2.2} />
+                </View>
+                <Text style={styles.addPhotoBtnText}>+ Add Photo</Text>
+              </>
+            )}
+          </Pressable>
+
+          {/* Uploaded Photos */}
+          {batchPhotos.map((photoUri, index) => (
+            <View key={index} style={styles.batchThumbWrapper}>
+              <Image source={{ uri: photoUri }} style={styles.batchThumbImage} />
+              <View style={styles.webpBadge}>
+                <Text style={styles.webpBadgeText}>WebP</Text>
+              </View>
+            </View>
+          ))}
+
+          {batchPhotos.length === 0 && (
+            <View style={styles.noPhotoPlaceholder}>
+              <Image
+                source={{ uri: currentCrop.image }}
+                style={styles.defaultCropThumb}
+              />
+              <Text style={styles.defaultCropNote}>Catalog default photo active</Text>
+            </View>
+          )}
+        </ScrollView>
       </MKCard>
 
       {/* ── Section 2: Market Intelligence Bento Grid (Image 5) ── */}
@@ -602,6 +705,136 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.06,
     shadowRadius: 8,
   },
+
+  /* ── Produce Batch Photos ── */
+  photoCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 16,
+    borderWidth: 1.2,
+    borderColor: '#EFEAE0',
+    marginBottom: MKSpacing.md,
+    elevation: 3,
+    shadowColor: '#1A1C1E',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+  },
+  photoCardHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 4,
+  },
+  photoTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  photoCardTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#1E5A2A',
+  },
+  verifiedBatchBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
+  },
+  verifiedBatchText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#16A34A',
+  },
+  photoCardSubtitle: {
+    fontSize: 12,
+    color: '#757575',
+    marginBottom: 12,
+  },
+  photoScrollContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingVertical: 4,
+  },
+  addPhotoBtn: {
+    width: 90,
+    height: 90,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#A5D6A7',
+    backgroundColor: '#F1F8E9',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addPhotoCircle: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#E8F5E9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 4,
+  },
+  addPhotoBtnText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#1E5A2A',
+  },
+  batchThumbWrapper: {
+    width: 90,
+    height: 90,
+    borderRadius: 16,
+    position: 'relative',
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: '#C8E6C9',
+  },
+  batchThumbImage: {
+    width: '100%',
+    height: '100%',
+  },
+  webpBadge: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+    backgroundColor: 'rgba(30, 90, 42, 0.85)',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 6,
+  },
+  webpBadgeText: {
+    fontSize: 9,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  noPhotoPlaceholder: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FAFAF9',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E7E5E4',
+  },
+  defaultCropThumb: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  defaultCropNote: {
+    fontSize: 11,
+    color: '#78716C',
+    fontWeight: '500',
+  },
+
   sectionTitle: {
     fontSize: 16,
     fontWeight: '800',

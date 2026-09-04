@@ -19,14 +19,38 @@ export default function PartnerActiveRouteScreen({ navigation }) {
   const { activeDelivery, advanceDeliveryStep } = usePartner();
   const [etaMins, setEtaMins] = useState(18);
   const [speed, setSpeed] = useState(36);
+  const [streamActive, setStreamActive] = useState(true);
 
   useEffect(() => {
-    // Subtle speed flutter simulation
+    // 1. Subtle speed flutter simulation
     const interval = setInterval(() => {
-      setSpeed(prev => Math.floor(34 + Math.random() * 8));
+      const currentSpeed = Math.floor(34 + Math.random() * 8);
+      setSpeed(currentSpeed);
+
+      // 2. High-frequency Realtime GPS broadcast to tracking service
+      const orderId = activeDelivery?.id || 'MK10284';
+      const trackingBaseUrl = (typeof process !== 'undefined' && process.env?.EXPO_PUBLIC_USER_API_URL) || 'http://localhost:4001/api/v1';
+      fetch(`${trackingBaseUrl}/tracking/publish`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          orderId,
+          driverId: 'KL-DP-9824',
+          driverName: 'Rahul Sharma',
+          latitude: 19.9975 + (Math.random() * 0.005),
+          longitude: 73.7898 + (Math.random() * 0.005),
+          speedKmH: currentSpeed,
+          heading: 45,
+          destLat: 18.5204,
+          destLon: 73.8567,
+        }),
+      }).catch(() => {
+        // Safe failover when offline or simulating locally
+      });
     }, 3000);
+
     return () => clearInterval(interval);
-  }, []);
+  }, [activeDelivery]);
 
   const handleArrived = () => {
     Alert.alert(

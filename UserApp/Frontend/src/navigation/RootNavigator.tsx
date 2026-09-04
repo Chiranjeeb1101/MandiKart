@@ -30,6 +30,7 @@ import SettingsScreen from '../screens/profile/SettingsScreen';
 import AddAddressScreen from '../screens/checkout/AddAddressScreen';
 import BulkRequirementScreen from '../screens/main/BulkRequirementScreen';
 import BulkMatchDiscoveryScreen from '../screens/main/BulkMatchDiscoveryScreen';
+import AnalyticsDashboardScreen from '../screens/analytics/AnalyticsDashboardScreen';
 
 const RootStack = createNativeStackNavigator<any>();
 const ProductStack = createNativeStackNavigator<any>();
@@ -86,6 +87,7 @@ export default function RootNavigator() {
       <RootStack.Screen name="OrderConfirmation" component={OrderConfirmationScreen as any} />
       <RootStack.Screen name="BulkRequirement" component={BulkRequirementScreen as any} />
       <RootStack.Screen name="BulkMatchDiscovery" component={BulkMatchDiscoveryScreen as any} />
+      <RootStack.Screen name="Analytics" component={AnalyticsDashboardScreen as any} />
     </RootStack.Navigator>
   );
 }

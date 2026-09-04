@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
-  Image, StatusBar, TextInput, Alert, FlatList,
+  Image, StatusBar, TextInput, Alert, FlatList, Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -54,10 +54,19 @@ export default function CartScreen() {
   };
 
   const clearCart = () => {
-    Alert.alert('Clear Cart', 'Are you sure you want to remove all items from your cart?', [
-      { text: 'Cancel', style: 'cancel' },
-      { text: 'Clear All', style: 'destructive', onPress: () => setItems([]) },
-    ]);
+    if (Platform.OS === 'web') {
+      if (typeof window !== 'undefined') {
+        const confirmed = window.confirm('Are you sure you want to remove all items from your cart?');
+        if (confirmed) setItems([]);
+      } else {
+        setItems([]);
+      }
+    } else {
+      Alert.alert('Clear Cart', 'Are you sure you want to remove all items from your cart?', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Clear All', style: 'destructive', onPress: () => setItems([]) },
+      ]);
+    }
   };
 
   const applyCoupon = () => {

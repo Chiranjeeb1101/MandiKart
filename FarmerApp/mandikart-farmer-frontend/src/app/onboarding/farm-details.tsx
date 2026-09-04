@@ -17,6 +17,8 @@ import {
   Pressable,
   TextInput,
   Dimensions,
+  Alert,
+  ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -29,9 +31,16 @@ import {
   Check,
   ArrowRight,
   ShieldCheck,
+  Camera,
+  FileText,
+  UploadCloud,
+  CheckCircle2,
 } from 'lucide-react-native';
+import * as ImagePicker from 'expo-image-picker';
 import { MKBackground, MKButton, MKHeader } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
+import { apiClient } from '@/services/apiClient';
+
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -70,6 +79,71 @@ export default function FarmDetailsScreen() {
   const [farmUnit, setFarmUnit] = useState<'Acres' | 'Hectares'>('Acres');
   const [selectedCrops, setSelectedCrops] = useState<string[]>(['onion', 'wheat', 'tomato']);
   const [ownershipType, setOwnershipType] = useState<'Owned' | 'Leased'>('Owned');
+  const [surveyNumber, setSurveyNumber] = useState('Gat No. 142/B');
+  const [soilType, setSoilType] = useState('Black Cotton Soil');
+  const [plotImageUri, setPlotImageUri] = useState<string | null>(null);
+  const [doc712Uri, setDoc712Uri] = useState<string | null>(null);
+  const [uploadingPlot, setUploadingPlot] = useState(false);
+  const [uploadingDoc, setUploadingDoc] = useState(false);
+
+  const handlePickPlotPhoto = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Camera roll access is needed to upload your farm plot photo.');
+        return;
+      }
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.7,
+      });
+      if (!res.canceled && res.assets[0]?.uri) {
+        const localUri = res.assets[0].uri;
+        setPlotImageUri(localUri);
+        setUploadingPlot(true);
+        const upload = await apiClient.uploadImage(localUri, 'land_records');
+        setUploadingPlot(false);
+        if (upload?.url) {
+          setPlotImageUri(upload.url);
+          Alert.alert('Farm Plot Photo Uploaded! 🌾', `Compressed to WebP and securely registered.\nStorage saved: ${upload.savingsPercent}%`);
+        }
+      }
+    } catch (err: any) {
+      setUploadingPlot(false);
+      Alert.alert('Upload Error', err?.message || 'Failed to upload photo');
+    }
+  };
+
+  const handlePickDoc712 = async () => {
+    try {
+      const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission Required', 'Camera roll access is needed to upload your 7/12 document.');
+        return;
+      }
+      const res = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        quality: 0.7,
+      });
+      if (!res.canceled && res.assets[0]?.uri) {
+        const localUri = res.assets[0].uri;
+        setDoc712Uri(localUri);
+        setUploadingDoc(true);
+        const upload = await apiClient.uploadImage(localUri, 'land_records');
+        setUploadingDoc(false);
+        if (upload?.url) {
+          setDoc712Uri(upload.url);
+          Alert.alert('7/12 Document Uploaded! 📄', `Compressed to WebP and stored for government verification.\nStorage saved: ${upload.savingsPercent}%`);
+        }
+      }
+    } catch (err: any) {
+      setUploadingDoc(false);
+      Alert.alert('Upload Error', err?.message || 'Failed to upload document');
+    }
+  };
 
   const toggleCrop = (id: string) => {
     if (selectedCrops.includes(id)) {
@@ -305,6 +379,103 @@ export default function FarmDetailsScreen() {
                   Leased
                 </Text>
               </Pressable>
+            </View>
+          </View>
+
+          {/* Section 5: Land Records & Photos (7/12 & Farm Plot) */}
+          <View style={styles.card}>
+            <View style={styles.cardHeaderRow}>
+              <View style={styles.cardIconBadge}>
+                <FileText size={18} color="#1E5A2A" strokeWidth={2.2} />
+              </View>
+              <View>
+                <Text style={styles.cardTitle}>5. Land Records & Verification</Text>
+                <Text style={styles.cardSubtitle}>Upload farm plot photo & 7/12 land extract</Text>
+              </View>
+            </View>
+
+            {/* Survey / Gat Number */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Survey / Gat Number</Text>
+              <TextInput
+                style={styles.textInput}
+                value={surveyNumber}
+                onChangeText={setSurveyNumber}
+                placeholder="e.g. Gat No. 142/B"
+                placeholderTextColor="#9E9E9E"
+              />
+            </View>
+
+            {/* Soil Type */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Soil Type</Text>
+              <TextInput
+                style={styles.textInput}
+                value={soilType}
+                onChangeText={setSoilType}
+                placeholder="e.g. Black Cotton, Loamy, Red"
+                placeholderTextColor="#9E9E9E"
+              />
+            </View>
+
+            {/* Upload Buttons Row */}
+            <View style={styles.uploadRow}>
+              {/* Farm Plot Photo */}
+              <Pressable
+                onPress={handlePickPlotPhoto}
+                style={[styles.uploadBox, plotImageUri ? styles.uploadBoxDone : null]}
+              >
+                {uploadingPlot ? (
+                  <ActivityIndicator size="small" color="#1E5A2A" />
+                ) : plotImageUri ? (
+                  <>
+                    <Image source={{ uri: plotImageUri }} style={styles.uploadThumb} />
+                    <View style={styles.uploadDoneBadge}>
+                      <CheckCircle2 size={14} color="#FFFFFF" />
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.uploadIconCircle}>
+                      <Camera size={20} color="#1E5A2A" />
+                    </View>
+                    <Text style={styles.uploadBoxTitle}>Farm Plot Photo</Text>
+                    <Text style={styles.uploadBoxSub}>Take or choose photo</Text>
+                  </>
+                )}
+              </Pressable>
+
+              {/* 7/12 Land Record Document */}
+              <Pressable
+                onPress={handlePickDoc712}
+                style={[styles.uploadBox, doc712Uri ? styles.uploadBoxDone : null]}
+              >
+                {uploadingDoc ? (
+                  <ActivityIndicator size="small" color="#1E5A2A" />
+                ) : doc712Uri ? (
+                  <>
+                    <Image source={{ uri: doc712Uri }} style={styles.uploadThumb} />
+                    <View style={styles.uploadDoneBadge}>
+                      <CheckCircle2 size={14} color="#FFFFFF" />
+                    </View>
+                  </>
+                ) : (
+                  <>
+                    <View style={styles.uploadIconCircle}>
+                      <FileText size={20} color="#1E5A2A" />
+                    </View>
+                    <Text style={styles.uploadBoxTitle}>7/12 Land Extract</Text>
+                    <Text style={styles.uploadBoxSub}>Satbara certificate</Text>
+                  </>
+                )}
+              </Pressable>
+            </View>
+
+            <View style={styles.compressionNote}>
+              <ShieldCheck size={14} color="#16A34A" />
+              <Text style={styles.compressionNoteText}>
+                Photos are automatically compressed to WebP for zero storage wastage.
+              </Text>
             </View>
           </View>
 
@@ -723,5 +894,100 @@ const styles = StyleSheet.create({
     fontSize: 11,
     color: '#7A7A7A',
     fontWeight: '500',
+  },
+  inputGroup: {
+    marginTop: 12,
+  },
+  inputLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#424242',
+    marginBottom: 6,
+  },
+  textInput: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    fontSize: 14,
+    color: '#212121',
+  },
+  uploadRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginTop: 16,
+  },
+  uploadBox: {
+    flex: 1,
+    height: 120,
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#A5D6A7',
+    borderRadius: 14,
+    backgroundColor: '#F1F8E9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 8,
+    position: 'relative',
+    overflow: 'hidden',
+  },
+  uploadBoxDone: {
+    borderStyle: 'solid',
+    borderColor: '#2E7D32',
+    backgroundColor: '#FFFFFF',
+  },
+  uploadIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#E8F5E9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 6,
+  },
+  uploadBoxTitle: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#1E5A2A',
+    textAlign: 'center',
+  },
+  uploadBoxSub: {
+    fontSize: 10,
+    color: '#757575',
+    textAlign: 'center',
+    marginTop: 2,
+  },
+  uploadThumb: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
+  },
+  uploadDoneBadge: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#16A34A',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compressionNote: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 12,
+    backgroundColor: '#F0FDF4',
+    padding: 8,
+    borderRadius: 8,
+  },
+  compressionNoteText: {
+    fontSize: 11,
+    color: '#15803D',
+    fontWeight: '500',
+    flex: 1,
   },
 });

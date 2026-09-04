@@ -5,3 +5,5 @@ export const authRouter = Router();
 
 authRouter.post('/login', BuyerAuthController.login);
 authRouter.post('/refresh-session', BuyerAuthController.refreshSession);
+authRouter.post('/google', BuyerAuthController.loginWithGoogle);
+authRouter.post('/phone-otp', BuyerAuthController.loginWithPhoneOtp);

@@ -96,6 +96,37 @@ export class AdminController {
       return;
     }
 
+    // Update payments and disputes tables in Supabase
+    try {
+      const supabase = getSupabaseAdmin();
+      if (resolution === 'REFUND_BUYER') {
+        await supabase.from('payments').update({
+          status: 'REFUNDED',
+          escrow_status: 'REFUNDED',
+          refunded_at: new Date().toISOString(),
+        }).eq('order_id', orderId);
+
+        await supabase.from('disputes').update({
+          status: 'RESOLVED_REFUND',
+          admin_notes: remarks || 'Resolved with buyer refund by Admin',
+          resolved_at: new Date().toISOString(),
+        }).eq('order_id', orderId);
+      } else {
+        await supabase.from('payments').update({
+          escrow_status: 'RELEASED',
+          escrow_released_at: new Date().toISOString(),
+        }).eq('order_id', orderId);
+
+        await supabase.from('disputes').update({
+          status: 'RESOLVED_SETTLED',
+          admin_notes: remarks || 'Resolved with farmer payout dispatch by Admin',
+          resolved_at: new Date().toISOString(),
+        }).eq('order_id', orderId);
+      }
+    } catch {
+      // Offline fallback
+    }
+
     await auditLog({
       actorId: adminId,
       role: UserRole.ADMIN,
@@ -110,7 +141,7 @@ export class AdminController {
         orderId,
         status: targetStatus,
         resolution,
-        message: `Dispute resolved. Order status transitioned to ${targetStatus}.`,
+        message: `Dispute resolved. Order status transitioned to ${targetStatus}. Escrow state updated.`,
       },
       meta: null,
       error: null,

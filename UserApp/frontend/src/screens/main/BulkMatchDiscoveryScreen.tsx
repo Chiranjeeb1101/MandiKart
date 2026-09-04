@@ -164,15 +164,38 @@ export default function BulkMatchDiscoveryScreen({ navigation, route }: any) {
                       })
                     }
                   >
-                    <Ionicons name="chatbubbles-outline" size={18} color={Colors.primary} />
-                    <Text style={styles.chatBtnText}>Inquire</Text>
+                    <Ionicons name="chatbubbles-outline" size={16} color={Colors.primary} />
+                    <Text style={styles.chatBtnText}>Chat</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={styles.counterBidBtn}
+                    onPress={() => {
+                      Alert.prompt
+                        ? Alert.prompt(
+                            'Submit Counter-Bid 🏷️',
+                            `Current asking: ₹${supplier.askingPricePerUnit}/${supplier.capacityUnit}. Enter your counter offer:`,
+                            (val) => {
+                              if (val) {
+                                Alert.alert('Bid Dispatched 🎉', `Counter offer of ₹${val}/${supplier.capacityUnit} transmitted to ${supplier.supplierName}.`);
+                              }
+                            }
+                          )
+                        : Alert.alert(
+                            'Counter-Bid Sent 🏷️',
+                            `Negotiation proposal of ₹${Math.round(supplier.askingPricePerUnit * 0.95)}/${supplier.capacityUnit} dispatched to ${supplier.supplierName}.`
+                          );
+                    }}
+                  >
+                    <Ionicons name="pricetag-outline" size={16} color="#B45309" />
+                    <Text style={styles.counterBidBtnText}>Counter-Bid</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
                     style={styles.reserveBtn}
                     onPress={() => handleReserveLot(supplier)}
                   >
-                    <Ionicons name="lock-closed" size={16} color={Colors.white} />
+                    <Ionicons name="lock-closed" size={15} color={Colors.white} />
                     <Text style={styles.reserveBtnText}>Reserve Lot</Text>
                   </TouchableOpacity>
                 </View>
@@ -313,8 +336,21 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   chatBtnText: { fontSize: 13, fontWeight: '600', color: Colors.primary },
+  counterBidBtn: {
+    flex: 1.2,
+    height: 42,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: '#D97706',
+    backgroundColor: '#FFFBEB',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  counterBidBtnText: { fontSize: 12, fontWeight: '700', color: '#B45309' },
   reserveBtn: {
-    flex: 2,
+    flex: 1.5,
     height: 42,
     borderRadius: BorderRadius.md,
     backgroundColor: Colors.primary,
@@ -323,5 +359,5 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
   },
-  reserveBtnText: { fontSize: 13, fontWeight: '700', color: Colors.white },
+  reserveBtnText: { fontSize: 13, fontWeight: '600', color: Colors.white },
 });
