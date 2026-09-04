@@ -307,7 +307,7 @@ export default function TrackLiveVehicleScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#FAF9F6',
+    backgroundColor: '#F6F1E9',
   },
   topBar: {
     flexDirection: 'row',

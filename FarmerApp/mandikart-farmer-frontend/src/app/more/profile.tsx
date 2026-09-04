@@ -412,7 +412,7 @@ export default function FarmerProfileScreen() {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: '#FAF9F6',
+    backgroundColor: '#F6F1E9',
   },
   topBar: {
     flexDirection: 'row',
@@ -422,7 +422,7 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#F3F4F6',
+    borderBottomColor: '#E3DCCF',
   },
   backBtn: {
     width: 40,
@@ -473,7 +473,7 @@ const styles = StyleSheet.create({
     padding: 22,
     alignItems: 'center',
     borderWidth: 1.5,
-    borderColor: '#ECEAE3',
+    borderColor: '#E3DCCF',
   },
   avatarWrapper: {
     position: 'relative',
@@ -537,7 +537,7 @@ const styles = StyleSheet.create({
     borderRadius: 22,
     padding: 18,
     borderWidth: 1.5,
-    borderColor: '#ECEAE3',
+    borderColor: '#E3DCCF',
   },
   sectionHeaderRow: {
     flexDirection: 'row',

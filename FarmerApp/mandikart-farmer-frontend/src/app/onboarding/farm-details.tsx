@@ -19,6 +19,7 @@ import {
   Dimensions,
   Alert,
   ActivityIndicator,
+  Modal,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -35,12 +36,16 @@ import {
   FileText,
   UploadCloud,
   CheckCircle2,
+  X,
+  Image as ImageIcon,
 } from 'lucide-react-native';
 import * as ImagePicker from 'expo-image-picker';
 import { MKBackground, MKButton, MKHeader } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
 import { apiClient } from '@/services/apiClient';
-
+import { CelebrationModal } from '@/components/CelebrationModal';
+import { FarmMapView } from '@/components/FarmMapView';
+import { pickImageFromGallery, takePhotoWithCamera } from '@/services/imagePickerService';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 
@@ -56,7 +61,8 @@ const VEGGIE_BASKET_URI =
 interface CropOption {
   id: string;
   name: string;
-  emoji: string;
+  emoji?: string;
+  image?: string;
 }
 
 const CROPS_LIST: CropOption[] = [
@@ -77,6 +83,7 @@ export default function FarmDetailsScreen() {
   const [farmLocation, setFarmLocation] = useState('Nashik, Maharashtra');
   const [farmSize, setFarmSize] = useState('5.5');
   const [farmUnit, setFarmUnit] = useState<'Acres' | 'Hectares'>('Acres');
+  const [cropsList, setCropsList] = useState<CropOption[]>(CROPS_LIST);
   const [selectedCrops, setSelectedCrops] = useState<string[]>(['onion', 'wheat', 'tomato']);
   const [ownershipType, setOwnershipType] = useState<'Owned' | 'Leased'>('Owned');
   const [surveyNumber, setSurveyNumber] = useState('Gat No. 142/B');
@@ -85,6 +92,14 @@ export default function FarmDetailsScreen() {
   const [doc712Uri, setDoc712Uri] = useState<string | null>(null);
   const [uploadingPlot, setUploadingPlot] = useState(false);
   const [uploadingDoc, setUploadingDoc] = useState(false);
+
+  // Dynamic Crop Modal states
+  const [addCropModalOpen, setAddCropModalOpen] = useState(false);
+  const [customCropName, setCustomCropName] = useState('');
+  const [customCropPhotoUri, setCustomCropPhotoUri] = useState<string | null>(null);
+
+  // Celebration Modal state
+  const [celebrationVisible, setCelebrationVisible] = useState(false);
 
   const handlePickPlotPhoto = async () => {
     try {
@@ -145,6 +160,46 @@ export default function FarmDetailsScreen() {
     }
   };
 
+  const handlePickCropPhoto = () => {
+    Alert.alert('Crop Photo', 'Choose photo source for your crop', [
+      {
+        text: 'Take Photo',
+        onPress: async () => {
+          const res = await takePhotoWithCamera();
+          if (!res.cancelled && res.uri) setCustomCropPhotoUri(res.uri);
+        },
+      },
+      {
+        text: 'From Gallery',
+        onPress: async () => {
+          const res = await pickImageFromGallery();
+          if (!res.cancelled && res.uri) setCustomCropPhotoUri(res.uri);
+        },
+      },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  };
+
+  const handleAddCustomCrop = () => {
+    if (!customCropName.trim()) {
+      Alert.alert('Crop Name Required', 'Please enter a name for your crop.');
+      return;
+    }
+    const newId = `custom_${Date.now()}`;
+    const newCrop: CropOption = {
+      id: newId,
+      name: customCropName.trim(),
+      emoji: '🌱',
+      image: customCropPhotoUri || undefined,
+    };
+    setCropsList((prev) => [...prev, newCrop]);
+    setSelectedCrops((prev) => [...prev, newId]);
+    setCustomCropName('');
+    setCustomCropPhotoUri(null);
+    setAddCropModalOpen(false);
+    Alert.alert('Crop Added! 🌱', `${newCrop.name} has been added to your crops.`);
+  };
+
   const toggleCrop = (id: string) => {
     if (selectedCrops.includes(id)) {
       setSelectedCrops(selectedCrops.filter((c) => c !== id));
@@ -159,10 +214,13 @@ export default function FarmDetailsScreen() {
         ...user,
         farmSizeAcres: parseFloat(farmSize) || 5,
         isVerified: true,
+        crops: selectedCrops.map(
+          (cId) => cropsList.find((c) => c.id === cId)?.name || cId
+        ),
       });
     }
     setIsAuthenticated(true);
-    router.replace('/(tabs)/home');
+    setCelebrationVisible(true);
   };
 
   return (
@@ -214,18 +272,12 @@ export default function FarmDetailsScreen() {
               </View>
             </View>
 
-            <View style={styles.locationContentRow}>
-              <View style={styles.locationInfoBox}>
-                <Text style={styles.locationTitle}>{farmLocation}</Text>
-                <Text style={styles.locationCountry}>India</Text>
-                <Text style={styles.locationNote}>
-                  Location helps estimate nearby buyers and transport costs accurately.
-                </Text>
-              </View>
-
-              <View style={styles.mapThumbWrapper}>
-                <Image source={{ uri: MAP_PREVIEW_URI }} style={styles.mapImage} />
-              </View>
+            <View style={styles.mapViewContainer}>
+              <FarmMapView
+                locationName={farmLocation}
+                acres={parseFloat(farmSize) || 5.5}
+                onDetectGps={() => setFarmLocation('Dindori, Nashik (GPS Verified)')}
+              />
             </View>
 
             <View style={styles.locationActionsRow}>
@@ -296,7 +348,7 @@ export default function FarmDetailsScreen() {
             </View>
 
             <View style={styles.cropsGrid}>
-              {CROPS_LIST.map((crop) => {
+              {cropsList.map((crop) => {
                 const isSelected = selectedCrops.includes(crop.id);
                 return (
                   <Pressable
@@ -309,7 +361,11 @@ export default function FarmDetailsScreen() {
                     accessibilityRole="checkbox"
                     accessibilityState={{ checked: isSelected }}
                   >
-                    <Text style={styles.cropEmoji}>{crop.emoji}</Text>
+                    {crop.image ? (
+                      <Image source={{ uri: crop.image }} style={styles.cropCustomThumb} />
+                    ) : (
+                      <Text style={styles.cropEmoji}>{crop.emoji || '🌱'}</Text>
+                    )}
                     <Text
                       style={[
                         styles.cropName,
@@ -328,7 +384,10 @@ export default function FarmDetailsScreen() {
               })}
             </View>
 
-            <Pressable style={styles.addCropBtn}>
+            <Pressable
+              style={styles.addCropBtn}
+              onPress={() => setAddCropModalOpen(true)}
+            >
               <Plus size={16} color="#1E5A2A" />
               <Text style={styles.addCropText}>Add Another Crop</Text>
             </Pressable>
@@ -515,6 +574,93 @@ export default function FarmDetailsScreen() {
           </View>
         </View>
       </ScrollView>
+
+      {/* ── Dynamic Add Crop Modal (Item 5) ── */}
+      <Modal
+        visible={addCropModalOpen}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setAddCropModalOpen(false)}
+      >
+        <View style={styles.cropModalOverlay}>
+          <View style={styles.cropModalCard}>
+            <View style={styles.cropModalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                <Sprout size={20} color="#1E5A2A" />
+                <Text style={styles.cropModalTitle}>Add Another Crop</Text>
+              </View>
+              <Pressable onPress={() => setAddCropModalOpen(false)} hitSlop={8}>
+                <X size={20} color="#6B7280" />
+              </Pressable>
+            </View>
+
+            <Text style={styles.cropModalSubtitle}>
+              Upload a photo and name your harvest crop:
+            </Text>
+
+            {/* Photo Upload Box */}
+            <View style={styles.cropPhotoContainer}>
+              {customCropPhotoUri ? (
+                <View style={styles.cropPhotoPreviewWrap}>
+                  <Image source={{ uri: customCropPhotoUri }} style={styles.cropPhotoPreviewImg} />
+                  <Pressable
+                    style={styles.cropPhotoRemoveBtn}
+                    onPress={() => setCustomCropPhotoUri(null)}
+                  >
+                    <X size={14} color="#FFFFFF" strokeWidth={2.5} />
+                  </Pressable>
+                </View>
+              ) : (
+                <Pressable style={styles.cropPhotoUploadBox} onPress={handlePickCropPhoto}>
+                  <Camera size={26} color="#1E5A2A" strokeWidth={2} />
+                  <Text style={styles.cropPhotoUploadText}>Take Photo or Select from Gallery</Text>
+                  <Text style={styles.cropPhotoUploadSub}>Show your actual produce quality</Text>
+                </Pressable>
+              )}
+            </View>
+
+            {/* Crop Name Input */}
+            <View style={styles.cropNameInputWrap}>
+              <Text style={styles.cropNameInputLabel}>Crop / Variety Name</Text>
+              <TextInput
+                style={styles.cropNameInput}
+                placeholder="e.g. Alphonso Mango, Soybean, Green Chilli"
+                placeholderTextColor="#9CA3AF"
+                value={customCropName}
+                onChangeText={setCustomCropName}
+              />
+            </View>
+
+            {/* Modal Actions */}
+            <View style={styles.cropModalActionRow}>
+              <Pressable
+                style={styles.cropModalCancelBtn}
+                onPress={() => setAddCropModalOpen(false)}
+              >
+                <Text style={styles.cropModalCancelText}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                style={styles.cropModalSaveBtn}
+                onPress={handleAddCustomCrop}
+              >
+                <Check size={16} color="#FFFFFF" strokeWidth={2.5} style={{ marginRight: 6 }} />
+                <Text style={styles.cropModalSaveText}>Add to My Crops</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* ── Celebration Modal (Item 6) ── */}
+      <CelebrationModal
+        visible={celebrationVisible}
+        onContinue={() => {
+          setCelebrationVisible(false);
+          router.replace('/(tabs)/home');
+        }}
+        farmerName={user?.firstName || user?.fullName || 'Farmer'}
+        farmLocation={farmLocation}
+      />
     </MKBackground>
   );
 }
@@ -805,6 +951,141 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#1E5A2A',
+  },
+  mapViewContainer: {
+    borderRadius: 16,
+    overflow: 'hidden',
+    marginVertical: 12,
+    borderWidth: 1,
+    borderColor: '#E8E4DA',
+  },
+  cropCustomThumb: {
+    width: 22,
+    height: 22,
+    borderRadius: 6,
+  },
+  cropModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.55)',
+    justifyContent: 'flex-end',
+  },
+  cropModalCard: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    padding: 24,
+    paddingBottom: 40,
+  },
+  cropModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  cropModalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#1A1C1E',
+  },
+  cropModalSubtitle: {
+    fontSize: 13,
+    color: '#6B7280',
+    marginBottom: 16,
+  },
+  cropPhotoContainer: {
+    marginBottom: 16,
+  },
+  cropPhotoUploadBox: {
+    borderWidth: 1.5,
+    borderStyle: 'dashed',
+    borderColor: '#1E5A2A',
+    borderRadius: 16,
+    paddingVertical: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#F0FDF4',
+    gap: 4,
+  },
+  cropPhotoUploadText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#1E5A2A',
+  },
+  cropPhotoUploadSub: {
+    fontSize: 11.5,
+    color: '#6B7280',
+  },
+  cropPhotoPreviewWrap: {
+    width: '100%',
+    height: 140,
+    borderRadius: 16,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  cropPhotoPreviewImg: {
+    width: '100%',
+    height: '100%',
+  },
+  cropPhotoRemoveBtn: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cropNameInputWrap: {
+    marginBottom: 20,
+  },
+  cropNameInputLabel: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: 6,
+  },
+  cropNameInput: {
+    height: 48,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    paddingHorizontal: 14,
+    fontSize: 14,
+    color: '#1F2937',
+    backgroundColor: '#F9FAFB',
+  },
+  cropModalActionRow: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  cropModalCancelBtn: {
+    flex: 1,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#F3F4F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cropModalCancelText: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  cropModalSaveBtn: {
+    flex: 2,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#1E5A2A',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  cropModalSaveText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   segmentedControl: {
     flexDirection: 'row',

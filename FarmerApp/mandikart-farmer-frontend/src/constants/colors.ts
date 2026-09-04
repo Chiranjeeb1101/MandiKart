@@ -25,16 +25,16 @@ export const MKColors = {
   accentOrangeMuted: '#FFCC80',
 
   // ── Backgrounds (organic brush-stroke feel) ──────────────
-  backgroundPrimary: '#FAFAF7',     // warm soft white
-  backgroundSecondary: '#F5F5F0',   // slightly deeper warm
+  backgroundPrimary: '#F6F1E9',     // richer warm earthy cream
+  backgroundSecondary: '#EFE8DC',   // deeper warm earthy
   backgroundCard: '#FFFFFF',
-  backgroundOverlay: 'rgba(0,0,0,0.35)',
+  backgroundOverlay: 'rgba(0,0,0,0.45)',
 
-  // Organic background brush blobs — low-opacity tints
-  bgBlobOrange: 'rgba(245, 124, 0, 0.06)',
-  bgBlobGreen: 'rgba(46, 125, 50, 0.06)',
-  bgBlobOrangeStrong: 'rgba(245, 124, 0, 0.10)',
-  bgBlobGreenStrong: 'rgba(46, 125, 50, 0.10)',
+  // Organic background brush blobs — enhanced opacity tints
+  bgBlobOrange: 'rgba(245, 124, 0, 0.12)',
+  bgBlobGreen: 'rgba(46, 125, 50, 0.12)',
+  bgBlobOrangeStrong: 'rgba(245, 124, 0, 0.18)',
+  bgBlobGreenStrong: 'rgba(46, 125, 50, 0.18)',
 
   // ── Text ─────────────────────────────────────────────────
   textPrimary: '#1A1C1E',
@@ -48,9 +48,9 @@ export const MKColors = {
   // ── Surfaces & Borders ───────────────────────────────────
   surface: '#FFFFFF',
   surfaceElevated: '#FFFFFF',
-  border: '#E8E8E8',
-  borderLight: '#F0F0F0',
-  divider: '#EEEEEE',
+  border: '#E3DCCF',
+  borderLight: '#ECE6DC',
+  divider: '#E5DFD4',
 
   // ── Semantic / Status ────────────────────────────────────
   success: '#2E7D32',

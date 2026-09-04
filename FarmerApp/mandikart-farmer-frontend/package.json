@@ -3,6 +3,7 @@
   "main": "expo-router/entry",
   "version": "1.0.0",
   "dependencies": {
+    "@expo/config": "^57.0.9",
     "@expo/vector-icons": "^15.1.1",
     "@hookform/resolvers": "^5.9.1",
     "@tanstack/react-query": "^5.102.8",

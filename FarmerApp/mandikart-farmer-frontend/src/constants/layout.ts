@@ -21,7 +21,7 @@ export const MKLayout = {
   cardPaddingLarge: 20,
   
   /** Standard section gap */
-  sectionGap: 24,
+  sectionGap: 14,
   
   /** Standard row minimum height */
   rowMinHeight: 60,

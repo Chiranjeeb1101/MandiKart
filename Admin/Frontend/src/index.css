@@ -1,0 +1,149 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background-color: #000000;
+    color: #ffffff;
+  }
+}
+
+/* Material Symbols Icon Configuration */
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  font-size: 20px;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+.material-symbols-outlined.fill {
+  font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+}
+
+/* Softened Low-Contrast White Borders */
+.border-white {
+  border-color: rgba(255, 255, 255, 0.22) !important;
+}
+.border-b-white {
+  border-bottom-color: rgba(255, 255, 255, 0.22) !important;
+}
+.border-t-white {
+  border-top-color: rgba(255, 255, 255, 0.22) !important;
+}
+.border-r-white {
+  border-right-color: rgba(255, 255, 255, 0.22) !important;
+}
+.border-l-white {
+  border-left-color: rgba(255, 255, 255, 0.22) !important;
+}
+
+/* Softened Pure Black Card with Low-Contrast Border */
+.enterprise-card {
+  background-color: #000000;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.enterprise-card:hover {
+  border-color: rgba(255, 255, 255, 0.45);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.08);
+}
+
+/* Scrollbars - Black & Subtle White Theme */
+.sidebar-scroll::-webkit-scrollbar {
+  width: 5px;
+}
+.sidebar-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.sidebar-scroll::-webkit-scrollbar-thumb {
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 20px;
+}
+
+/* Light Mode Dynamic Theme Overrides */
+body.light-mode {
+  background-color: #f8fafc !important;
+  color: #0f172a !important;
+}
+
+.light-mode .bg-black {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+.light-mode .bg-zinc-950,
+.light-mode .bg-zinc-900 {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+}
+
+.light-mode .text-white {
+  color: #0f172a !important;
+}
+
+.light-mode .text-zinc-400,
+.light-mode .text-slate-400,
+.light-mode .text-zinc-300,
+.light-mode .text-slate-300 {
+  color: #475569 !important;
+}
+
+.light-mode .border-white,
+.light-mode .border-b-white,
+.light-mode .border-t-white,
+.light-mode .border-r-white,
+.light-mode .border-l-white {
+  border-color: rgba(0, 0, 0, 0.15) !important;
+}
+
+.light-mode .border-zinc-800,
+.light-mode .border-zinc-700 {
+  border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+.light-mode .enterprise-card {
+  background-color: #ffffff !important;
+  border-color: rgba(0, 0, 0, 0.12) !important;
+  color: #0f172a !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.light-mode input,
+.light-mode select,
+.light-mode textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: rgba(0, 0, 0, 0.2) !important;
+}
+
+.light-mode input::placeholder,
+.light-mode textarea::placeholder {
+  color: #94a3b8 !important;
+}
+
+.light-mode table thead tr {
+  background-color: #e2e8f0 !important;
+  color: #334155 !important;
+}
+
+.light-mode table tbody tr:hover {
+  background-color: #f1f5f9 !important;
+}
