@@ -22,6 +22,7 @@ import {
   ScrollView,
   Modal,
   Alert,
+  TextInput,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import {
@@ -46,6 +47,7 @@ import {
   Flame,
   CreditCard,
   Navigation,
+  Search,
 } from 'lucide-react-native';
 import { MKScreen, MKCard } from '@/components/ui';
 import { MKColors } from '@/constants/colors';
@@ -224,6 +226,7 @@ const ORDERS_DATA: OrderItem[] = [
 export default function OrdersScreen() {
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState<OrderTab>('Active');
+  const [searchQuery, setSearchQuery] = useState('');
   const [orders, setOrders] = useState<OrderItem[]>(ORDERS_DATA);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<OrderItem | null>(null);
 
@@ -231,12 +234,19 @@ export default function OrdersScreen() {
   const pendingCount = orders.filter((o) => o.tab === 'Pending').length;
   const completedCount = orders.filter((o) => o.tab === 'Completed').length;
 
-  const filteredOrders =
-    selectedTab === 'All'
-      ? orders
-      : orders.filter((o) => o.tab === selectedTab);
-
-  const activeEnRouteOrder = orders.find((o) => o.statusType === 'en_route');
+  const filteredOrders = orders.filter((o) => {
+    if (selectedTab !== 'All' && o.tab !== selectedTab) return false;
+    if (searchQuery.trim().length > 0) {
+      const q = searchQuery.toLowerCase().trim();
+      return (
+        o.cropName.toLowerCase().includes(q) ||
+        o.orderNumber.toLowerCase().includes(q) ||
+        o.buyerName.toLowerCase().includes(q) ||
+        o.statusLabel.toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
 
   function handleAcceptOffer(orderId: string) {
     setOrders((prev) =>
@@ -275,7 +285,7 @@ export default function OrdersScreen() {
   }
 
   return (
-    <MKScreen>
+    <MKScreen scrollable contentContainerStyle={styles.screenScrollContent}>
       {/* ── 1. Header ── */}
       <View style={styles.header}>
         <View style={styles.headerTextCol}>
@@ -300,40 +310,25 @@ export default function OrdersScreen() {
         </View>
       </View>
 
-      {/* ── 2. Live Transit Radar Banner (Active Vehicle Tracking) ── */}
-      {activeEnRouteOrder && (
-        <View style={styles.liveTransitBanner}>
-          <View style={styles.liveTransitLeft}>
-            <View style={styles.radarPulseWrap}>
-              <View style={styles.radarPulseOuter} />
-              <View style={styles.radarPulseDot} />
-            </View>
-            <View style={{ flex: 1, minWidth: 0 }}>
-              <View style={styles.liveTransitBadgeRow}>
-                <Text style={styles.liveTransitBadgeText}>LIVE VEHICLE IN TRANSIT</Text>
-                <Text style={styles.liveTransitEtaText}>ETA {activeEnRouteOrder.etaMins} mins</Text>
-              </View>
-              <Text numberOfLines={1} style={styles.liveTransitVehicleText}>
-                {activeEnRouteOrder.vehicleModel} • {activeEnRouteOrder.vehicleNumber}
-              </Text>
-              <Text numberOfLines={1} style={styles.liveTransitSubtext}>
-                Picking up {activeEnRouteOrder.quantity} {activeEnRouteOrder.cropName} at your farmgate
-              </Text>
-            </View>
-          </View>
-
-          <Pressable
-            style={({ pressed }) => [
-              styles.trackLiveBtn,
-              pressed && { opacity: 0.9, transform: [{ scale: 0.96 }] },
-            ]}
-            onPress={() => router.push('/orders/track-vehicle')}
-          >
-            <Navigation size={14} color="#FFFFFF" strokeWidth={2.4} />
-            <Text style={styles.trackLiveBtnText}>Track Vehicle</Text>
-          </Pressable>
+      {/* ── 2. Order Quick Search Bar ── */}
+      <View style={styles.searchBarWrapper}>
+        <View style={styles.searchBarInner}>
+          <Search size={18} color="#64748B" style={styles.searchIcon} />
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search by crop, order ID or buyer..."
+            placeholderTextColor="#94A3B8"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <Pressable onPress={() => setSearchQuery('')} style={styles.searchClearBtn}>
+              <X size={16} color="#64748B" />
+            </Pressable>
+          )}
         </View>
-      )}
+      </View>
 
       {/* ── 3. Summary Stat Strip (Clickable Filters) ── */}
       <View style={styles.summaryStrip}>
@@ -443,6 +438,22 @@ export default function OrdersScreen() {
                   <Text style={styles.orderValueSub}>Total Value</Text>
                 </View>
               </View>
+
+              {/* Inline Live Transit Badge for Active Dispatch */}
+              {order.statusType === 'en_route' && (
+                <View style={styles.inlineLiveTransitBanner}>
+                  <View style={styles.inlineTransitLeft}>
+                    <View style={styles.inlineRadarDot} />
+                    <Truck size={14} color="#15803D" strokeWidth={2.4} />
+                    <Text style={styles.inlineTransitText}>
+                      Live Transit • Driver ETA {order.etaMins} mins
+                    </Text>
+                  </View>
+                  <Text style={styles.inlineTransitSub}>
+                    {order.vehicleModel} ({order.vehicleNumber})
+                  </Text>
+                </View>
+              )}
 
               {/* Crop & Buyer Info */}
               <View style={styles.cropInfoRow}>
@@ -808,111 +819,95 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
 
-  /* ── Live Transit Radar Banner ── */
-  liveTransitBanner: {
+  screenScrollContent: {
+    paddingHorizontal: 10,
+    width: '100%',
+  },
+
+  /* ── Search Bar ── */
+  searchBarWrapper: {
+    marginBottom: 12,
+  },
+  searchBarInner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#E3DCCF',
+    paddingHorizontal: 14,
+    height: 48,
+    shadowColor: '#1A1C1E',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  searchIcon: {
+    marginRight: 8,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: '#1E293B',
+    paddingVertical: 0,
+  },
+  searchClearBtn: {
+    padding: 4,
+    marginRight: 4,
+  },
+
+  /* ── Inline Live Transit Banner inside Order Card ── */
+  inlineLiveTransitBanner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#1E5A2A',
-    borderRadius: 16,
-    padding: 12,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 12,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
     marginBottom: 10,
-    gap: 10,
-    shadowColor: '#1E5A2A',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 3,
   },
-  liveTransitLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-    minWidth: 0,
-    gap: 10,
-  },
-  radarPulseWrap: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    position: 'relative',
-  },
-  radarPulseOuter: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    backgroundColor: 'rgba(74, 222, 128, 0.4)',
-    position: 'absolute',
-  },
-  radarPulseDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-    backgroundColor: '#4ADE80',
-  },
-  liveTransitBadgeRow: {
+  inlineTransitLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
+    flex: 1,
+    minWidth: 0,
   },
-  liveTransitBadgeText: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    color: '#86EFAC',
-    letterSpacing: 0.5,
-  },
-  liveTransitEtaText: {
-    fontSize: 10,
-    fontWeight: '800',
-    color: '#FBBF24',
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    paddingHorizontal: 6,
-    paddingVertical: 1,
+  inlineRadarDot: {
+    width: 8,
+    height: 8,
     borderRadius: 4,
+    backgroundColor: '#22C55E',
   },
-  liveTransitVehicleText: {
-    fontSize: 12.5,
+  inlineTransitText: {
+    fontSize: 11.5,
     fontWeight: '800',
-    color: '#FFFFFF',
-    marginTop: 1,
+    color: '#15803D',
   },
-  liveTransitSubtext: {
-    fontSize: 10.5,
-    color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: 1,
-  },
-  trackLiveBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    backgroundColor: '#EA580C',
-    paddingHorizontal: 10,
-    paddingVertical: 7,
-    borderRadius: 10,
-    flexShrink: 0,
-  },
-  trackLiveBtnText: {
+  inlineTransitSub: {
     fontSize: 11,
-    fontWeight: '800',
-    color: '#FFFFFF',
+    fontWeight: '700',
+    color: '#475569',
   },
 
   /* ── Summary Strip ── */
   summaryStrip: {
     flexDirection: 'row',
     width: '100%',
-    gap: 8,
-    marginBottom: 10,
+    gap: 10,
+    marginBottom: 12,
   },
   summaryBox: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingVertical: 8,
-    paddingHorizontal: 6,
+    borderRadius: 18,
+    paddingVertical: 12,
+    paddingHorizontal: 8,
     alignItems: 'center',
     justifyContent: 'center',
     elevation: 2,
@@ -929,12 +924,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#F0FDF4',
   },
   summaryCount: {
-    fontSize: 18,
+    fontSize: 22,
     fontWeight: '900',
-    marginBottom: 1,
+    marginBottom: 2,
   },
   summaryLabel: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: '800',
     color: '#6B7280',
     letterSpacing: 0.6,
@@ -945,15 +940,15 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     width: '100%',
     backgroundColor: '#EFE8DC',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 3,
-    marginBottom: 10,
+    marginBottom: 12,
     gap: 4,
   },
   filterPill: {
     flex: 1,
-    paddingVertical: 6,
-    borderRadius: 9,
+    paddingVertical: 8,
+    borderRadius: 11,
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -966,7 +961,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   filterPillText: {
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: '600',
     color: '#64748B',
   },
@@ -977,12 +972,12 @@ const styles = StyleSheet.create({
 
   /* ── Orders List & Cards ── */
   ordersList: {
-    gap: 10,
+    gap: 12,
   },
   orderCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 12,
+    borderRadius: 22,
+    padding: 16,
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
     shadowColor: '#000',
@@ -1053,12 +1048,12 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   orderValueAmount: {
-    fontSize: 15,
+    fontSize: 16.5,
     fontWeight: '900',
     color: '#15803D',
   },
   orderValueSub: {
-    fontSize: 9.5,
+    fontSize: 10,
     color: '#64748B',
     fontWeight: '600',
   },
@@ -1067,33 +1062,35 @@ const styles = StyleSheet.create({
   cropInfoRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 8,
+    gap: 12,
+    marginBottom: 10,
   },
   cropThumb: {
-    width: 44,
-    height: 44,
-    borderRadius: 10,
+    width: 52,
+    height: 52,
+    borderRadius: 14,
     backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   cropNameTitle: {
-    fontSize: 14,
+    fontSize: 15.5,
     fontWeight: '800',
     color: '#1A1C1E',
   },
   cropVarietySub: {
-    fontSize: 11,
+    fontSize: 12,
     color: '#64748B',
-    marginTop: 1,
+    marginTop: 2,
   },
   buyerInlineRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
+    gap: 5,
+    marginTop: 3,
   },
   buyerInlineName: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: '#1F2937',
   },
@@ -1101,9 +1098,9 @@ const styles = StyleSheet.create({
   /* Stepper Box */
   stepperBox: {
     backgroundColor: '#F9FAFB',
-    borderRadius: 10,
-    padding: 8,
-    marginBottom: 8,
+    borderRadius: 12,
+    padding: 10,
+    marginBottom: 10,
   },
   stepperHeader: {
     flexDirection: 'row',
@@ -1123,16 +1120,16 @@ const styles = StyleSheet.create({
     backgroundColor: '#15803D',
   },
   stepperHeaderText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '700',
     color: '#1F2937',
   },
   progressBarWrap: {
-    height: 5,
+    height: 6,
     backgroundColor: '#E5E7EB',
     borderRadius: 3,
     overflow: 'hidden',
-    marginBottom: 4,
+    marginBottom: 5,
   },
   progressTrack: {
     height: '100%',
@@ -1144,7 +1141,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
   },
   progressStepLabel: {
-    fontSize: 9,
+    fontSize: 9.5,
     color: '#9CA3AF',
     fontWeight: '600',
   },
@@ -1155,11 +1152,11 @@ const styles = StyleSheet.create({
   pickupBriefRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    marginTop: 2,
+    gap: 5,
+    marginTop: 4,
   },
   pickupBriefText: {
-    fontSize: 10.5,
+    fontSize: 11,
     color: '#4B5563',
     fontWeight: '600',
   },
@@ -1170,17 +1167,18 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     backgroundColor: '#FFF7ED',
-    borderRadius: 10,
-    padding: 8,
+    borderRadius: 12,
+    padding: 10,
     borderWidth: 1,
     borderColor: '#FFEDD5',
-    marginBottom: 8,
+    marginBottom: 10,
   },
   pendingNoticeText: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: '#C2410C',
     fontWeight: '600',
     flex: 1,
+    lineHeight: 16,
   },
 
   /* Card Actions Row */
@@ -1194,13 +1192,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    height: 36,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    height: 40,
+    paddingHorizontal: 14,
+    borderRadius: 10,
     backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   seeDetailsBtnText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '700',
     color: '#374151',
   },
@@ -1210,55 +1210,69 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
-    height: 36,
-    borderRadius: 8,
+    height: 40,
+    borderRadius: 10,
     backgroundColor: '#15803D',
+    elevation: 2,
+    shadowColor: '#15803D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
   },
   trackVehicleActionText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '800',
     color: '#FFFFFF',
   },
   counterBtn: {
-    height: 36,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    height: 40,
+    paddingHorizontal: 14,
+    borderRadius: 10,
     backgroundColor: '#FEF3C7',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
   },
   counterBtnText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '800',
     color: '#D97706',
   },
   acceptBtn: {
     flex: 1,
-    height: 36,
-    borderRadius: 8,
+    height: 40,
+    borderRadius: 10,
     backgroundColor: '#15803D',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
+    elevation: 2,
+    shadowColor: '#15803D',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
   },
   acceptBtnText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '800',
     color: '#FFFFFF',
   },
   invoiceBtn: {
     flex: 1,
-    height: 36,
-    borderRadius: 8,
+    height: 40,
+    borderRadius: 10,
     backgroundColor: '#DCFCE7',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
+    gap: 6,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
   },
   invoiceBtnText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '800',
     color: '#15803D',
   },

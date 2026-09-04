@@ -152,11 +152,34 @@ export default function HomeScreen() {
     ? `${user.district}, ${user.state}`
     : 'Dindori, Nashik, Maharashtra';
 
+  const [notifFilter, setNotifFilter] = useState<'all' | 'unread' | 'orders'>('all');
+  const [notifToast, setNotifToast] = useState<string | null>(null);
+
   const unreadCount = notifications.filter((n) => n.unread).length;
 
   function markAllNotificationsRead() {
     setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
+    setNotifToast('All notifications marked as read');
+    setTimeout(() => {
+      setNotifToast(null);
+    }, 2500);
   }
+
+  function handleNotificationPress(notif: (typeof notifications)[0]) {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === notif.id ? { ...n, unread: false } : n))
+    );
+    if (notif.actionRoute) {
+      setNotificationModalVisible(false);
+      router.push(notif.actionRoute as any);
+    }
+  }
+
+  const displayNotifications = notifications.filter((n) => {
+    if (notifFilter === 'unread') return n.unread;
+    if (notifFilter === 'orders') return n.type === 'order' || n.type === 'mandi';
+    return true;
+  });
 
   // High Demanded Crops Data
   const highDemandProducts = [
@@ -275,7 +298,7 @@ export default function HomeScreen() {
   );
 
   return (
-    <MKScreen>
+    <MKScreen scrollable contentContainerStyle={styles.screenScrollContent}>
       {/* ── 1. Top App Bar ── */}
       <View style={styles.topAppBar}>
         <Pressable
@@ -401,7 +424,7 @@ export default function HomeScreen() {
       {/* ── 3. Under Glance: High Aesthetic Search Bar with Voice Feature ── */}
       <View style={styles.searchBarWrapper}>
         <View style={styles.searchBarInner}>
-          <Search size={18} color="#64748B" style={styles.searchIcon} />
+          <Search size={20} color="#64748B" style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
             placeholder="Search crops, buyers, mandi rates (e.g. Onion, Tomato)..."
@@ -424,9 +447,9 @@ export default function HomeScreen() {
             accessibilityLabel="Voice Search"
           >
             {isListening ? (
-              <MicOff size={18} color="#FFFFFF" strokeWidth={2.4} />
+              <MicOff size={20} color="#FFFFFF" strokeWidth={2.4} />
             ) : (
-              <Mic size={18} color="#FFFFFF" strokeWidth={2.4} />
+              <Mic size={20} color="#FFFFFF" strokeWidth={2.4} />
             )}
           </Pressable>
         </View>
@@ -474,7 +497,7 @@ export default function HomeScreen() {
 
       {/* ── 4. Sell Today Hero Card ── */}
       <Pressable
-        onPress={() => router.push('/(tabs)/sell')}
+        onPress={() => router.push('/(tabs)/produce')}
         style={({ pressed }) => [
           styles.heroSellCard,
           pressed && { transform: [{ scale: 0.98 }], opacity: 0.92 },
@@ -530,21 +553,6 @@ export default function HomeScreen() {
             >
               High Demanded to Sell
             </Text>
-            <View
-              style={[
-                styles.segmentTabCountBadge,
-                opportunitySide === 'high_demand' && styles.segmentTabCountBadgeActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.segmentTabCountText,
-                  opportunitySide === 'high_demand' && styles.segmentTabCountTextActive,
-                ]}
-              >
-                {filteredHighDemand.length}
-              </Text>
-            </View>
           </Pressable>
 
           <Pressable
@@ -566,21 +574,6 @@ export default function HomeScreen() {
             >
               Produce Recommendations
             </Text>
-            <View
-              style={[
-                styles.segmentTabCountBadge,
-                opportunitySide === 'recommendations' && styles.segmentTabCountBadgeActive,
-              ]}
-            >
-              <Text
-                style={[
-                  styles.segmentTabCountText,
-                  opportunitySide === 'recommendations' && styles.segmentTabCountTextActive,
-                ]}
-              >
-                {filteredRecommendations.length}
-              </Text>
-            </View>
           </Pressable>
         </View>
 
@@ -759,7 +752,7 @@ export default function HomeScreen() {
         </Text>
       </View>
 
-      {/* ════ Interactive Notifications Drawer / Modal (Item Fixed) ════ */}
+      {/* ════ Interactive Notifications Drawer / Modal ════ */}
       <Modal
         visible={notificationModalVisible}
         transparent
@@ -786,39 +779,123 @@ export default function HomeScreen() {
               </Pressable>
             </View>
 
+            {/* Confirmation Toast Feedback Banner */}
+            {notifToast && (
+              <View style={styles.notifToastBanner}>
+                <CheckCircle2 size={15} color="#15803D" />
+                <Text style={styles.notifToastText}>{notifToast}</Text>
+              </View>
+            )}
+
             <View style={styles.modalSubActionsRow}>
               <Text style={styles.modalSubtext}>Recent updates for your farm and sales</Text>
-              <Pressable onPress={markAllNotificationsRead}>
+              <Pressable
+                style={styles.markAllReadBtn}
+                onPress={markAllNotificationsRead}
+              >
+                <Check size={13} color="#15803D" strokeWidth={2.5} />
                 <Text style={styles.markAllReadText}>Mark all read</Text>
               </Pressable>
             </View>
 
-            <ScrollView style={styles.notifScrollView} showsVerticalScrollIndicator={false}>
-              {notifications.map((n) => (
-                <View
-                  key={n.id}
-                  style={[styles.notifItemCard, n.unread && styles.notifItemUnread]}
+            {/* Notification Filter Chips */}
+            <View style={styles.notifFilterRow}>
+              <Pressable
+                style={[
+                  styles.notifFilterChip,
+                  notifFilter === 'all' && styles.notifFilterChipActive,
+                ]}
+                onPress={() => setNotifFilter('all')}
+              >
+                <Text
+                  style={[
+                    styles.notifFilterChipText,
+                    notifFilter === 'all' && styles.notifFilterChipTextActive,
+                  ]}
                 >
-                  <View style={styles.notifItemHeader}>
-                    <Text style={styles.notifItemTitle}>{n.title}</Text>
-                    <Text style={styles.notifItemTime}>{n.time}</Text>
-                  </View>
-                  <Text style={styles.notifItemBody}>{n.description}</Text>
+                  All ({notifications.length})
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.notifFilterChip,
+                  notifFilter === 'unread' && styles.notifFilterChipActive,
+                ]}
+                onPress={() => setNotifFilter('unread')}
+              >
+                <Text
+                  style={[
+                    styles.notifFilterChipText,
+                    notifFilter === 'unread' && styles.notifFilterChipTextActive,
+                  ]}
+                >
+                  Unread ({unreadCount})
+                </Text>
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.notifFilterChip,
+                  notifFilter === 'orders' && styles.notifFilterChipActive,
+                ]}
+                onPress={() => setNotifFilter('orders')}
+              >
+                <Text
+                  style={[
+                    styles.notifFilterChipText,
+                    notifFilter === 'orders' && styles.notifFilterChipTextActive,
+                  ]}
+                >
+                  Orders & Transit
+                </Text>
+              </Pressable>
+            </View>
 
-                  {n.actionText && n.actionRoute && (
-                    <Pressable
-                      style={styles.notifActionBtn}
-                      onPress={() => {
-                        setNotificationModalVisible(false);
-                        router.push(n.actionRoute as any);
-                      }}
-                    >
-                      <Text style={styles.notifActionBtnText}>{n.actionText}</Text>
-                      <ArrowRight size={14} color="#15803D" strokeWidth={2.4} />
-                    </Pressable>
-                  )}
+            <ScrollView style={styles.notifScrollView} showsVerticalScrollIndicator={false}>
+              {displayNotifications.length === 0 ? (
+                <View style={styles.notifEmptyWrap}>
+                  <View style={styles.notifEmptyIconCircle}>
+                    <CheckCircle2 size={32} color="#15803D" />
+                  </View>
+                  <Text style={styles.notifEmptyTitle}>All caught up!</Text>
+                  <Text style={styles.notifEmptySub}>
+                    {notifFilter === 'unread'
+                      ? 'No unread notifications at the moment.'
+                      : 'No notifications found in this category.'}
+                  </Text>
                 </View>
-              ))}
+              ) : (
+                displayNotifications.map((n) => (
+                  <Pressable
+                    key={n.id}
+                    style={[styles.notifItemCard, n.unread && styles.notifItemUnread]}
+                    onPress={() => handleNotificationPress(n)}
+                  >
+                    <View style={styles.notifItemHeader}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
+                        {n.unread && <View style={styles.notifItemUnreadDot} />}
+                        <Text numberOfLines={1} style={styles.notifItemTitle}>
+                          {n.title}
+                        </Text>
+                      </View>
+                      <Text style={styles.notifItemTime}>{n.time}</Text>
+                    </View>
+                    <Text style={styles.notifItemBody}>{n.description}</Text>
+
+                    {n.actionText && n.actionRoute && (
+                      <Pressable
+                        style={styles.notifActionBtn}
+                        onPress={() => {
+                          setNotificationModalVisible(false);
+                          router.push(n.actionRoute as any);
+                        }}
+                      >
+                        <Text style={styles.notifActionBtnText}>{n.actionText}</Text>
+                        <ArrowRight size={14} color="#15803D" strokeWidth={2.4} />
+                      </Pressable>
+                    )}
+                  </Pressable>
+                ))
+              )}
             </ScrollView>
           </View>
         </View>
@@ -830,6 +907,11 @@ export default function HomeScreen() {
 // ─── Styles ──────────────────────────────────────────────────────────────────
 
 const styles = StyleSheet.create({
+  screenScrollContent: {
+    paddingHorizontal: 10,
+    width: '100%',
+  },
+
   /* ── 1. Top Bar ── */
   topAppBar: {
     flexDirection: 'row',
@@ -946,14 +1028,14 @@ const styles = StyleSheet.create({
   metricCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingVertical: 14,
+    borderRadius: 22,
+    paddingVertical: 18,
     paddingHorizontal: 6,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
-    minHeight: 132,
+    minHeight: 148,
     elevation: 3,
     shadowColor: '#1A1C1E',
     shadowOffset: { width: 0, height: 2 },
@@ -963,44 +1045,44 @@ const styles = StyleSheet.create({
   },
   metricCardLast: {},
   metricIconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 6,
   },
   metricBigNumber: {
-    fontSize: 22,
+    fontSize: 24,
     fontWeight: '900',
     color: '#1A1C1E',
     marginBottom: 2,
   },
   metricBigText: {
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: '900',
     color: '#1A1C1E',
     textAlign: 'center',
     marginBottom: 2,
   },
   metricBigTextGreen: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '900',
     color: '#15803D',
     textAlign: 'center',
     marginBottom: 2,
   },
   metricLabel: {
-    fontSize: 11,
-    lineHeight: 14,
+    fontSize: 12,
+    lineHeight: 15,
     color: '#64748B',
     textAlign: 'center',
     fontWeight: '700',
-    marginBottom: 5,
+    marginBottom: 6,
   },
   metricStatusPillOrange: {
     backgroundColor: '#FFEDD5',
-    paddingHorizontal: 7,
+    paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
@@ -1011,7 +1093,7 @@ const styles = StyleSheet.create({
   },
   metricStatusPillGreen: {
     backgroundColor: '#DCFCE7',
-    paddingHorizontal: 7,
+    paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
   },
@@ -1021,7 +1103,7 @@ const styles = StyleSheet.create({
     color: '#15803D',
   },
 
-  /* ── 3. Search Bar with Voice Feature ── */
+  /* ── 3. Search Bar with Voice Feature (Height 56px) ── */
   searchBarWrapper: {
     marginBottom: 12,
   },
@@ -1032,20 +1114,20 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
-    paddingHorizontal: 14,
-    height: 48,
+    paddingHorizontal: 16,
+    height: 56,
     shadowColor: '#1A1C1E',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 5,
+    elevation: 3,
   },
   searchIcon: {
-    marginRight: 8,
+    marginRight: 10,
   },
   searchInput: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '600',
     color: '#1E293B',
     paddingVertical: 0,
@@ -1055,9 +1137,9 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   voiceMicBtn: {
-    width: 34,
-    height: 34,
-    borderRadius: 17,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#15803D',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1154,8 +1236,8 @@ const styles = StyleSheet.create({
   heroSellCard: {
     width: '100%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: 22,
+    padding: 18,
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
     elevation: 3,
@@ -1163,7 +1245,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
     shadowRadius: 8,
-    minHeight: 140,
+    minHeight: 156,
     overflow: 'hidden',
     marginBottom: 12,
     flexDirection: 'row',
@@ -1175,27 +1257,27 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   heroSellTitle: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '900',
     color: '#1A1C1E',
     marginBottom: 4,
-    lineHeight: 22,
+    lineHeight: 23,
   },
   heroSellSubtitle: {
-    fontSize: 11.5,
+    fontSize: 12,
     color: '#4B5563',
-    marginBottom: 10,
-    lineHeight: 16,
+    marginBottom: 12,
+    lineHeight: 17,
   },
   inlineAddBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#15803D',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     alignSelf: 'flex-start',
-    gap: 5,
+    gap: 6,
     elevation: 2,
     shadowColor: '#15803D',
     shadowOffset: { width: 0, height: 2 },
@@ -1203,13 +1285,13 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   inlineAddBtnText: {
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: '800',
     color: '#FFFFFF',
   },
   heroBasketImage: {
-    width: 88,
-    height: 88,
+    width: 96,
+    height: 96,
     resizeMode: 'contain',
     flexShrink: 0,
   },
@@ -1225,7 +1307,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   sectionHeadingTitle: {
-    fontSize: 16,
+    fontSize: 16.5,
     fontWeight: '800',
     color: '#1A1C1E',
   },
@@ -1252,10 +1334,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 8,
+    paddingVertical: 9,
+    paddingHorizontal: 10,
     borderRadius: 11,
-    gap: 5,
+    gap: 6,
   },
   segmentTabActive: {
     backgroundColor: '#FFFFFF',
@@ -1266,7 +1348,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   segmentTabText: {
-    fontSize: 11.5,
+    fontSize: 12,
     fontWeight: '600',
     color: '#64748B',
   },
@@ -1296,8 +1378,8 @@ const styles = StyleSheet.create({
   },
   opportunityCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: 22,
+    padding: 18,
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
     shadowColor: '#1A1C1E',
@@ -1312,9 +1394,9 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   oppCropThumb: {
-    width: 48,
-    height: 48,
-    borderRadius: 14,
+    width: 52,
+    height: 52,
+    borderRadius: 16,
     marginRight: 10,
     borderWidth: 1,
     borderColor: '#E5E7EB',
@@ -1325,12 +1407,12 @@ const styles = StyleSheet.create({
     paddingRight: 8,
   },
   oppCropTitle: {
-    fontSize: 15.5,
-    fontWeight: '800',
+    fontSize: 16.5,
+    fontWeight: '900',
     color: '#1A1C1E',
   },
   oppCropSub: {
-    fontSize: 11.5,
+    fontSize: 12,
     color: '#64748B',
     marginTop: 2,
   },
@@ -1352,11 +1434,11 @@ const styles = StyleSheet.create({
   oppPriceBanner: {
     flexDirection: 'row',
     backgroundColor: '#F8FBF8',
-    borderRadius: 12,
+    borderRadius: 14,
     borderWidth: 1,
     borderColor: '#DCFCE7',
-    paddingVertical: 10,
-    paddingHorizontal: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     marginBottom: 12,
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -1365,7 +1447,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   oppPricePrimaryLabel: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: '700',
     color: '#15803D',
     textTransform: 'uppercase',
@@ -1373,13 +1455,13 @@ const styles = StyleSheet.create({
     marginBottom: 2,
   },
   oppPricePrimaryValue: {
-    fontSize: 15,
+    fontSize: 16.5,
     fontWeight: '900',
     color: '#14532D',
   },
   oppPriceDivider: {
     width: 1,
-    height: 28,
+    height: 30,
     backgroundColor: '#BBF7D0',
     marginHorizontal: 10,
   },
@@ -1388,13 +1470,13 @@ const styles = StyleSheet.create({
     alignItems: 'flex-end',
   },
   oppPriceSecondaryLabel: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: '600',
     color: '#64748B',
     marginBottom: 2,
   },
   oppPriceSecondaryValue: {
-    fontSize: 13.5,
+    fontSize: 14,
     fontWeight: '800',
     color: '#334155',
   },
@@ -1409,30 +1491,30 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 5,
     backgroundColor: '#F0FDF4',
-    paddingHorizontal: 9,
-    paddingVertical: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 8,
     flexShrink: 1,
     minWidth: 0,
   },
   oppBuyerBadgeText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '700',
     color: '#15803D',
   },
   oppActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 6,
     backgroundColor: '#15803D',
-    paddingHorizontal: 13,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: 15,
+    paddingVertical: 9,
+    borderRadius: 12,
     flexShrink: 0,
-    elevation: 1,
+    elevation: 2,
   },
   oppActionBtnText: {
-    fontSize: 12,
+    fontSize: 13,
     fontWeight: '800',
     color: '#FFFFFF',
   },
@@ -1440,8 +1522,8 @@ const styles = StyleSheet.create({
   /* ── Produce Recommendations Cards ── */
   recCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: 22,
+    padding: 18,
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
     shadowColor: '#1A1C1E',
@@ -1471,28 +1553,28 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
   recCropTitle: {
-    fontSize: 16,
-    fontWeight: '800',
+    fontSize: 16.5,
+    fontWeight: '900',
     color: '#1A1C1E',
   },
   recPriceWrap: {
     alignItems: 'flex-end',
   },
   recPriceLabel: {
-    fontSize: 10,
+    fontSize: 10.5,
     fontWeight: '600',
     color: '#64748B',
   },
   recPriceVal: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '900',
     color: '#15803D',
     marginTop: 2,
   },
   recAdviceText: {
-    fontSize: 12.5,
+    fontSize: 13,
     color: '#475569',
-    lineHeight: 18,
+    lineHeight: 19,
     marginBottom: 12,
   },
   recFooterRow: {
@@ -1505,8 +1587,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     backgroundColor: '#F1F5F9',
-    paddingHorizontal: 9,
-    paddingVertical: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 8,
   },
   recCycleText: {
@@ -1519,22 +1601,22 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     backgroundColor: '#E8F5E9',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 12,
     borderWidth: 1,
     borderColor: '#C8E6C9',
   },
   recAddProduceText: {
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: '800',
     color: '#15803D',
   },
 
   /* ── 6. APMC Mandi Rates ── */
   apmcCard: {
-    padding: 16,
-    borderRadius: 20,
+    padding: 18,
+    borderRadius: 22,
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
   },
@@ -1550,7 +1632,7 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   apmcTitle: {
-    fontSize: 14,
+    fontSize: 14.5,
     fontWeight: '800',
     color: '#1F2937',
   },
@@ -1589,23 +1671,23 @@ const styles = StyleSheet.create({
     backgroundColor: '#E5E7EB',
   },
   apmcCrop: {
-    fontSize: 11.5,
+    fontSize: 12,
     color: '#6B7280',
     fontWeight: '600',
     marginBottom: 2,
   },
   apmcPrice: {
-    fontSize: 16,
+    fontSize: 17,
     fontWeight: '900',
     color: '#111827',
   },
   apmcUnit: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: '#9CA3AF',
     fontWeight: '600',
   },
   apmcTrend: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '700',
     marginTop: 2,
   },
@@ -1613,8 +1695,8 @@ const styles = StyleSheet.create({
   /* ── 7. Weather Card ── */
   weatherCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    padding: 16,
+    borderRadius: 22,
+    padding: 18,
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
     marginTop: 12,
@@ -1626,7 +1708,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   weatherTitle: {
-    fontSize: 14,
+    fontSize: 14.5,
     fontWeight: '800',
     color: '#1A1C1E',
   },
@@ -1637,14 +1719,14 @@ const styles = StyleSheet.create({
     borderRadius: 8,
   },
   weatherTempText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '800',
     color: '#C2410C',
   },
   weatherBody: {
-    fontSize: 12,
+    fontSize: 12.5,
     color: '#4B5563',
-    lineHeight: 16,
+    lineHeight: 18,
   },
 
   /* ── Notification Modal ── */
@@ -1664,11 +1746,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   modalHeaderTitle: {
-    fontSize: 18,
-    fontWeight: '800',
+    fontSize: 19,
+    fontWeight: '900',
     color: '#1A1C1E',
   },
   modalUnreadBadge: {
@@ -1685,12 +1767,28 @@ const styles = StyleSheet.create({
   modalCloseBtn: {
     padding: 4,
   },
+  notifToastBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#DCFCE7',
+    borderRadius: 10,
+    padding: 8,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  notifToastText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#15803D',
+  },
   modalSubActionsRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 14,
-    paddingBottom: 10,
+    marginBottom: 12,
+    paddingBottom: 8,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
   },
@@ -1698,13 +1796,70 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#64748B',
   },
+  markAllReadBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
   markAllReadText: {
-    fontSize: 12,
-    fontWeight: '700',
+    fontSize: 11.5,
+    fontWeight: '800',
     color: '#15803D',
+  },
+  notifFilterRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginBottom: 12,
+  },
+  notifFilterChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    backgroundColor: '#F1F5F9',
+  },
+  notifFilterChipActive: {
+    backgroundColor: '#15803D',
+  },
+  notifFilterChipText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  notifFilterChipTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
   },
   notifScrollView: {
     marginBottom: 10,
+  },
+  notifEmptyWrap: {
+    alignItems: 'center',
+    paddingVertical: 36,
+  },
+  notifEmptyIconCircle: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#DCFCE7',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
+  notifEmptyTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#1A1C1E',
+    marginBottom: 4,
+  },
+  notifEmptySub: {
+    fontSize: 12.5,
+    color: '#64748B',
   },
   notifItemCard: {
     backgroundColor: '#F8FAFC',
@@ -1724,10 +1879,17 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 4,
   },
+  notifItemUnreadDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#15803D',
+  },
   notifItemTitle: {
     fontSize: 13.5,
     fontWeight: '800',
     color: '#1E293B',
+    flex: 1,
   },
   notifItemTime: {
     fontSize: 10.5,
