@@ -341,14 +341,14 @@ export default function HomeScreen() {
             ]}
           >
             <View style={[styles.metricIconCircle, { backgroundColor: '#FFF2E8' }]}>
-              <FileText size={19} color="#D9531E" strokeWidth={2.4} />
+              <FileText size={17} color="#D9531E" strokeWidth={2.4} />
             </View>
             <Text style={styles.metricBigNumber}>2</Text>
             <Text numberOfLines={1} style={styles.metricLabel}>
               Active Orders
             </Text>
             <View style={styles.metricStatusPillOrange}>
-              <Text style={styles.metricStatusPillOrangeText}>1 En Route</Text>
+              <Text numberOfLines={1} style={styles.metricStatusPillOrangeText}>1 En Route</Text>
             </View>
           </Pressable>
 
@@ -361,7 +361,7 @@ export default function HomeScreen() {
             ]}
           >
             <View style={[styles.metricIconCircle, { backgroundColor: '#E8F5E9' }]}>
-              <Truck size={19} color="#15803D" strokeWidth={2.4} />
+              <Truck size={17} color="#15803D" strokeWidth={2.4} />
             </View>
             <Text numberOfLines={1} style={styles.metricBigText}>
               Tomorrow
@@ -370,7 +370,7 @@ export default function HomeScreen() {
               Pickup Slot
             </Text>
             <View style={styles.metricStatusPillGreen}>
-              <Text style={styles.metricStatusPillGreenText}>08:30 AM</Text>
+              <Text numberOfLines={1} style={styles.metricStatusPillGreenText}>08:30 AM</Text>
             </View>
           </Pressable>
 
@@ -384,16 +384,16 @@ export default function HomeScreen() {
             ]}
           >
             <View style={[styles.metricIconCircle, { backgroundColor: '#E8F5E9' }]}>
-              <Wallet size={19} color="#15803D" strokeWidth={2.4} />
+              <Wallet size={17} color="#15803D" strokeWidth={2.4} />
             </View>
             <Text numberOfLines={1} style={styles.metricBigTextGreen}>
-              ₹48,500
+              ₹48.5k
             </Text>
             <Text numberOfLines={1} style={styles.metricLabel}>
               Net Payouts
             </Text>
             <View style={styles.metricStatusPillGreen}>
-              <Text style={styles.metricStatusPillGreenText}>+18% MTD</Text>
+              <Text numberOfLines={1} style={styles.metricStatusPillGreenText}>+18% MTD</Text>
             </View>
           </Pressable>
         </View>
@@ -602,8 +602,8 @@ export default function HomeScreen() {
                         <Star size={11} color="#FFFFFF" fill="#FFFFFF" />
                         <Text style={styles.oppMatchPillText}>{prod.match}</Text>
                       </View>
-                      <Text style={styles.oppCropTitle}>{prod.name}</Text>
-                      <Text style={styles.oppCropSub}>{prod.subname}</Text>
+                      <Text numberOfLines={1} style={styles.oppCropTitle}>{prod.name}</Text>
+                      <Text numberOfLines={1} style={styles.oppCropSub}>{prod.subname}</Text>
                     </View>
                     <View style={styles.oppDemandPill}>
                       <Flame size={12} color="#EA580C" fill="#EA580C" />
@@ -614,18 +614,18 @@ export default function HomeScreen() {
                   {/* Pricing Breakdown Grid */}
                   <View style={styles.oppBreakdownRow}>
                     <View style={styles.oppBreakdownCol}>
-                      <Text style={styles.oppBreakdownLabel}>Selling Price</Text>
-                      <Text style={styles.oppBreakdownVal}>{prod.sellingPrice}</Text>
+                      <Text numberOfLines={1} style={styles.oppBreakdownLabel}>Selling Price</Text>
+                      <Text numberOfLines={1} style={styles.oppBreakdownVal}>{prod.sellingPrice}</Text>
                     </View>
                     <View style={styles.oppBreakdownDivider} />
                     <View style={styles.oppBreakdownCol}>
-                      <Text style={styles.oppBreakdownLabel}>Transport</Text>
-                      <Text style={styles.oppBreakdownValSub}>- {prod.transport}</Text>
+                      <Text numberOfLines={1} style={styles.oppBreakdownLabel}>Transport</Text>
+                      <Text numberOfLines={1} style={styles.oppBreakdownValSub}>- {prod.transport}</Text>
                     </View>
                     <View style={styles.oppBreakdownDivider} />
                     <View style={styles.oppBreakdownCol}>
-                      <Text style={styles.oppBreakdownLabel}>Net Return</Text>
-                      <Text style={styles.oppBreakdownValGreen}>{prod.netReturn}</Text>
+                      <Text numberOfLines={1} style={styles.oppBreakdownLabel}>Net Return</Text>
+                      <Text numberOfLines={1} style={styles.oppBreakdownValGreen}>{prod.netReturn}</Text>
                     </View>
                   </View>
 
@@ -633,7 +633,7 @@ export default function HomeScreen() {
                   <View style={styles.oppFooterRow}>
                     <View style={styles.oppBuyerTag}>
                       <ShieldCheck size={14} color="#15803D" />
-                      <Text style={styles.oppBuyerTagText}>{prod.buyers}</Text>
+                      <Text numberOfLines={1} style={styles.oppBuyerTagText}>{prod.buyers}</Text>
                     </View>
                     <Pressable
                       style={({ pressed }) => [
@@ -773,8 +773,6 @@ export default function HomeScreen() {
         </Text>
       </View>
 
-      <View style={{ height: 40 }} />
-
       {/* ════ Interactive Notifications Drawer / Modal (Item Fixed) ════ */}
       <Modal
         visible={notificationModalVisible}
@@ -851,7 +849,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 16,
+    marginBottom: 10,
     width: '100%',
   },
   farmerProfileHeader: {
@@ -862,12 +860,12 @@ const styles = StyleSheet.create({
   },
   avatarWrapper: {
     position: 'relative',
-    marginRight: 12,
+    marginRight: 10,
   },
   avatarImage: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
+    width: 44,
+    height: 44,
+    borderRadius: 22,
     borderWidth: 2,
     borderColor: '#FFFFFF',
   },
@@ -875,9 +873,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 13,
-    height: 13,
-    borderRadius: 7,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     backgroundColor: '#22C55E',
     borderWidth: 2,
     borderColor: '#FFFFFF',
@@ -887,7 +885,7 @@ const styles = StyleSheet.create({
     minWidth: 0,
   },
   greetingTitle: {
-    fontSize: 18,
+    fontSize: 17,
     fontWeight: '800',
     color: '#1A1C1E',
     letterSpacing: -0.3,
@@ -898,35 +896,35 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   locationText: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: '#4B5563',
     fontWeight: '600',
     marginLeft: 3,
     flexShrink: 1,
   },
   notificationBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
-    elevation: 3,
+    elevation: 2,
     shadowColor: '#1A1C1E',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
     flexShrink: 0,
   },
   notificationBadge: {
     position: 'absolute',
     top: 2,
     right: 2,
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
     backgroundColor: '#EA580C',
     alignItems: 'center',
     justifyContent: 'center',
@@ -934,131 +932,131 @@ const styles = StyleSheet.create({
     borderColor: '#FFFFFF',
   },
   notificationBadgeText: {
-    fontSize: 10,
+    fontSize: 9,
     fontWeight: '800',
     color: '#FFFFFF',
   },
 
   /* ── 2. Today at a Glance (Top Middle) ── */
   glanceSectionContainer: {
-    marginBottom: 16,
+    marginBottom: 10,
   },
   glanceHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 10,
+    marginBottom: 8,
   },
   glanceSectionTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
     color: '#1A1C1E',
   },
   glanceDateLabel: {
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '600',
     color: '#64748B',
   },
   metricsRow: {
     flexDirection: 'row',
     width: '100%',
-    gap: 10,
+    gap: 8,
   },
   metricCard: {
     flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    paddingVertical: 14,
-    paddingHorizontal: 6,
+    borderRadius: 18,
+    paddingVertical: 10,
+    paddingHorizontal: 4,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
-    minHeight: 128,
-    elevation: 4,
+    minHeight: 114,
+    elevation: 2,
     shadowColor: '#1A1C1E',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.08,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
     minWidth: 0,
   },
   metricCardLast: {},
   metricIconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   metricBigNumber: {
-    fontSize: 22,
+    fontSize: 19,
     fontWeight: '900',
     color: '#1A1C1E',
     marginBottom: 1,
   },
   metricBigText: {
-    fontSize: 13.5,
+    fontSize: 12,
     fontWeight: '900',
     color: '#1A1C1E',
     textAlign: 'center',
     marginBottom: 1,
   },
   metricBigTextGreen: {
-    fontSize: 14.5,
+    fontSize: 13,
     fontWeight: '900',
     color: '#15803D',
     textAlign: 'center',
     marginBottom: 1,
   },
   metricLabel: {
-    fontSize: 10.5,
-    lineHeight: 14,
+    fontSize: 10,
+    lineHeight: 13,
     color: '#64748B',
     textAlign: 'center',
     fontWeight: '600',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   metricStatusPillOrange: {
     backgroundColor: '#FFEDD5',
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 5,
   },
   metricStatusPillOrangeText: {
-    fontSize: 9.5,
+    fontSize: 8.5,
     fontWeight: '800',
     color: '#C2410C',
   },
   metricStatusPillGreen: {
     backgroundColor: '#DCFCE7',
-    paddingHorizontal: 6,
+    paddingHorizontal: 5,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 5,
   },
   metricStatusPillGreenText: {
-    fontSize: 9.5,
+    fontSize: 8.5,
     fontWeight: '800',
     color: '#15803D',
   },
 
   /* ── 3. Search Bar with Voice Feature ── */
   searchBarWrapper: {
-    marginBottom: 18,
+    marginBottom: 10,
   },
   searchBarInner: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    borderRadius: 14,
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
     paddingHorizontal: 12,
-    height: 50,
+    height: 46,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
     elevation: 2,
   },
   searchIcon: {
@@ -1066,7 +1064,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: 13.5,
+    fontSize: 13,
     fontWeight: '600',
     color: '#1E293B',
     paddingVertical: 0,
@@ -1076,17 +1074,17 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   voiceMicBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
     backgroundColor: '#15803D',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#15803D',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.2,
+    shadowRadius: 3,
+    elevation: 2,
   },
   voiceMicBtnListening: {
     backgroundColor: '#DC2626',
@@ -1175,24 +1173,24 @@ const styles = StyleSheet.create({
   heroSellCard: {
     width: '100%',
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 18,
+    borderRadius: 18,
+    padding: 12,
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
-    elevation: 4,
+    elevation: 3,
     shadowColor: '#1A1C1E',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
-    minHeight: 146,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    minHeight: 120,
     overflow: 'hidden',
-    marginBottom: 20,
+    marginBottom: 12,
     flexDirection: 'row',
     alignItems: 'center',
   },
   heroSellContent: {
     flex: 1,
-    paddingRight: 8,
+    paddingRight: 6,
     minWidth: 0,
   },
   heroBadge: {
@@ -1200,66 +1198,66 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 4,
     backgroundColor: '#15803D',
-    paddingHorizontal: 7,
-    paddingVertical: 2.5,
-    borderRadius: 6,
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 5,
     alignSelf: 'flex-start',
-    marginBottom: 6,
+    marginBottom: 4,
   },
   heroBadgeText: {
-    fontSize: 9.5,
+    fontSize: 9,
     fontWeight: '800',
     color: '#FFFFFF',
     letterSpacing: 0.4,
   },
   heroSellTitle: {
-    fontSize: 16.5,
+    fontSize: 15,
     fontWeight: '800',
     color: '#1A1C1E',
-    marginBottom: 4,
-    lineHeight: 21,
+    marginBottom: 2,
+    lineHeight: 19,
   },
   heroSellSubtitle: {
-    fontSize: 11.5,
+    fontSize: 11,
     color: '#5F6368',
-    marginBottom: 12,
-    lineHeight: 16,
+    marginBottom: 8,
+    lineHeight: 15,
   },
   inlineAddBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#15803D',
-    borderRadius: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    borderRadius: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     alignSelf: 'flex-start',
-    gap: 6,
-    elevation: 2,
+    gap: 5,
+    elevation: 1,
   },
   inlineAddBtnText: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '800',
     color: '#FFFFFF',
   },
   heroBasketImage: {
-    width: 105,
-    height: 105,
+    width: 78,
+    height: 78,
     resizeMode: 'contain',
     flexShrink: 0,
   },
 
   /* ── 5. Best Opportunity 2-Sided Segmented Section ── */
   opportunitySectionWrap: {
-    marginBottom: 20,
+    marginBottom: 10,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   sectionHeadingTitle: {
-    fontSize: 16.5,
+    fontSize: 15.5,
     fontWeight: '800',
     color: '#1A1C1E',
   },
@@ -1269,16 +1267,16 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   viewAllBtnText: {
-    fontSize: 12.5,
+    fontSize: 12,
     fontWeight: '700',
     color: '#15803D',
   },
   segmentedTabContainer: {
     flexDirection: 'row',
     backgroundColor: '#EFE8DC',
-    borderRadius: 14,
-    padding: 4,
-    marginBottom: 14,
+    borderRadius: 12,
+    padding: 3,
+    marginBottom: 10,
     gap: 4,
   },
   segmentTab: {
@@ -1286,21 +1284,21 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
+    paddingVertical: 7,
     paddingHorizontal: 6,
-    borderRadius: 10,
-    gap: 5,
+    borderRadius: 9,
+    gap: 4,
   },
   segmentTabActive: {
     backgroundColor: '#FFFFFF',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06,
+    shadowRadius: 3,
     elevation: 2,
   },
   segmentTabText: {
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '600',
     color: '#64748B',
   },
@@ -1312,13 +1310,13 @@ const styles = StyleSheet.create({
     backgroundColor: '#E2E8F0',
     paddingHorizontal: 5,
     paddingVertical: 1,
-    borderRadius: 6,
+    borderRadius: 5,
   },
   segmentTabCountBadgeActive: {
     backgroundColor: '#DCFCE7',
   },
   segmentTabCountText: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '800',
     color: '#475569',
   },
@@ -1326,58 +1324,59 @@ const styles = StyleSheet.create({
     color: '#15803D',
   },
   opportunityCardsList: {
-    gap: 12,
+    gap: 10,
   },
   opportunityCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 14,
+    borderRadius: 16,
+    padding: 12,
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
     elevation: 2,
   },
   opportunityCardTop: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   oppCropThumb: {
-    width: 48,
-    height: 48,
-    borderRadius: 12,
-    marginRight: 10,
+    width: 42,
+    height: 42,
+    borderRadius: 10,
+    marginRight: 8,
   },
   oppCropDetails: {
     flex: 1,
     minWidth: 0,
+    paddingRight: 6,
   },
   oppMatchPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 3,
     backgroundColor: '#15803D',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 5,
     alignSelf: 'flex-start',
-    marginBottom: 3,
+    marginBottom: 2,
   },
   oppMatchPillText: {
-    fontSize: 9.5,
+    fontSize: 9,
     fontWeight: '800',
     color: '#FFFFFF',
   },
   oppCropTitle: {
-    fontSize: 14.5,
+    fontSize: 14,
     fontWeight: '800',
     color: '#1A1C1E',
   },
   oppCropSub: {
-    fontSize: 11,
+    fontSize: 10.5,
     color: '#64748B',
     marginTop: 1,
   },
@@ -1386,84 +1385,90 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 3,
     backgroundColor: '#FFEDD5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 6,
+    flexShrink: 0,
   },
   oppDemandText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '800',
     color: '#EA580C',
   },
   oppBreakdownRow: {
     flexDirection: 'row',
     backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 10,
-    marginBottom: 12,
+    borderRadius: 10,
+    padding: 8,
+    marginBottom: 8,
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   oppBreakdownCol: {
     flex: 1,
     alignItems: 'center',
+    minWidth: 0,
   },
   oppBreakdownLabel: {
-    fontSize: 10,
+    fontSize: 9.5,
     fontWeight: '600',
     color: '#64748B',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   oppBreakdownVal: {
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '700',
     color: '#1E293B',
   },
   oppBreakdownValSub: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
     color: '#DC2626',
   },
   oppBreakdownValGreen: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '900',
     color: '#15803D',
   },
   oppBreakdownDivider: {
     width: 1,
-    height: 24,
+    height: 20,
     backgroundColor: '#E2E8F0',
   },
   oppFooterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    gap: 6,
   },
   oppBuyerTag: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     backgroundColor: '#F0FDF4',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    flex: 1,
+    minWidth: 0,
   },
   oppBuyerTagText: {
-    fontSize: 11,
+    fontSize: 10.5,
     fontWeight: '700',
     color: '#15803D',
   },
   oppSellActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 5,
     backgroundColor: '#15803D',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    flexShrink: 0,
   },
   oppSellActionText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '800',
     color: '#FFFFFF',
   },
@@ -1471,14 +1476,14 @@ const styles = StyleSheet.create({
   /* ── Produce Recommendations Cards ── */
   recCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 18,
-    padding: 14,
+    borderRadius: 16,
+    padding: 12,
     borderWidth: 1.5,
     borderColor: '#E3DCCF',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
     elevation: 2,
   },
   recCardHeader: {
