@@ -3,9 +3,10 @@ import type { RegionalActivity } from '../types/admin';
 
 interface GeoActivityCardProps {
   regions: RegionalActivity[];
+  onOpenGeoMap?: () => void;
 }
 
-export const GeoActivityCard: React.FC<GeoActivityCardProps> = ({ regions }) => {
+export const GeoActivityCard: React.FC<GeoActivityCardProps> = ({ regions, onOpenGeoMap }) => {
   return (
     <div className="bg-black rounded-xl border border-white p-5 shadow-md flex flex-col justify-between">
       <div>
@@ -45,8 +46,12 @@ export const GeoActivityCard: React.FC<GeoActivityCardProps> = ({ regions }) => 
       </div>
 
       <div className="mt-4 pt-3 border-t border-white text-right">
-        <button className="text-xs font-bold text-emerald-400 hover:text-emerald-300">
-          View Geo Intelligence Map →
+        <button
+          onClick={onOpenGeoMap}
+          className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center justify-end gap-1 ml-auto"
+        >
+          <span>View Geo Intelligence Map</span>
+          <span className="material-symbols-outlined text-sm">arrow_forward</span>
         </button>
       </div>
     </div>

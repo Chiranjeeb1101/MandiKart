@@ -3,11 +3,15 @@ import type { KpiMetric } from '../types/admin';
 
 interface KpiCardProps {
   metric: KpiMetric;
+  onClick?: () => void;
 }
 
-export const KpiCard: React.FC<KpiCardProps> = ({ metric }) => {
+export const KpiCard: React.FC<KpiCardProps> = ({ metric, onClick }) => {
   return (
-    <div className="bg-black p-5 rounded-xl border border-white shadow-md flex flex-col justify-between hover:shadow-lg transition-all">
+    <div
+      onClick={onClick}
+      className={`bg-black p-5 rounded-xl border border-white shadow-md flex flex-col justify-between hover:border-emerald-400 hover:shadow-lg transition-all ${onClick ? 'cursor-pointer' : ''}`}
+    >
       <div className="flex items-center justify-between mb-3">
         <span className="text-xs font-extrabold text-slate-300 uppercase tracking-wider">
           {metric.label}

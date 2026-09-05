@@ -3,9 +3,11 @@ import type { AiInsight } from '../types/admin';
 
 interface AiInsightsCardProps {
   insights: AiInsight[];
+  onExecuteAction?: (insight: AiInsight) => void;
+  onOpenWorkbench?: () => void;
 }
 
-export const AiInsightsCard: React.FC<AiInsightsCardProps> = ({ insights }) => {
+export const AiInsightsCard: React.FC<AiInsightsCardProps> = ({ insights, onExecuteAction, onOpenWorkbench }) => {
   const getCategoryBadge = (category: string) => {
     if (category.includes('RISK') || category.includes('DISPUTE')) {
       // Red indicator
@@ -53,7 +55,10 @@ export const AiInsightsCard: React.FC<AiInsightsCardProps> = ({ insights }) => {
               <p className="text-[11px] text-slate-300 leading-relaxed">{insight.description}</p>
               <div className="pt-1.5 border-t border-white/30 flex items-center justify-between text-[11px]">
                 <span className="text-emerald-400 font-bold">Recommended:</span>
-                <button className="text-[11px] font-extrabold text-orange-400 hover:text-orange-300 underline">
+                <button
+                  onClick={() => onExecuteAction?.(insight)}
+                  className="text-[11px] font-extrabold text-orange-400 hover:text-orange-300 underline text-left"
+                >
                   {insight.recommendedAction}
                 </button>
               </div>
@@ -64,7 +69,10 @@ export const AiInsightsCard: React.FC<AiInsightsCardProps> = ({ insights }) => {
 
       <div className="pt-3 border-t border-white flex items-center justify-between text-xs text-slate-300">
         <span className="text-[11px] font-medium text-slate-300">Synced 2m ago</span>
-        <button className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+        <button
+          onClick={onOpenWorkbench}
+          className="text-xs font-bold text-emerald-400 hover:text-emerald-300 flex items-center gap-1"
+        >
           <span>Open AI Workbench</span>
           <span className="material-symbols-outlined text-sm">arrow_forward</span>
         </button>

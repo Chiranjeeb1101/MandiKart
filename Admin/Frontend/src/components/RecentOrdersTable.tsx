@@ -3,9 +3,11 @@ import type { OrderSummary } from '../types/admin';
 
 interface RecentOrdersTableProps {
   orders: OrderSummary[];
+  onViewAllOrders?: () => void;
+  onSelectOrder?: (order: OrderSummary) => void;
 }
 
-export const RecentOrdersTable: React.FC<RecentOrdersTableProps> = ({ orders }) => {
+export const RecentOrdersTable: React.FC<RecentOrdersTableProps> = ({ orders, onViewAllOrders, onSelectOrder }) => {
   const getStatusBadge = (status: OrderSummary['status']) => {
     switch (status) {
       case 'COMPLETED':
@@ -36,7 +38,10 @@ export const RecentOrdersTable: React.FC<RecentOrdersTableProps> = ({ orders }) 
             Cross-entity order transactions synced via Fastify Order Engine
           </p>
         </div>
-        <button className="inline-flex items-center gap-1 px-3 py-1.5 bg-black hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition-colors self-start sm:self-auto border border-white">
+        <button
+          onClick={onViewAllOrders}
+          className="inline-flex items-center gap-1 px-3 py-1.5 bg-black hover:bg-slate-900 text-white rounded-lg text-xs font-bold transition-colors self-start sm:self-auto border border-white"
+        >
           <span>View All Orders</span>
           <span className="material-symbols-outlined text-sm">arrow_forward</span>
         </button>
@@ -86,7 +91,10 @@ export const RecentOrdersTable: React.FC<RecentOrdersTableProps> = ({ orders }) 
                   </span>
                 </td>
                 <td className="px-5 py-3.5 text-right">
-                  <button className="text-emerald-400 hover:text-emerald-300 font-bold hover:underline">
+                  <button
+                    onClick={() => onSelectOrder?.(order)}
+                    className="text-emerald-400 hover:text-emerald-300 font-bold hover:underline"
+                  >
                     View
                   </button>
                 </td>
