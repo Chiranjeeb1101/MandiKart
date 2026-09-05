@@ -74,10 +74,11 @@ export default function OnboardingScreen({ navigation }: Props) {
       {/* Header Bar */}
       <View style={styles.header}>
         <View style={styles.brandRow}>
-          <View style={styles.logoMark}>
-            <Text style={styles.logoText}>M</Text>
-          </View>
-          <Text style={styles.brandName}>MandiKart</Text>
+          <Image
+            source={require('../../../assets/logo.png')}
+            style={styles.headerLogoImage}
+            resizeMode="contain"
+          />
         </View>
 
         <TouchableOpacity style={styles.skipBtn} onPress={handleSkip} activeOpacity={0.7}>
@@ -165,14 +166,8 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm + 4,
     zIndex: 10,
   },
-  brandRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  logoMark: {
-    width: 32, height: 32, borderRadius: 10,
-    backgroundColor: Colors.primary,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  logoText: { fontSize: 16, fontWeight: '800', color: Colors.white },
-  brandName: { fontSize: 18, fontWeight: '800', color: Colors.textPrimary },
+  brandRow: { flexDirection: 'row', alignItems: 'center' },
+  headerLogoImage: { width: 130, height: 45 },
   skipBtn: {
     paddingHorizontal: 12, paddingVertical: 6,
     borderRadius: BorderRadius.full,

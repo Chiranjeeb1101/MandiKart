@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, StatusBar, Animated, Easing,
+  View, Text, StyleSheet, StatusBar, Animated, Easing, Image,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -119,11 +119,11 @@ export default function SplashScreen({ navigation }: Props) {
         ]}
       >
         <View style={styles.haloRing}>
-          <View style={styles.logoBadgeOuter}>
-            <View style={styles.logoBadgeInner}>
-              <Text style={styles.logoEmoji}>🌾</Text>
-            </View>
-          </View>
+          <Image
+            source={require('../../../assets/logo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
         </View>
 
         <Text style={styles.brandName}>MandiKart</Text>
@@ -200,6 +200,10 @@ const styles = StyleSheet.create({
   logoArea: {
     alignItems: 'center',
     gap: 10,
+  },
+  logoImage: {
+    width: 150,
+    height: 150,
   },
   haloRing: {
     width: 120,

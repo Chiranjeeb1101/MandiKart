@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
   View, Text, StyleSheet, TextInput, TouchableOpacity,
-  KeyboardAvoidingView, Platform, ScrollView, StatusBar, Alert,
+  KeyboardAvoidingView, Platform, ScrollView, StatusBar, Alert, Image,
 } from 'react-native';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
 import { Ionicons } from '@expo/vector-icons';
@@ -104,10 +104,11 @@ export default function LoginScreen({ navigation }: Props) {
           {/* Brand Header */}
           <View style={styles.header}>
             <View style={styles.logoRow}>
-              <View style={styles.logoMark}>
-                <Text style={styles.logoText}>M</Text>
-              </View>
-              <Text style={styles.brandName}>MandiKart</Text>
+              <Image
+                source={require('../../../assets/logo.png')}
+                style={styles.brandLogoImage}
+                resizeMode="contain"
+              />
             </View>
 
             <View style={styles.taglineBadge}>
@@ -279,14 +280,8 @@ const styles = StyleSheet.create({
   scroll: { flexGrow: 1, paddingHorizontal: Spacing.lg, paddingTop: 48, paddingBottom: Spacing.xl, gap: Spacing.md },
   // Header
   header: { alignItems: 'center', gap: 6 },
-  logoRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 },
-  logoMark: {
-    width: 38, height: 38, borderRadius: 12,
-    backgroundColor: Colors.primary, alignItems: 'center', justifyContent: 'center',
-    ...Shadows.sm,
-  },
-  logoText: { fontSize: 20, fontWeight: '800', color: Colors.white },
-  brandName: { fontSize: 22, fontWeight: '800', color: Colors.textPrimary },
+  logoRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  brandLogoImage: { width: 180, height: 100 },
   taglineBadge: {
     flexDirection: 'row', alignItems: 'center', gap: 4,
     backgroundColor: Colors.primaryLight,
