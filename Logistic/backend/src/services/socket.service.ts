@@ -74,7 +74,7 @@ export class SocketService {
       });
 
       // ── Cleanup on disconnect ────────────────────────────────────────────────
-      socket.on('disconnect', (reason) => {
+      socket.on('disconnect', (reason: any) => {
         // Remove driver from online registry
         for (const [driverId, socketId] of _onlineDrivers.entries()) {
           if (socketId === socket.id) {
