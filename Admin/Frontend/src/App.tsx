@@ -9,6 +9,7 @@ import { DisputeResolution } from './pages/DisputeResolution';
 import { LogisticsOverview } from './pages/LogisticsOverview';
 import { AiIntelligence } from './pages/AiIntelligence';
 import { SystemSettings } from './pages/SystemSettings';
+import { PushNotifications } from './pages/PushNotifications';
 
 export const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<AdminUser | null>({
@@ -103,6 +104,16 @@ export const App: React.FC = () => {
   if (currentTab === 'ai-insights') {
     return (
       <AiIntelligence
+        user={currentUser}
+        onLogout={handleLogout}
+        onNavigateTab={handleTabChange}
+      />
+    );
+  }
+
+  if (currentTab === 'push-notifications') {
+    return (
+      <PushNotifications
         user={currentUser}
         onLogout={handleLogout}
         onNavigateTab={handleTabChange}

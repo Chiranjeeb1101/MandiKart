@@ -118,7 +118,6 @@ export default function HomeScreen() {
   const [wishlisted, setWishlisted] = useState<string[]>([]);
   const [products, setProducts] = useState<Product[]>(SAMPLE_PRODUCTS);
   const [isRefreshingProducts, setIsRefreshingProducts] = useState<boolean>(false);
-  const [showMap, setShowMap] = useState<boolean>(true);
   const [isLocationModalVisible, setIsLocationModalVisible] = useState<boolean>(false);
   const [isLanguageModalVisible, setIsLanguageModalVisible] = useState<boolean>(false);
   const [isDetectingGps, setIsDetectingGps] = useState<boolean>(false);
@@ -418,34 +417,7 @@ export default function HomeScreen() {
           />
         </View>
 
-        {/* Live Farm & Fleet GPS Map Widget */}
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-              <Ionicons name="map" size={18} color={Colors.primary} />
-              <Text style={styles.sectionTitle}>Live Farm & GPS Fleet</Text>
-            </View>
-            <TouchableOpacity onPress={() => setShowMap(!showMap)}>
-              <Text style={styles.seeAll}>{showMap ? 'Hide Map' : 'View Live Map'}</Text>
-            </TouchableOpacity>
-          </View>
 
-          {showMap && (
-            <View style={{ paddingHorizontal: Spacing.md, marginTop: Spacing.xs }}>
-              <InteractiveMapView
-                origin={{
-                  title: 'Nashik Organic Farm',
-                  coordinates: { latitude: 19.9975, longitude: 73.7898 },
-                  subTitle: 'Harvest Lot #2026-09',
-                }}
-                destination={{
-                  title: 'Your Location',
-                  subTitle: currentAddress?.formattedAddress || 'Pune Delivery Hub',
-                }}
-              />
-            </View>
-          )}
-        </View>
 
         {/* Fresh Deals */}
         <View style={styles.section}>

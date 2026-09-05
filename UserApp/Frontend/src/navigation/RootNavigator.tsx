@@ -83,6 +83,9 @@ export default function RootNavigator() {
           <RootStack.Screen name="EditProfile" component={EditProfileScreen} />
           <RootStack.Screen name="Settings" component={SettingsScreen} />
           <RootStack.Screen name="AddAddress" component={AddAddressScreen as any} />
+          <RootStack.Screen name="DeliveryAddress" component={DeliveryAddressScreen as any} />
+          <RootStack.Screen name="CheckoutReview" component={CheckoutReviewScreen as any} />
+          <RootStack.Screen name="Payment" component={PaymentScreen as any} />
           <RootStack.Screen name="OrderDetails" component={OrderDetailsScreen as any} />
           <RootStack.Screen name="OrderTracking" component={OrderTrackingScreen as any} />
           <RootStack.Screen name="OrderConfirmation" component={OrderConfirmationScreen as any} />
