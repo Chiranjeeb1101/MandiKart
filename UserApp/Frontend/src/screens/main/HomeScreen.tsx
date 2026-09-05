@@ -101,7 +101,16 @@ const BANNER_WIDTH = Dimensions.get('window').width - 32;
 export default function HomeScreen() {
   const navigation = useNavigation<Nav>();
   const { buyerMode, toggleBuyerMode, user } = useAuth();
-  const { currentAddress, currentLocation, fetchCurrentLocation, isLoadingLocation, setManualLocation } = useLocation();
+  const {
+    currentAddress,
+    currentLocation,
+    fetchCurrentLocation,
+    isLoadingLocation,
+    setManualLocation,
+    savedAddresses,
+    selectedAddressId,
+    selectSavedAddress,
+  } = useLocation();
   const { t, currentLanguageOption, setLanguage } = useLanguage();
   const [searchText, setSearchText] = useState('');
   const [wishlisted, setWishlisted] = useState<string[]>([]);
@@ -116,6 +125,11 @@ export default function HomeScreen() {
   const handleLocationPress = () => {
     setLocationNotice(null);
     setIsLocationModalVisible(true);
+  };
+
+  const handleSelectSavedAddress = (id: string) => {
+    selectSavedAddress(id);
+    setIsLocationModalVisible(false);
   };
 
   const handleAutoDetectGPS = async () => {
@@ -188,7 +202,11 @@ export default function HomeScreen() {
               onPress={() => navigation.navigate('Main', { screen: 'Profile' } as any)}
             >
               <View style={styles.avatar}>
-                <Text style={styles.avatarText}>{user?.fullName?.charAt(0) || 'A'}</Text>
+                {user?.avatarUrl ? (
+                  <Image source={{ uri: user.avatarUrl }} style={styles.avatarImage} />
+                ) : (
+                  <Text style={styles.avatarText}>{user?.fullName?.charAt(0) || 'A'}</Text>
+                )}
               </View>
               <View style={styles.onlineDot} />
             </TouchableOpacity>
@@ -210,15 +228,6 @@ export default function HomeScreen() {
 
             {/* Right icons */}
             <View style={styles.headerActions}>
-              {/* Regional Language Quick Toggle Pill */}
-              <TouchableOpacity
-                style={styles.langPill}
-                onPress={() => setIsLanguageModalVisible(true)}
-              >
-                <Text style={styles.langPillFlag}>{currentLanguageOption.flag}</Text>
-                <Text style={styles.langPillText}>{currentLanguageOption.code.toUpperCase()}</Text>
-              </TouchableOpacity>
-
               <TouchableOpacity
                 style={styles.iconBtn}
                 onPress={() => navigation.navigate('Notifications')}
@@ -543,9 +552,43 @@ export default function HomeScreen() {
               )}
             </TouchableOpacity>
 
-            {/* Section 2: Popular Mandi Hubs */}
-            <Text style={styles.hubsSectionTitle}>Popular APMC Mandi Hubs (1-Tap Select)</Text>
+            {/* Section 2: My Saved Delivery Addresses */}
+            <Text style={styles.hubsSectionTitle}>My Saved Delivery Addresses ({savedAddresses.length})</Text>
             <ScrollView style={styles.hubsScroll} showsVerticalScrollIndicator={false}>
+              {savedAddresses.map((addr) => {
+                const isSelected = selectedAddressId === addr.id || currentAddress?.formattedAddress === addr.formattedAddress;
+                return (
+                  <TouchableOpacity
+                    key={addr.id}
+                    style={[styles.hubItem, isSelected && styles.hubItemActive]}
+                    onPress={() => handleSelectSavedAddress(addr.id)}
+                    activeOpacity={0.7}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <Text style={[styles.hubName, isSelected && styles.hubNameActive]}>{addr.fullName}</Text>
+                        <View style={styles.hubBadge}>
+                          <Text style={styles.hubBadgeText}>{addr.type || 'HOME'}</Text>
+                        </View>
+                        {addr.isDefault && (
+                          <View style={{ backgroundColor: '#FEF3C7', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4 }}>
+                            <Text style={{ fontSize: 9, fontWeight: '800', color: '#B45309' }}>DEFAULT</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.hubAddress} numberOfLines={1}>{addr.formattedAddress}</Text>
+                    </View>
+                    {isSelected ? (
+                      <Ionicons name="checkmark-circle" size={20} color={Colors.primary} />
+                    ) : (
+                      <Ionicons name="chevron-forward" size={16} color={Colors.textSecondary} />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+
+              {/* APMC Mandi Hubs */}
+              <Text style={[styles.hubsSectionTitle, { marginTop: 14 }]}>Popular APMC Mandi Hubs</Text>
               {POPULAR_MANDI_HUBS.map((hub) => {
                 const isSelected = currentAddress?.city?.toLowerCase() === hub.city.toLowerCase() ||
                   currentAddress?.area?.toLowerCase() === hub.area.toLowerCase();
@@ -662,7 +705,9 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.primary,
     alignItems: 'center', justifyContent: 'center',
     borderWidth: 2, borderColor: Colors.primaryLight,
+    overflow: 'hidden',
   },
+  avatarImage: { width: 36, height: 36, borderRadius: 18 },
   avatarText: { fontSize: 16, fontWeight: '800', color: Colors.white },
   onlineDot: {
     position: 'absolute', bottom: 1, right: 1,

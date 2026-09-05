@@ -202,12 +202,6 @@ export default function OTPScreen({ navigation, route }: Props) {
             })}
           </View>
 
-          {/* Demo Code Helper
-          <View style={styles.demoPill}>
-            <Ionicons name="bulb-outline" size={14} color="#059669" style={{ marginRight: 6 }} />
-            <Text style={styles.demoPillText}>Demo Code: Enter any 4 digits (e.g. 1 2 3 4)</Text>
-          </View> */}
-
           {/* Primary Action Button */}
           <PrimaryButton
             title="Verify & Proceed"

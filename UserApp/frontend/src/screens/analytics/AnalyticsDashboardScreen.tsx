@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Dimensions,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadows } from '../../theme';
@@ -81,7 +82,7 @@ export default function AnalyticsDashboardScreen({ navigation }: any) {
           <Text style={styles.headerTitle}>MandiKart Live Analytics</Text>
           <View style={styles.liveBadge}>
             <View style={styles.liveDot} />
-            <Text style={styles.liveBadgeText}>Firebase Realtime Sync</Text>
+            <Text style={styles.liveBadgeText}>Realtime Sync</Text>
           </View>
         </View>
         <TouchableOpacity onPress={onRefresh} style={styles.refreshBtn}>
@@ -211,7 +212,11 @@ export default function AnalyticsDashboardScreen({ navigation }: any) {
                 return (
                   <View key={idx} style={styles.breakdownRow}>
                     <View style={styles.breakdownLabelRow}>
-                      <View style={[styles.legendDot, { backgroundColor: color }]} />
+                      {crop.imageUrl ? (
+                        <Image source={{ uri: crop.imageUrl }} style={styles.productPhotoThumb} />
+                      ) : (
+                        <View style={[styles.legendDot, { backgroundColor: color }]} />
+                      )}
                       <Text style={styles.breakdownName}>{crop.label}</Text>
                       <Text style={styles.breakdownPct}>{crop.value}%</Text>
                     </View>
@@ -238,7 +243,12 @@ export default function AnalyticsDashboardScreen({ navigation }: any) {
               {regionalPriceVolatility.map((mandi: any, idx: number) => (
                 <View key={idx} style={styles.volatilityCard}>
                   <View style={styles.volatilityHeader}>
-                    <Text style={styles.volatilityName}>{mandi.label}</Text>
+                    <View style={styles.volatilityLabelWrap}>
+                      {mandi.imageUrl && (
+                        <Image source={{ uri: mandi.imageUrl }} style={styles.productPhotoThumbSmall} />
+                      )}
+                      <Text style={styles.volatilityName}>{mandi.label}</Text>
+                    </View>
                     <Text style={styles.volatilitySpread}>₹{mandi.value} - ₹{mandi.secondaryValue}/kg</Text>
                   </View>
                   <View style={styles.volatilityBar}>
@@ -514,6 +524,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+  },
+  productPhotoThumb: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    marginRight: 8,
+    backgroundColor: Colors.gray100,
+  },
+  productPhotoThumbSmall: {
+    width: 22,
+    height: 22,
+    borderRadius: 4,
+    marginRight: 6,
+    backgroundColor: Colors.gray100,
+  },
+  volatilityLabelWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
   },
   breakdownName: {
     flex: 1,

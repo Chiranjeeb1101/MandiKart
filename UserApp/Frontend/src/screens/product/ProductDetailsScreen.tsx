@@ -12,6 +12,10 @@ import { SAMPLE_PRODUCTS } from '../../services/mockData';
 
 import NegotiationModal from '../../components/NegotiationModal';
 import { useLocation } from '../../context/LocationContext';
+import { useCart } from '../../context/CartContext';
+import { useWishlist } from '../../context/WishlistContext';
+
+import { getFallbackProductImage } from '../../utils/imageUtils';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProductStack'>;
 
@@ -19,9 +23,13 @@ export default function ProductDetailsScreen({ navigation, route }: any) {
   const { productId } = route.params;
   const product = SAMPLE_PRODUCTS.find((p) => p.id === productId) || SAMPLE_PRODUCTS[0];
   const { currentAddress } = useLocation();
+  const { addToCart } = useCart();
+  const { toggleWishlist, isWishlisted } = useWishlist();
   const [qty, setQty] = useState(1);
-  const [isWishlisted, setIsWishlisted] = useState(false);
   const [isNegotiating, setIsNegotiating] = useState(false);
+  const [imgUri, setImgUri] = useState<string>(product.imageUrl);
+
+  const favorited = isWishlisted(product.id);
 
   return (
     <View style={styles.container}>
@@ -30,13 +38,22 @@ export default function ProductDetailsScreen({ navigation, route }: any) {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: 120 }}>
         {/* Image & Header */}
         <View style={styles.imageHeader}>
-          <Image source={{ uri: product.imageUrl }} style={styles.image} />
+          <Image
+            source={{ uri: imgUri || getFallbackProductImage(product.category, product.name) }}
+            style={styles.image}
+            onError={() => {
+              const fallback = getFallbackProductImage(product.category, product.name);
+              if (imgUri !== fallback) {
+                setImgUri(fallback);
+              }
+            }}
+          />
           <View style={styles.headerActions}>
             <TouchableOpacity onPress={() => navigation.goBack()} style={styles.iconBtn}>
               <Ionicons name="arrow-back" size={24} color={Colors.textPrimary} />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setIsWishlisted(!isWishlisted)} style={styles.iconBtn}>
-              <Ionicons name={isWishlisted ? "heart" : "heart-outline"} size={24} color={isWishlisted ? Colors.error : Colors.textPrimary} />
+            <TouchableOpacity onPress={() => toggleWishlist(product)} style={styles.iconBtn}>
+              <Ionicons name={favorited ? "heart" : "heart-outline"} size={24} color={favorited ? Colors.error : Colors.textPrimary} />
             </TouchableOpacity>
           </View>
         </View>
@@ -79,8 +96,8 @@ export default function ProductDetailsScreen({ navigation, route }: any) {
           <Text style={styles.sectionTitle}>Grown by</Text>
           <FarmerCard
             farmer={product.farmer}
-            onPress={() => {}}
-            onChat={() => navigation.navigate('ChatStack', { screen: 'Chat' })}
+            onPress={() => navigation.navigate('FarmerProfile', { farmer: product.farmer })}
+            onChat={() => navigation.navigate('ChatStack', { screen: 'Chat', params: { farmerName: product.farmer?.name } })}
           />
         </View>
 
@@ -121,7 +138,10 @@ export default function ProductDetailsScreen({ navigation, route }: any) {
         </TouchableOpacity>
         <PrimaryButton
           title={`Add • ₹${product.price * qty}`}
-          onPress={() => navigation.navigate('Main', { screen: 'Cart' } as any)}
+          onPress={() => {
+            addToCart(product, qty);
+            navigation.navigate('Main', { screen: 'Cart' } as any);
+          }}
           style={styles.addBtn}
         />
       </View>

@@ -80,24 +80,24 @@ export default function ChatScreen({ navigation, route }: any) {
   const handleAcceptNegotiation = async (neg: NegotiationOffer) => {
     try {
       await apiClient.negotiations.respond(neg.id, 'ACCEPT');
-      const orderRes = await apiClient.negotiations.convertToOrder(neg.id, 'Flat 402, Shivajinagar, Pune');
 
       setMessages((prev) =>
         prev.map((m) =>
           m.negotiationRef?.id === neg.id
             ? {
                 ...m,
-                negotiationRef: { ...m.negotiationRef, status: 'ORDERED' },
+                negotiationRef: { ...m.negotiationRef, status: 'ACCEPTED' },
               }
             : m
         )
       );
 
+      // Navigate to intermediate CheckoutReview screen (Order Summary & Address verification)
       navigation.navigate('CheckoutStack', {
-        screen: 'OrderConfirmation',
+        screen: 'CheckoutReview',
         params: {
-          orderId: orderRes.order?.orderNumber || 'MK-ORD-2026-9041',
-          deliveryOtp: orderRes.order?.deliveryOtp || '749182',
+          isNegotiated: true,
+          negotiation: neg,
         },
       });
     } catch (err: any) {

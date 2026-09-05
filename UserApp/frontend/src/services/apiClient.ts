@@ -373,7 +373,10 @@ export const apiClient = {
           return SAMPLE_PRODUCTS.filter((p) => p.name.toLowerCase().includes(params.crop!.toLowerCase()));
         }
         if (params?.category) {
-          return SAMPLE_PRODUCTS.filter((p) => p.category.toLowerCase() === params.category!.toLowerCase());
+          const cat = params.category.toLowerCase();
+          return SAMPLE_PRODUCTS.filter(
+            (p) => p.category.toLowerCase() === cat || p.categoryId.toLowerCase() === cat
+          );
         }
         return SAMPLE_PRODUCTS;
       }
@@ -925,15 +928,15 @@ export const apiClient = {
           { label: 'Sun', value: 114200, secondaryValue: 58 },
         ],
         cropVolumeBreakdown: [
-          { label: 'Nashik Onion', value: 42 },
-          { label: 'Tomato Hybrid', value: 26 },
-          { label: 'Potato Jyoti', value: 18 },
-          { label: 'Wheat Sharbati', value: 14 },
+          { label: 'Nashik Red Onion', value: 42, imageUrl: 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=400' },
+          { label: 'Tomato Hybrid', value: 26, imageUrl: 'https://images.unsplash.com/photo-1607305387299-a3d9611cd469?w=400' },
+          { label: 'Potato Jyoti', value: 18, imageUrl: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400' },
+          { label: 'Wheat Sharbati', value: 14, imageUrl: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400' },
         ],
         regionalPriceVolatility: [
-          { label: 'Nashik APMC', value: 24, secondaryValue: 28 },
-          { label: 'Pune APMC', value: 26, secondaryValue: 30 },
-          { label: 'Vashi Mumbai', value: 31, secondaryValue: 34 },
+          { label: 'Nashik APMC (Red Onion)', value: 24, secondaryValue: 28, imageUrl: 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=400' },
+          { label: 'Pune APMC (Tomato)', value: 26, secondaryValue: 30, imageUrl: 'https://images.unsplash.com/photo-1607305387299-a3d9611cd469?w=400' },
+          { label: 'Vashi Mumbai (Potato)', value: 31, secondaryValue: 34, imageUrl: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400' },
         ],
         deliveryFulfillmentTrends: [
           { label: 'Delivered On-Time', value: 94 },

@@ -66,9 +66,6 @@ export default function OnboardingScreen({ navigation }: Props) {
 
   const handleSkip = () => navigation.replace('Login');
 
-  const handleDemoGuest = () => {
-    navigation.replace('Login');
-  };
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
@@ -145,12 +142,6 @@ export default function OnboardingScreen({ navigation }: Props) {
           </Text>
           <Ionicons name="arrow-forward" size={18} color={Colors.white} />
         </TouchableOpacity>
-
-        {/* Guest Demo Login Option */}
-        {/* <TouchableOpacity style={styles.guestBtn} onPress={handleDemoGuest} activeOpacity={0.85}>
-          <Ionicons name="flash-outline" size={15} color={Colors.primary} />
-          <Text style={styles.guestBtnText}>Explore App in Demo Mode</Text>
-        </TouchableOpacity> */}
 
         {/* Sign In Link */}
         <View style={styles.loginRow}>

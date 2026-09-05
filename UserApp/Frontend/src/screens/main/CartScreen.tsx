@@ -13,6 +13,8 @@ import EmptyState from '../../components/EmptyState';
 import QuantitySelector from '../../components/QuantitySelector';
 import { SAMPLE_PRODUCTS } from '../../services/mockData';
 import { CartItem, Product } from '../../types';
+import { useCart } from '../../context/CartContext';
+import { useLocation } from '../../context/LocationContext';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
@@ -21,78 +23,58 @@ const SUGGESTED_ITEMS = SAMPLE_PRODUCTS.slice(3, 8);
 
 export default function CartScreen() {
   const navigation = useNavigation<Nav>();
-  const [items, setItems] = useState<CartItem[]>([
-    { id: 'ci-1', product: SAMPLE_PRODUCTS[0], quantity: 2 }, // Fresh Tomatoes
-    { id: 'ci-2', product: SAMPLE_PRODUCTS[2], quantity: 1 }, // Alphonso Mangoes
-    { id: 'ci-3', product: SAMPLE_PRODUCTS[7], quantity: 1 }, // Farm Fresh Eggs
-  ]);
-  const [couponCode, setCouponCode] = useState('');
-  const [appliedDiscount, setAppliedDiscount] = useState(0); // in percent
-  const [couponApplied, setCouponApplied] = useState(false);
-  const [selectedSlot, setSelectedSlot] = useState<'express' | 'morning'>('express');
+  const { currentAddress } = useLocation();
+  const {
+    items,
+    addToCart,
+    updateQty,
+    removeItem,
+    clearCart: contextClearCart,
+    couponCode: contextCouponCode,
+    couponApplied,
+    applyCoupon: contextApplyCoupon,
+    removeCoupon,
+    subtotal,
+    deliveryFee,
+    handlingFee,
+    couponSavings,
+    total,
+  } = useCart();
 
-  const updateQty = (id: string, qty: number) => {
-    setItems((prev) => prev.map((i) => i.id === id ? { ...i, quantity: qty } : i));
-  };
-  
-  const removeItem = (id: string) => {
-    setItems((prev) => prev.filter((i) => i.id !== id));
-  };
+  const [inputCouponCode, setInputCouponCode] = useState('');
+  const [selectedSlot, setSelectedSlot] = useState<'express' | 'morning'>('express');
+  const deliveryThreshold = 500;
 
   const addSuggestedItem = (product: Product) => {
-    const existing = items.find((i) => i.product.id === product.id);
-    if (existing) {
-      updateQty(existing.id, existing.quantity + 1);
-    } else {
-      const newItem: CartItem = {
-        id: `ci-${Date.now()}`,
-        product,
-        quantity: 1,
-      };
-      setItems((prev) => [...prev, newItem]);
-    }
+    addToCart(product, 1);
   };
 
-  const clearCart = () => {
+  const handleClearCart = () => {
     if (Platform.OS === 'web') {
       if (typeof window !== 'undefined') {
         const confirmed = window.confirm('Are you sure you want to remove all items from your cart?');
-        if (confirmed) setItems([]);
+        if (confirmed) contextClearCart();
       } else {
-        setItems([]);
+        contextClearCart();
       }
     } else {
       Alert.alert('Clear Cart', 'Are you sure you want to remove all items from your cart?', [
         { text: 'Cancel', style: 'cancel' },
-        { text: 'Clear All', style: 'destructive', onPress: () => setItems([]) },
+        { text: 'Clear All', style: 'destructive', onPress: () => contextClearCart() },
       ]);
     }
   };
 
-  const applyCoupon = () => {
-    if (couponCode.trim().toUpperCase() === 'MANDI10' || couponCode.trim().toUpperCase() === 'FRESH') {
-      setAppliedDiscount(10);
-      setCouponApplied(true);
+  const handleApplyCoupon = () => {
+    const success = contextApplyCoupon(inputCouponCode);
+    if (success) {
       Alert.alert('Coupon Applied! 🎉', '10% discount applied to your order.');
     } else {
       Alert.alert('Invalid Coupon', 'Try using coupon code "MANDI10" or "FRESH".');
     }
   };
 
-  const removeCoupon = () => {
-    setCouponApplied(false);
-    setAppliedDiscount(0);
-    setCouponCode('');
-  };
-
-  // Price calculations
-  const subtotal = items.reduce((sum, i) => sum + i.product.price * i.quantity, 0);
-  const couponSavings = couponApplied ? Math.round((subtotal * appliedDiscount) / 100) : 0;
-  const deliveryThreshold = 500;
-  const deliveryFee = subtotal >= deliveryThreshold ? 0 : 40;
-  const handlingFee = 5;
-  const total = Math.max(0, subtotal - couponSavings + deliveryFee + handlingFee);
-  const totalSavings = couponSavings + (deliveryFee === 0 ? 40 : 0);
+  const totalSavings = couponSavings + (deliveryFee === 0 && items.length > 0 ? 40 : 0);
 
   if (items.length === 0) {
     return (
@@ -122,7 +104,7 @@ export default function CartScreen() {
           <Text style={styles.title}>My Cart ({items.length})</Text>
           <Text style={styles.subtitle}>Farm fresh produce</Text>
         </View>
-        <TouchableOpacity onPress={clearCart} style={styles.clearBtn}>
+        <TouchableOpacity onPress={handleClearCart} style={styles.clearBtn}>
           <Ionicons name="trash-bin-outline" size={16} color={Colors.error} />
           <Text style={styles.clearText}>Clear</Text>
         </TouchableOpacity>
@@ -131,13 +113,17 @@ export default function CartScreen() {
       {/* Delivery Address Bar */}
       <TouchableOpacity
         style={styles.addressBar}
-        onPress={() => navigation.navigate('AddAddress', {})}
+        onPress={() => navigation.navigate('DeliveryAddress' as any)}
         activeOpacity={0.85}
       >
         <Ionicons name="location" size={18} color={Colors.primary} />
         <View style={styles.addressInfo}>
-          <Text style={styles.addressTitle}>Deliver to Pune, Maharashtra</Text>
-          <Text style={styles.addressSub} numberOfLines={1}>Flat 402, Shivajinagar, Pune - 411005</Text>
+          <Text style={styles.addressTitle}>
+            Deliver to {currentAddress ? `${currentAddress.city}, ${currentAddress.state}` : 'Pune, Maharashtra'}
+          </Text>
+          <Text style={styles.addressSub} numberOfLines={1}>
+            {currentAddress ? currentAddress.formattedAddress : 'Flat 402, Shivajinagar, Pune - 411005'}
+          </Text>
         </View>
         <Text style={styles.changeLink}>Change</Text>
       </TouchableOpacity>
@@ -261,7 +247,7 @@ export default function CartScreen() {
             <View style={styles.appliedCouponRow}>
               <View style={styles.appliedCouponTag}>
                 <Ionicons name="pricetag" size={16} color={Colors.primary} />
-                <Text style={styles.appliedCouponText}>{couponCode.toUpperCase()} (10% OFF)</Text>
+                <Text style={styles.appliedCouponText}>{(contextCouponCode || 'MANDI10').toUpperCase()} (10% OFF)</Text>
               </View>
               <TouchableOpacity onPress={removeCoupon}>
                 <Text style={styles.removeCouponText}>Remove</Text>
@@ -274,11 +260,11 @@ export default function CartScreen() {
                 style={styles.couponInput}
                 placeholder="Enter Coupon Code (e.g. MANDI10)"
                 placeholderTextColor={Colors.textDisabled}
-                value={couponCode}
-                onChangeText={setCouponCode}
+                value={inputCouponCode}
+                onChangeText={setInputCouponCode}
                 autoCapitalize="characters"
               />
-              <TouchableOpacity style={styles.applyBtn} onPress={applyCoupon}>
+              <TouchableOpacity style={styles.applyBtn} onPress={handleApplyCoupon}>
                 <Text style={styles.applyBtnText}>Apply</Text>
               </TouchableOpacity>
             </View>

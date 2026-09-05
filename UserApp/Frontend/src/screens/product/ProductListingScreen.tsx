@@ -19,7 +19,9 @@ export default function ProductListingScreen({ navigation, route }: any) {
     .filter((p) => {
       const matchesSearch = !search || p.name.toLowerCase().includes(search.toLowerCase());
       const matchesCategory = !categoryId ||
-        (categoryId === 'fresh-deals' ? p.isFreshDeal : p.categoryId === categoryId);
+        (categoryId === 'fresh-deals'
+          ? p.isFreshDeal
+          : (p.categoryId === categoryId || p.category.toLowerCase() === (categoryName || '').toLowerCase()));
       return matchesSearch && matchesCategory;
     })
     .sort((a, b) => {

@@ -21,7 +21,7 @@ interface AuthContextType {
   token: string | null;
   buyerMode: BuyerMode;
   setBuyerMode: (mode: BuyerMode) => void;
-  toggleBuyerMode: () => void;
+  updateUser: (updatedFields: Partial<BuyerProfile>) => void;
   signIn: (phone: string, password?: string) => Promise<{ success: boolean; error?: string }>;
   signUp: (params: {
     phone: string;
@@ -45,6 +45,7 @@ const AuthContext = createContext<AuthContextType>({
   buyerMode: 'RETAIL',
   setBuyerMode: () => {},
   toggleBuyerMode: () => {},
+  updateUser: () => {},
   signIn: async () => ({ success: false }),
   signUp: async () => ({ success: false }),
   signInWithGoogle: async () => false,
@@ -58,6 +59,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<BuyerProfile | null>(null);
   const [token, setToken] = useState<string | null>(null);
   const [buyerMode, setBuyerMode] = useState<BuyerMode>('RETAIL');
+
+  const updateUser = (updatedFields: Partial<BuyerProfile>) => {
+    setUser((prev) => (prev ? { ...prev, ...updatedFields } : null));
+  };
 
   useEffect(() => {
     // Restore saved session only if an actual user logged in previously
@@ -204,6 +209,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         buyerMode,
         setBuyerMode,
         toggleBuyerMode,
+        updateUser,
         signIn,
         signUp,
         signInWithGoogle,

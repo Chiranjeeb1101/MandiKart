@@ -22,6 +22,20 @@ export interface GeoAddress {
   country: string;
 }
 
+export interface SavedAddress {
+  id: string;
+  type: 'HOME' | 'WORK' | 'OTHER';
+  fullName: string;
+  phone: string;
+  formattedAddress: string;
+  street?: string;
+  area?: string;
+  city: string;
+  state: string;
+  pincode: string;
+  isDefault: boolean;
+}
+
 export interface TrackingPoint {
   coordinates: GeoCoordinates;
   remainingDistanceKm: number;
@@ -35,6 +49,8 @@ export type PermissionStatus = 'undetermined' | 'granted' | 'denied';
 interface LocationContextType {
   currentLocation: GeoCoordinates | null;
   currentAddress: GeoAddress | null;
+  savedAddresses: SavedAddress[];
+  selectedAddressId: string;
   isLoadingLocation: boolean;
   locationError: string | null;
   permissionStatus: PermissionStatus;
@@ -45,6 +61,9 @@ interface LocationContextType {
     to: { latitude: number; longitude: number }
   ) => { distanceKm: number; etaMinutes: number };
   setManualLocation: (coords: GeoCoordinates, address: GeoAddress) => void;
+  addSavedAddress: (addr: Omit<SavedAddress, 'id'>) => SavedAddress;
+  selectSavedAddress: (id: string) => void;
+  deleteSavedAddress: (id: string) => void;
   startDriverSimulation: (
     origin: GeoCoordinates,
     destination: GeoCoordinates,
@@ -67,6 +86,22 @@ const DEFAULT_PUNE_ADDRESS: GeoAddress = {
   pincode: '411005',
   country: 'India',
 };
+
+const DEFAULT_SAVED_ADDRESSES: SavedAddress[] = [
+  {
+    id: 'addr-1',
+    type: 'HOME',
+    fullName: 'Ramesh Sharma',
+    phone: '+91 98765 43210',
+    formattedAddress: '123, Model Town, near SBI Bank, Pune, Maharashtra - 411016',
+    street: '123, Model Town',
+    area: 'Shivajinagar',
+    city: 'Pune',
+    state: 'Maharashtra',
+    pincode: '411016',
+    isDefault: true,
+  },
+];
 
 // Haversine formula
 function computeHaversineDistance(
@@ -128,8 +163,8 @@ function resolveLocalAddress(lat: number, lon: number): GeoAddress {
   if (lat >= 18.9 && lat <= 19.3 && lon >= 72.7 && lon <= 73.1) {
     return {
       formattedAddress: 'Sector 19, Vashi APMC, Navi Mumbai, Maharashtra - 400703',
-      street: 'Sector 19',
-      area: 'Vashi APMC',
+      street: 'APMC Market Rd',
+      area: 'Vashi',
       city: 'Navi Mumbai',
       state: 'Maharashtra',
       pincode: '400703',
@@ -175,6 +210,8 @@ function resolveLocalAddress(lat: number, lon: number): GeoAddress {
 const LocationContext = createContext<LocationContextType>({
   currentLocation: DEFAULT_PUNE_COORDS,
   currentAddress: DEFAULT_PUNE_ADDRESS,
+  savedAddresses: DEFAULT_SAVED_ADDRESSES,
+  selectedAddressId: 'addr-1',
   isLoadingLocation: false,
   locationError: null,
   permissionStatus: 'undetermined',
@@ -182,15 +219,64 @@ const LocationContext = createContext<LocationContextType>({
   reverseGeocode: async () => DEFAULT_PUNE_ADDRESS,
   calculateDistance: () => ({ distanceKm: 2.5, etaMinutes: 15 }),
   setManualLocation: () => {},
+  addSavedAddress: () => DEFAULT_SAVED_ADDRESSES[0],
+  selectSavedAddress: () => {},
+  deleteSavedAddress: () => {},
   startDriverSimulation: () => () => {},
 });
 
 export function LocationProvider({ children }: { children: React.ReactNode }) {
   const [currentLocation, setCurrentLocation] = useState<GeoCoordinates | null>(DEFAULT_PUNE_COORDS);
   const [currentAddress, setCurrentAddress] = useState<GeoAddress | null>(DEFAULT_PUNE_ADDRESS);
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>(DEFAULT_SAVED_ADDRESSES);
+  const [selectedAddressId, setSelectedAddressId] = useState<string>('addr-1');
   const [isLoadingLocation, setIsLoadingLocation] = useState<boolean>(false);
   const [locationError, setLocationError] = useState<string | null>(null);
   const [permissionStatus, setPermissionStatus] = useState<PermissionStatus>('undetermined');
+
+  const addSavedAddress = (addr: Omit<SavedAddress, 'id'>): SavedAddress => {
+    const newAddr: SavedAddress = {
+      ...addr,
+      id: `addr-${Date.now()}`,
+    };
+    setSavedAddresses((prev) => {
+      if (newAddr.isDefault) {
+        return [newAddr, ...prev.map((a) => ({ ...a, isDefault: false }))];
+      }
+      return [newAddr, ...prev];
+    });
+    setSelectedAddressId(newAddr.id);
+    setCurrentAddress({
+      formattedAddress: newAddr.formattedAddress,
+      street: newAddr.street,
+      area: newAddr.area,
+      city: newAddr.city,
+      state: newAddr.state,
+      pincode: newAddr.pincode,
+      country: 'India',
+    });
+    return newAddr;
+  };
+
+  const selectSavedAddress = (id: string) => {
+    setSelectedAddressId(id);
+    const target = savedAddresses.find((a) => a.id === id);
+    if (target) {
+      setCurrentAddress({
+        formattedAddress: target.formattedAddress,
+        street: target.street,
+        area: target.area,
+        city: target.city,
+        state: target.state,
+        pincode: target.pincode,
+        country: 'India',
+      });
+    }
+  };
+
+  const deleteSavedAddress = (id: string) => {
+    setSavedAddresses((prev) => prev.filter((a) => a.id !== id));
+  };
 
   // Reverse geocode wrapper: queries backend API first (zero CORS), then falls back to local dictionary
   const reverseGeocode = async (coords: { latitude: number; longitude: number }): Promise<GeoAddress> => {
@@ -198,160 +284,85 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       const serverAddr = await apiClient.tracking.reverseGeocode(coords.latitude, coords.longitude);
       if (serverAddr && serverAddr.city) {
         return {
-          formattedAddress: serverAddr.formattedAddress,
-          street: serverAddr.street || 'Main Road',
-          area: serverAddr.area || serverAddr.city,
+          formattedAddress: serverAddr.formattedAddress || `${serverAddr.area || ''}, ${serverAddr.city}, ${serverAddr.state}`,
+          street: serverAddr.street || '',
+          area: serverAddr.area || '',
           city: serverAddr.city,
-          state: serverAddr.state,
-          pincode: serverAddr.pincode,
-          country: serverAddr.country || 'India',
+          state: serverAddr.state || '',
+          pincode: serverAddr.pincode || '',
+          country: 'India',
         };
       }
     } catch {
-      // Fallback silently to local dictionary
+      // API fallback
     }
     return resolveLocalAddress(coords.latitude, coords.longitude);
   };
 
-  const fetchCurrentLocation = async (highAccuracy: boolean = true): Promise<GeoCoordinates | null> => {
+  const fetchCurrentLocation = async (highAccuracy: boolean = false): Promise<GeoCoordinates | null> => {
     setIsLoadingLocation(true);
     setLocationError(null);
 
     try {
-      if (Platform.OS !== 'web') {
-        // Native Android / iOS via expo-location (No API key needed)
-        const { status } = await Location.requestForegroundPermissionsAsync();
-        if (status !== 'granted') {
-          setPermissionStatus('denied');
-          setLocationError('Location permission denied');
-          setCurrentLocation(DEFAULT_PUNE_COORDS);
-          setCurrentAddress(DEFAULT_PUNE_ADDRESS);
-          setIsLoadingLocation(false);
-          return DEFAULT_PUNE_COORDS;
-        }
-
-        setPermissionStatus('granted');
-        const pos = await Location.getCurrentPositionAsync({
-          accuracy: highAccuracy ? Location.Accuracy.Balanced : Location.Accuracy.Lowest,
+      if (Platform.OS === 'web') {
+        const coords = await new Promise<GeoCoordinates>((resolve, reject) => {
+          if (!navigator.geolocation) {
+            reject(new Error('Geolocation is not supported by your browser.'));
+            return;
+          }
+          navigator.geolocation.getCurrentPosition(
+            (pos) => {
+              resolve({
+                latitude: pos.coords.latitude,
+                longitude: pos.coords.longitude,
+                accuracy: pos.coords.accuracy,
+              });
+            },
+            (err) => reject(err),
+            { timeout: 10000, enableHighAccuracy: highAccuracy }
+          );
         });
 
-        const coords: GeoCoordinates = {
-          latitude: pos.coords.latitude,
-          longitude: pos.coords.longitude,
-          accuracy: pos.coords.accuracy || 10,
-          altitude: pos.coords.altitude,
-          heading: pos.coords.heading,
-          speed: pos.coords.speed,
-        };
-
         setCurrentLocation(coords);
-
-        // Native Reverse-Geocode
-        try {
-          const rev = await Location.reverseGeocodeAsync({
-            latitude: coords.latitude,
-            longitude: coords.longitude,
-          });
-
-          if (rev && rev.length > 0) {
-            const r = rev[0];
-            const city = r.city || r.subregion || r.district || 'Pune';
-            const state = r.region || 'Maharashtra';
-            const pincode = r.postalCode || '411005';
-            const street = r.street || r.name || 'FC Road';
-            const area = r.district || r.subregion || city;
-            const formatted = `${street ? street + ', ' : ''}${area ? area + ', ' : ''}${city}, ${state} - ${pincode}`;
-
-            const addr: GeoAddress = {
-              formattedAddress: formatted,
-              street,
-              area,
-              city,
-              state,
-              pincode,
-              country: r.country || 'India',
-            };
-            setCurrentAddress(addr);
-          } else {
-            const addr = await reverseGeocode(coords);
-            setCurrentAddress(addr);
-          }
-        } catch {
-          const addr = await reverseGeocode(coords);
-          setCurrentAddress(addr);
-        }
-
+        setPermissionStatus('granted');
+        const resolvedAddr = await reverseGeocode(coords);
+        setCurrentAddress(resolvedAddr);
         setIsLoadingLocation(false);
         return coords;
-      } else {
-        // Web fallback with resilient two-tier accuracy and timeout
-        if (typeof navigator !== 'undefined' && navigator.geolocation) {
-          return new Promise((resolve) => {
-            const handleSuccess = async (position: any) => {
-              const coords: GeoCoordinates = {
-                latitude: position.coords.latitude,
-                longitude: position.coords.longitude,
-                accuracy: position.coords.accuracy,
-              };
-              setCurrentLocation(coords);
-              setPermissionStatus('granted');
-              const addr = await reverseGeocode(coords);
-              setCurrentAddress(addr);
-              setIsLoadingLocation(false);
-              resolve(coords);
-            };
-
-            const handleFallback = () => {
-              navigator.geolocation.getCurrentPosition(
-                handleSuccess,
-                () => {
-                  setPermissionStatus('denied');
-                  setCurrentLocation(DEFAULT_PUNE_COORDS);
-                  setCurrentAddress(DEFAULT_PUNE_ADDRESS);
-                  setIsLoadingLocation(false);
-                  resolve(DEFAULT_PUNE_COORDS);
-                },
-                { enableHighAccuracy: false, timeout: 8000, maximumAge: 300000 }
-              );
-            };
-
-            navigator.geolocation.getCurrentPosition(
-              handleSuccess,
-              handleFallback,
-              { enableHighAccuracy: highAccuracy, timeout: 4000, maximumAge: 60000 }
-            );
-          });
-        }
       }
-    } catch (e: any) {
-      console.warn('[LocationContext] GPS error:', e?.message);
-      setLocationError(e?.message || 'Error detecting location');
+
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      setPermissionStatus(status === 'granted' ? 'granted' : 'denied');
+
+      if (status !== 'granted') {
+        setLocationError('Location permission was denied.');
+        setIsLoadingLocation(false);
+        return null;
+      }
+
+      const location = await Location.getCurrentPositionAsync({
+        accuracy: highAccuracy ? Location.Accuracy.High : Location.Accuracy.Balanced,
+      });
+
+      const coords: GeoCoordinates = {
+        latitude: location.coords.latitude,
+        longitude: location.coords.longitude,
+        accuracy: location.coords.accuracy || undefined,
+        altitude: location.coords.altitude,
+        heading: location.coords.heading,
+        speed: location.coords.speed,
+      };
+
+      setCurrentLocation(coords);
+      const resolvedAddr = await reverseGeocode(coords);
+      setCurrentAddress(resolvedAddr);
+      setIsLoadingLocation(false);
+      return coords;
+    } catch (err: any) {
+      setLocationError(err?.message || 'Failed to obtain live location.');
+      setIsLoadingLocation(false);
+      return null;
     }
-
-    setCurrentLocation(DEFAULT_PUNE_COORDS);
-    setCurrentAddress(DEFAULT_PUNE_ADDRESS);
-    setIsLoadingLocation(false);
-    return DEFAULT_PUNE_COORDS;
-  };
-
-  // Attempt silent location check on web on mount if permission already granted
-  useEffect(() => {
-    if (Platform.OS === 'web' && typeof navigator !== 'undefined' && (navigator as any).permissions) {
-      (navigator as any).permissions.query({ name: 'geolocation' }).then((result: any) => {
-        if (result.state === 'granted') {
-          fetchCurrentLocation(false);
-        }
-      }).catch(() => {});
-    }
-  }, []);
-
-  const calculateDistance = (
-    from: { latitude: number; longitude: number },
-    to: { latitude: number; longitude: number }
-  ): { distanceKm: number; etaMinutes: number } => {
-    const dist = computeHaversineDistance(from, to);
-    const eta = Math.max(5, Math.round((dist / 32) * 60));
-    return { distanceKm: dist, etaMinutes: eta };
   };
 
   const setManualLocation = (coords: GeoCoordinates, address: GeoAddress) => {
@@ -359,24 +370,34 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
     setCurrentAddress(address);
   };
 
-  /**
-   * Driver live movement simulation along route
-   */
+  const calculateDistance = (
+    from: { latitude: number; longitude: number },
+    to: { latitude: number; longitude: number }
+  ) => {
+    const distanceKm = computeHaversineDistance(from, to);
+    const etaMinutes = Math.max(5, Math.round((distanceKm / 30) * 60));
+    return { distanceKm, etaMinutes };
+  };
+
   const startDriverSimulation = (
     origin: GeoCoordinates,
     destination: GeoCoordinates,
     onStep: (point: TrackingPoint) => void
-  ): (() => void) => {
+  ) => {
     let step = 0;
-    const totalSteps = 40; // 40 increments
-    const totalDist = computeHaversineDistance(origin, destination);
+    const totalSteps = 20;
 
     const interval = setInterval(() => {
-      step += 1;
+      step++;
       const progress = Math.min(1, step / totalSteps);
       const currentLat = origin.latitude + (destination.latitude - origin.latitude) * progress;
       const currentLon = origin.longitude + (destination.longitude - origin.longitude) * progress;
-      const remainingDist = Math.max(0.1, Math.round(totalDist * (1 - progress) * 10) / 10);
+
+      const remainingDist = computeHaversineDistance(
+        { latitude: currentLat, longitude: currentLon },
+        destination
+      );
+
       const etaMin = Math.max(2, Math.round((remainingDist / 28) * 60));
       const speed = Math.round(24 + Math.sin(step) * 6);
 
@@ -405,6 +426,8 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
       value={{
         currentLocation,
         currentAddress,
+        savedAddresses,
+        selectedAddressId,
         isLoadingLocation,
         locationError,
         permissionStatus,
@@ -412,6 +435,9 @@ export function LocationProvider({ children }: { children: React.ReactNode }) {
         reverseGeocode,
         calculateDistance,
         setManualLocation,
+        addSavedAddress,
+        selectSavedAddress,
+        deleteSavedAddress,
         startDriverSimulation,
       }}
     >

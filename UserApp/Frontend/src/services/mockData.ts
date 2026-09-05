@@ -13,12 +13,12 @@ import {
 
 export const SAMPLE_CATEGORIES: Category[] = [
   { id: 'cat-1', name: 'Vegetables', icon: '🥦', imageUrl: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=400', productCount: 12 },
-  { id: 'cat-2', name: 'Fruits', icon: '🍎', imageUrl: 'https://images.unsplash.com/photo-1610832958506-aa56368176cf?w=400', productCount: 10 },
+  { id: 'cat-2', name: 'Fruits', icon: '🍎', imageUrl: 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=400', productCount: 10 },
   { id: 'cat-3', name: 'Grains', icon: '🌾', imageUrl: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400', productCount: 6 },
   { id: 'cat-5', name: 'Spices', icon: '🌶️', imageUrl: 'https://images.unsplash.com/photo-1596040033229-a9821ebd058d?w=400', productCount: 75 },
   { id: 'cat-6', name: 'Pulses', icon: '🫘', imageUrl: 'https://images.unsplash.com/photo-1515543904379-3d757afe72e4?w=400', productCount: 8 },
   { id: 'cat-7', name: 'Oils', icon: '🫙', imageUrl: 'https://images.unsplash.com/photo-1474979266404-7eaacbcd87c5?w=400', productCount: 30 },
-  { id: 'cat-8', name: 'Herbs', icon: '🌿', imageUrl: 'https://images.unsplash.com/photo-1608683459069-b1d56f50b4a4?w=400', productCount: 6 },
+  { id: 'cat-8', name: 'Herbs', icon: '🌿', imageUrl: 'https://images.unsplash.com/photo-1628556270448-4d4e4148e1b1?w=400', productCount: 6 },
   { id: 'cat-9', name: 'Poultry', icon: '🐔', imageUrl: 'https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?w=400', productCount: 4 },
 ];
 
@@ -96,9 +96,9 @@ export const SAMPLE_PRODUCTS: Product[] = [
     id: 'prod-3',
     name: 'Alphonso Mangoes',
     imageUrl:
-      'https://images.unsplash.com/photo-1605027998928-f240d6741abe?w=400',
+      'https://images.unsplash.com/photo-1553279768-865429fa0078?w=400',
     images: [
-      'https://images.unsplash.com/photo-1605027998928-f240d6741abe?w=400',
+      'https://images.unsplash.com/photo-1553279768-865429fa0078?w=400',
     ],
     price: 120,
     unit: 'dozen',
@@ -117,9 +117,9 @@ export const SAMPLE_PRODUCTS: Product[] = [
     id: 'prod-4',
     name: 'Basmati Rice',
     imageUrl:
-      'https://images.unsplash.com/photo-1536304993881-ff86e6718094?w=400',
+      'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400',
     images: [
-      'https://images.unsplash.com/photo-1536304993881-ff86e6718094?w=400',
+      'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400',
     ],
     price: 85,
     unit: 'kg',
@@ -176,8 +176,8 @@ export const SAMPLE_PRODUCTS: Product[] = [
   {
     id: 'prod-7',
     name: 'Fresh Bananas',
-    imageUrl: 'https://images.unsplash.com/photo-1528825871115-3581a5387919?w=400',
-    images: ['https://images.unsplash.com/photo-1528825871115-3581a5387919?w=400'],
+    imageUrl: 'https://images.unsplash.com/photo-1603833665858-e61d17a86224?w=400',
+    images: ['https://images.unsplash.com/photo-1603833665858-e61d17a86224?w=400'],
     price: 40,
     unit: 'dozen',
     minOrder: 1,
@@ -194,8 +194,8 @@ export const SAMPLE_PRODUCTS: Product[] = [
   {
     id: 'prod-10',
     name: 'Yellow Moong Dal',
-    imageUrl: 'https://images.unsplash.com/photo-1585994276709-a78d228f4a62?w=400',
-    images: ['https://images.unsplash.com/photo-1585994276709-a78d228f4a62?w=400'],
+    imageUrl: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400',
+    images: ['https://images.unsplash.com/photo-1546833999-b9f581a1996d?w=400'],
     price: 95,
     unit: 'kg',
     minOrder: 2,
@@ -246,8 +246,8 @@ export const SAMPLE_PRODUCTS: Product[] = [
   {
     id: 'prod-13',
     name: 'Coconut Oil',
-    imageUrl: 'https://images.unsplash.com/photo-1556228720-da10fc0f4e5d?w=400',
-    images: ['https://images.unsplash.com/photo-1556228720-da10fc0f4e5d?w=400'],
+    imageUrl: 'https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=400',
+    images: ['https://images.unsplash.com/photo-1620916566398-39f1143ab7be?w=400'],
     price: 195,
     unit: 'litre',
     minOrder: 1,
@@ -280,8 +280,8 @@ export const SAMPLE_PRODUCTS: Product[] = [
   {
     id: 'prod-15',
     name: 'Fresh Coriander',
-    imageUrl: 'https://images.unsplash.com/photo-1593452292723-d34551152a4e?w=400',
-    images: ['https://images.unsplash.com/photo-1593452292723-d34551152a4e?w=400'],
+    imageUrl: 'https://images.unsplash.com/photo-1592417817098-8f3d6eb231fc?w=400',
+    images: ['https://images.unsplash.com/photo-1592417817098-8f3d6eb231fc?w=400'],
     price: 10,
     unit: 'bunch',
     minOrder: 3,
@@ -314,8 +314,8 @@ export const SAMPLE_PRODUCTS: Product[] = [
   {
     id: 'prod-17',
     name: 'Farm Fresh Eggs',
-    imageUrl: 'https://images.unsplash.com/photo-1569288052389-dac9b01ac4d6?w=400',
-    images: ['https://images.unsplash.com/photo-1569288052389-dac9b01ac4d6?w=400'],
+    imageUrl: 'https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=400',
+    images: ['https://images.unsplash.com/photo-1582722872445-44dc5f7e3c8f?w=400'],
     price: 80,
     unit: 'dozen',
     minOrder: 1,
@@ -367,8 +367,8 @@ export const SAMPLE_PRODUCTS: Product[] = [
   {
     id: 'prod-21',
     name: 'Red Carrots',
-    imageUrl: 'https://images.unsplash.com/photo-1447175008436-08417192a620?w=400',
-    images: ['https://images.unsplash.com/photo-1447175008436-08417192a620?w=400'],
+    imageUrl: 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=400',
+    images: ['https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=400'],
     price: 45,
     unit: 'kg',
     minOrder: 1,
@@ -472,8 +472,8 @@ export const SAMPLE_PRODUCTS: Product[] = [
   {
     id: 'prod-27',
     name: 'Fresh Brinjal (Eggplant)',
-    imageUrl: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=400',
-    images: ['https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=400'],
+    imageUrl: 'https://images.unsplash.com/photo-1613743983387-0b15cfef3ff5?w=400',
+    images: ['https://images.unsplash.com/photo-1613743983387-0b15cfef3ff5?w=400'],
     price: 32,
     unit: 'kg',
     minOrder: 1,
@@ -561,8 +561,8 @@ export const SAMPLE_PRODUCTS: Product[] = [
   {
     id: 'prod-34',
     name: 'Sweet Watermelon',
-    imageUrl: 'https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?w=400',
-    images: ['https://images.unsplash.com/photo-1589984662646-e7b2e4962f18?w=400'],
+    imageUrl: 'https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=400',
+    images: ['https://images.unsplash.com/photo-1587049352846-4a222e784d38?w=400'],
     price: 30,
     unit: 'kg',
     minOrder: 3,
@@ -578,8 +578,8 @@ export const SAMPLE_PRODUCTS: Product[] = [
   {
     id: 'prod-35',
     name: 'Ripe Papaya',
-    imageUrl: 'https://images.unsplash.com/photo-1617112848923-cc2234396a8d?w=400',
-    images: ['https://images.unsplash.com/photo-1617112848923-cc2234396a8d?w=400'],
+    imageUrl: 'https://images.unsplash.com/photo-1517260739337-6799d239ce83?w=400',
+    images: ['https://images.unsplash.com/photo-1517260739337-6799d239ce83?w=400'],
     price: 45,
     unit: 'kg',
     minOrder: 1,
@@ -595,8 +595,8 @@ export const SAMPLE_PRODUCTS: Product[] = [
   {
     id: 'prod-36',
     name: 'Organic Guava (Amrood)',
-    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Guava_ID.jpg/640px-Guava_ID.jpg',
-    images: ['https://upload.wikimedia.org/wikipedia/commons/thumb/0/02/Guava_ID.jpg/640px-Guava_ID.jpg'],
+    imageUrl: 'https://images.unsplash.com/photo-1601493700631-2b16ec4b4716?w=400',
+    images: ['https://images.unsplash.com/photo-1601493700631-2b16ec4b4716?w=400'],
     price: 50,
     unit: 'kg',
     minOrder: 1,
@@ -630,8 +630,8 @@ export const SAMPLE_PRODUCTS: Product[] = [
   {
     id: 'prod-40',
     name: 'Unpolished Toor Dal (Arhar)',
-    imageUrl: 'https://images.unsplash.com/photo-1585994276709-a78d228f4a62?w=400',
-    images: ['https://images.unsplash.com/photo-1585994276709-a78d228f4a62?w=400'],
+    imageUrl: 'https://images.unsplash.com/photo-1515543904379-3d757afe72e4?w=400',
+    images: ['https://images.unsplash.com/photo-1515543904379-3d757afe72e4?w=400'],
     price: 135,
     unit: 'kg',
     minOrder: 1,
@@ -649,8 +649,8 @@ export const SAMPLE_PRODUCTS: Product[] = [
   {
     id: 'prod-41',
     name: 'Organic Rajma (Chitra)',
-    imageUrl: 'https://images.unsplash.com/photo-1551462147-37885abb36f1?w=400',
-    images: ['https://images.unsplash.com/photo-1551462147-37885abb36f1?w=400'],
+    imageUrl: 'https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?w=400',
+    images: ['https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?w=400'],
     price: 150,
     unit: 'kg',
     minOrder: 1,
@@ -736,8 +736,8 @@ export const SAMPLE_PRODUCTS: Product[] = [
   {
     id: 'prod-50',
     name: 'Fresh Mint Leaves (Pudina)',
-    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Mint-leaves-2007.jpg/640px-Mint-leaves-2007.jpg',
-    images: ['https://upload.wikimedia.org/wikipedia/commons/thumb/c/c5/Mint-leaves-2007.jpg/640px-Mint-leaves-2007.jpg'],
+    imageUrl: 'https://images.unsplash.com/photo-1628556270448-4d4e4148e1b1?w=400',
+    images: ['https://images.unsplash.com/photo-1628556270448-4d4e4148e1b1?w=400'],
     price: 15,
     unit: 'bunch',
     minOrder: 2,
@@ -754,8 +754,8 @@ export const SAMPLE_PRODUCTS: Product[] = [
   {
     id: 'prod-51',
     name: 'Fresh Curry Leaves',
-    imageUrl: 'https://images.unsplash.com/photo-1608683459069-b1d56f50b4a4?w=400',
-    images: ['https://images.unsplash.com/photo-1608683459069-b1d56f50b4a4?w=400'],
+    imageUrl: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=400',
+    images: ['https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=400'],
     price: 10,
     unit: 'bunch',
     minOrder: 3,
@@ -788,8 +788,8 @@ export const SAMPLE_PRODUCTS: Product[] = [
   {
     id: 'prod-53',
     name: 'Organic Lemongrass',
-    imageUrl: 'https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Cymbopogon_citratus_-_Stalks.jpg/640px-Cymbopogon_citratus_-_Stalks.jpg',
-    images: ['https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Cymbopogon_citratus_-_Stalks.jpg/640px-Cymbopogon_citratus_-_Stalks.jpg'],
+    imageUrl: 'https://images.unsplash.com/photo-1515586000433-45406d8e6662?w=400',
+    images: ['https://images.unsplash.com/photo-1515586000433-45406d8e6662?w=400'],
     price: 25,
     unit: 'bunch',
     minOrder: 1,

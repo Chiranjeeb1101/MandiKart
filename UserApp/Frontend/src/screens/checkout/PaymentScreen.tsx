@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, StatusBar, ActivityIndicator, TextInput } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../../theme';
 import PrimaryButton from '../../components/PrimaryButton';
 import { apiClient } from '../../services/apiClient';
+import { useCart } from '../../context/CartContext';
 
 export default function PaymentScreen({ navigation, route }: any) {
+  const { clearCart } = useCart();
   const [selected, setSelected] = useState('upi');
+  const [upiId, setUpiId] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const amount = route.params?.amount || 155;
+  const amount = route.params?.amount || route.params?.total || 155;
   const isBulk = route.params?.isBulk || false;
   const bulkSupplier = route.params?.bulkSupplier;
+  const isNegotiated = route.params?.isNegotiated || false;
+  const negotiation = route.params?.negotiation;
 
   const methods = [
     { id: 'upi', label: 'UPI (GPay, PhonePe, Paytm)', icon: 'phone-portrait-outline', desc: 'Fast & Instant' },
@@ -23,7 +28,18 @@ export default function PaymentScreen({ navigation, route }: any) {
   const handlePayment = async () => {
     setLoading(true);
     try {
-      const items = isBulk && bulkSupplier
+      const items = isNegotiated && negotiation
+        ? [
+            {
+              productId: negotiation.id || 'prod-neg',
+              cropName: negotiation.cropName || 'Negotiated Produce',
+              grade: 'A' as const,
+              quantity: negotiation.quantity || 1,
+              unit: negotiation.unit || 'kg',
+              pricePerUnit: negotiation.counterPrice || negotiation.offeredPrice || 50,
+            },
+          ]
+        : isBulk && bulkSupplier
         ? [
             {
               productId: bulkSupplier.supplierId || 'prod-bulk',
@@ -74,6 +90,7 @@ export default function PaymentScreen({ navigation, route }: any) {
       }
 
       setLoading(false);
+      clearCart();
       navigation.navigate('OrderConfirmation', {
         orderId,
         deliveryOtp: res.order?.deliveryOtp || '719284',
@@ -82,6 +99,7 @@ export default function PaymentScreen({ navigation, route }: any) {
       });
     } catch (err: any) {
       setLoading(false);
+      clearCart();
       navigation.navigate('OrderConfirmation', {
         orderId: 'MK-ORD-2026-9041',
         deliveryOtp: '719284',
@@ -158,14 +176,18 @@ export default function PaymentScreen({ navigation, route }: any) {
             {/* Dynamic Interactive Fields per method */}
             {selected === 'upi' && m.id === 'upi' && (
               <View style={styles.expandedSection}>
-                <Text style={styles.inputPrompt}>Enter UPI VPA ID</Text>
+                <Text style={styles.inputPrompt}>Enter Virtual Payment Address (VPA)</Text>
                 <View style={styles.upiInputWrap}>
                   <Text style={styles.upiIconText}>@</Text>
-                  <Text style={styles.upiValueDemo}>buyer.mandikart@okaxis</Text>
-                  <View style={styles.verifiedBadge}>
-                    <Ionicons name="checkmark-circle" size={14} color="#15803D" />
-                    <Text style={styles.verifiedText}>Auto-Verified</Text>
-                  </View>
+                  <TextInput
+                    style={styles.upiInputField}
+                    value={upiId}
+                    onChangeText={setUpiId}
+                    placeholder="e.g. mobile@upi or username@okaxis"
+                    placeholderTextColor={Colors.textSecondary}
+                    autoCapitalize="none"
+                    autoCorrect={false}
+                  />
                 </View>
               </View>
             )}
@@ -324,11 +346,12 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: Colors.primary,
   },
-  upiValueDemo: {
+  upiInputField: {
     flex: 1,
     fontSize: 13,
     fontWeight: '600',
     color: Colors.textPrimary,
+    padding: 0,
   },
   verifiedBadge: {
     flexDirection: 'row',

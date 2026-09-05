@@ -9,6 +9,7 @@ import {
   StatusBar,
   Alert,
   ActivityIndicator,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -16,7 +17,16 @@ import { Colors, Spacing, BorderRadius, Shadows } from '../../theme';
 import { apiClient } from '../../services/apiClient';
 import { useLocation } from '../../context/LocationContext';
 
-const CROPS = ['Red Onion', 'Tomato', 'Potato', 'Wheat', 'Basmati Rice', 'Green Chilli', 'Ginger', 'Turmeric'];
+const CROPS = [
+  { name: 'Red Onion', imageUrl: 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=400' },
+  { name: 'Tomato', imageUrl: 'https://images.unsplash.com/photo-1607305387299-a3d9611cd469?w=400' },
+  { name: 'Potato', imageUrl: 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400' },
+  { name: 'Wheat', imageUrl: 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400' },
+  { name: 'Basmati Rice', imageUrl: 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400' },
+  { name: 'Green Chilli', imageUrl: 'https://images.unsplash.com/photo-1565557623262-b51c2513a641?w=400' },
+  { name: 'Ginger', imageUrl: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=400' },
+  { name: 'Turmeric', imageUrl: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=400' },
+];
 const GRADES: Array<'A' | 'B' | 'C'> = ['A', 'B', 'C'];
 const UNITS: Array<'quintal' | 'tonne' | 'kg'> = ['quintal', 'tonne', 'kg'];
 
@@ -98,11 +108,12 @@ export default function BulkRequirementScreen({ navigation }: any) {
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.cropList}>
             {CROPS.map((c) => (
               <TouchableOpacity
-                key={c}
-                style={[styles.cropChip, selectedCrop === c && styles.cropChipActive]}
-                onPress={() => setSelectedCrop(c)}
+                key={c.name}
+                style={[styles.cropChip, selectedCrop === c.name && styles.cropChipActive]}
+                onPress={() => setSelectedCrop(c.name)}
               >
-                <Text style={[styles.cropChipText, selectedCrop === c && styles.cropChipTextActive]}>{c}</Text>
+                <Image source={{ uri: c.imageUrl }} style={styles.cropChipImage} />
+                <Text style={[styles.cropChipText, selectedCrop === c.name && styles.cropChipTextActive]}>{c.name}</Text>
               </TouchableOpacity>
             ))}
           </ScrollView>
@@ -281,12 +292,21 @@ const styles = StyleSheet.create({
   sectionTitle: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary, marginBottom: Spacing.sm },
   cropList: { gap: Spacing.xs, paddingVertical: 4 },
   cropChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
     borderRadius: BorderRadius.full,
     backgroundColor: Colors.gray100,
     borderWidth: 1,
     borderColor: Colors.border,
+    gap: 6,
+  },
+  cropChipImage: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: Colors.gray200,
   },
   cropChipActive: {
     backgroundColor: Colors.primaryLight,

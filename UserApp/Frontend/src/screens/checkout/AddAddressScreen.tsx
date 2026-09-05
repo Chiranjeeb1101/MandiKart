@@ -15,7 +15,7 @@ type AddressType = 'HOME' | 'WORK' | 'OTHER';
 
 export default function AddAddressScreen() {
   const navigation = useNavigation();
-  const { fetchCurrentLocation, currentAddress, currentLocation, setManualLocation, isLoadingLocation } = useLocation();
+  const { fetchCurrentLocation, currentAddress, currentLocation, setManualLocation, addSavedAddress, isLoadingLocation } = useLocation();
 
   // Form State
   const [fullName, setFullName] = useState('');
@@ -83,34 +83,30 @@ export default function AddAddressScreen() {
       return;
     }
 
-    const newAddress = {
+    addSavedAddress({
+      type: addressType,
+      fullName,
+      phone,
       formattedAddress: `${houseNo}, ${street}, ${landmark ? landmark + ', ' : ''}${city}, ${state} - ${pincode}`,
       street: houseNo,
       area: street,
       city,
       state,
       pincode,
-      country: 'India',
-    };
-
-    if (isDefault) {
-      setManualLocation(
-        currentLocation || { latitude: 18.5204, longitude: 73.8567 },
-        newAddress
-      );
-    }
+      isDefault,
+    });
 
     if (Platform.OS === 'web') {
       window.alert(`Address Saved! 🎉\nNew ${addressType} delivery address added successfully.`);
-      (navigation as any).goBack();
+      (navigation as any).navigate('DeliveryAddress');
     } else {
       Alert.alert(
         'Address Saved! 🎉',
         `New ${addressType} delivery address added successfully.`,
         [
           {
-            text: 'OK',
-            onPress: () => (navigation as any).goBack(),
+            text: 'View Delivery Addresses',
+            onPress: () => (navigation as any).navigate('DeliveryAddress'),
           },
         ]
       );

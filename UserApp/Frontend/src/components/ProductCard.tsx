@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, BorderRadius, Spacing, Shadows } from '../theme';
 import { Product } from '../types';
+import { getFallbackProductImage } from '../utils/imageUtils';
 
 interface Props {
   product: Product;
@@ -19,6 +20,8 @@ export default function ProductCard({
   onWishlistToggle,
   isWishlisted,
 }: Props) {
+  const [imgUri, setImgUri] = useState<string>(product.imageUrl);
+
   const discountedPrice = product.discount
     ? Math.round(product.price * (1 - product.discount / 100))
     : null;
@@ -27,9 +30,15 @@ export default function ProductCard({
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
       <View style={styles.imageContainer}>
         <Image
-          source={{ uri: product.imageUrl }}
+          source={{ uri: imgUri || getFallbackProductImage(product.category, product.name) }}
           style={styles.image}
           resizeMode="cover"
+          onError={() => {
+            const fallback = getFallbackProductImage(product.category, product.name);
+            if (imgUri !== fallback) {
+              setImgUri(fallback);
+            }
+          }}
         />
         {/* Badges */}
         <View style={styles.badgeRow}>

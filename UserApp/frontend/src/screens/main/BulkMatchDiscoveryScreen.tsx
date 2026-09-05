@@ -8,12 +8,21 @@ import {
   StatusBar,
   ActivityIndicator,
   Alert,
+  Image,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadows } from '../../theme';
 import { apiClient } from '../../services/apiClient';
 import { BulkSupplierMatch, BulkRequirement } from '../../types';
+
+const CROP_PHOTOS: Record<string, string> = {
+  'Red Onion': 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=400',
+  'Tomato': 'https://images.unsplash.com/photo-1607305387299-a3d9611cd469?w=400',
+  'Potato': 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400',
+  'Wheat': 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=400',
+  'Basmati Rice': 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400',
+};
 
 export default function BulkMatchDiscoveryScreen({ navigation, route }: any) {
   const requirementId = route.params?.requirementId || 'breq_101';
@@ -80,11 +89,17 @@ export default function BulkMatchDiscoveryScreen({ navigation, route }: any) {
         {/* Requirement snapshot */}
         <View style={styles.summaryCard}>
           <View style={styles.summaryTop}>
-            <View>
-              <Text style={styles.summaryCrop}>{passedReq?.cropName || 'Red Onion'} (Grade {passedReq?.grade || 'A'})</Text>
-              <Text style={styles.summaryDemand}>
-                Target: {passedReq?.requiredQuantity || 25} {passedReq?.quantityUnit || 'quintal'} • Max ₹{passedReq?.maxTargetPricePerUnit || 2400}/{passedReq?.quantityUnit || 'quintal'}
-              </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+              <Image
+                source={{ uri: CROP_PHOTOS[passedReq?.cropName || 'Red Onion'] || 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=400' }}
+                style={{ width: 36, height: 36, borderRadius: 8 }}
+              />
+              <View style={{ flex: 1 }}>
+                <Text style={styles.summaryCrop}>{passedReq?.cropName || 'Red Onion'} (Grade {passedReq?.grade || 'A'})</Text>
+                <Text style={styles.summaryDemand}>
+                  Target: {passedReq?.requiredQuantity || 25} {passedReq?.quantityUnit || 'quintal'} • Max ₹{passedReq?.maxTargetPricePerUnit || 2400}/{passedReq?.quantityUnit || 'quintal'}
+                </Text>
+              </View>
             </View>
             <View style={styles.statusBadge}>
               <Text style={styles.statusBadgeText}>MATCHED</Text>
@@ -124,13 +139,21 @@ export default function BulkMatchDiscoveryScreen({ navigation, route }: any) {
                   </View>
                 </View>
 
-                {/* Supplier Name & Location */}
-                <Text style={styles.supplierName}>{supplier.supplierName}</Text>
-                <View style={styles.locRow}>
-                  <Ionicons name="navigate-outline" size={13} color={Colors.textSecondary} />
-                  <Text style={styles.supplierLoc}>
-                    {supplier.location} • {supplier.distanceKm} km away
-                  </Text>
+                {/* Supplier Name, Product Photo & Location */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginTop: 4 }}>
+                  <Image
+                    source={{ uri: CROP_PHOTOS[supplier.cropName] || 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=400' }}
+                    style={{ width: 32, height: 32, borderRadius: 6 }}
+                  />
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.supplierName}>{supplier.supplierName} • {supplier.cropName}</Text>
+                    <View style={styles.locRow}>
+                      <Ionicons name="navigate-outline" size={13} color={Colors.textSecondary} />
+                      <Text style={styles.supplierLoc}>
+                        {supplier.location} • {supplier.distanceKm} km away
+                      </Text>
+                    </View>
+                  </View>
                 </View>
 
                 {/* Metrics Grid */}

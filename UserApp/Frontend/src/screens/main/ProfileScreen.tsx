@@ -14,21 +14,24 @@ import * as ImagePicker from 'expo-image-picker';
 import { apiClient } from '../../services/apiClient';
 
 import { useLanguage, SupportedLanguage } from '../../context/LanguageContext';
+import { useLocation } from '../../context/LocationContext';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
 
 export default function ProfileScreen() {
   const navigation = useNavigation<Nav>();
-  const { user, logout } = useAuth();
+  const { user, updateUser, logout } = useAuth();
   const { currentLanguageOption, setLanguage, t } = useLanguage();
+  const { savedAddresses, currentAddress } = useLocation();
 
   const displayName = user?.fullName || (user?.phone ? `Buyer ${user.phone}` : 'Valued Buyer');
   const displayContact = user?.phone ? `${user.phone}${user.email ? ` • ${user.email}` : ''}` : 'MandiKart Member';
   const initialLetter = displayName.charAt(0).toUpperCase() || 'B';
 
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
-  const [avatarUri, setAvatarUri] = useState<string | null>(user?.avatarUrl || null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const displayAvatar = user?.avatarUrl;
 
   const handlePickAvatar = async () => {
     try {
@@ -39,7 +42,7 @@ export default function ProfileScreen() {
       }
 
       const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        mediaTypes: ['images'],
         allowsEditing: true,
         aspect: [1, 1],
         quality: 0.7,
@@ -47,13 +50,13 @@ export default function ProfileScreen() {
 
       if (!result.canceled && result.assets[0]?.uri) {
         const localUri = result.assets[0].uri;
-        setAvatarUri(localUri);
+        updateUser({ avatarUrl: localUri });
         setUploadingAvatar(true);
 
         const uploadRes = await apiClient.storage.uploadImage(localUri, 'avatars');
         setUploadingAvatar(false);
         if (uploadRes?.url) {
-          setAvatarUri(uploadRes.url);
+          updateUser({ avatarUrl: uploadRes.url });
           Alert.alert(
             'Photo Uploaded! 📸',
             `Your profile photo was compressed to WebP and saved securely.\nStorage saved: ${uploadRes.savingsPercent}%`
@@ -126,8 +129,8 @@ export default function ProfileScreen() {
             onPress={handlePickAvatar}
             activeOpacity={0.8}
           >
-            {avatarUri ? (
-              <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+            {displayAvatar ? (
+              <Image source={{ uri: displayAvatar }} style={styles.avatarImage} />
             ) : (
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>{initialLetter}</Text>
@@ -147,6 +150,17 @@ export default function ProfileScreen() {
               </View>
             </View>
             <Text style={styles.userContact}>{displayContact}</Text>
+
+            {/* Active Delivery Location Indicator */}
+            <TouchableOpacity
+              style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}
+              onPress={() => navigation.navigate('DeliveryAddress' as any)}
+            >
+              <Ionicons name="location" size={13} color={Colors.primary} />
+              <Text style={{ fontSize: 12, fontWeight: '600', color: Colors.primary }} numberOfLines={1}>
+                Deliver to: {currentAddress ? (currentAddress.formattedAddress) : 'Pune, Maharashtra'}
+              </Text>
+            </TouchableOpacity>
 
             {/* Loyalty Badge */}
             <View style={styles.loyaltyTag}>
@@ -185,10 +199,10 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.statCard}
-            onPress={() => navigation.navigate('AddAddress', {})}
+            onPress={() => navigation.navigate('DeliveryAddress' as any)}
           >
             <Ionicons name="location" size={20} color="#3B82F6" />
-            <Text style={styles.statNumber}>3</Text>
+            <Text style={styles.statNumber}>{savedAddresses.length}</Text>
             <Text style={styles.statLabel}>Addresses</Text>
           </TouchableOpacity>
 
@@ -265,7 +279,7 @@ export default function ProfileScreen() {
             </View>
             <View style={{ flex: 1 }}>
               <Text style={styles.menuLabel}>Market Analytics & GMV Graphs</Text>
-              <Text style={{ fontSize: 11, color: '#16A34A', fontWeight: '500' }}>Live Firebase & Mandi telemetry</Text>
+              <Text style={{ fontSize: 11, color: '#16A34A', fontWeight: '500' }}>Mandi telemetry</Text>
             </View>
             <Ionicons name="chevron-forward" size={16} color={Colors.textDisabled} />
           </TouchableOpacity>
@@ -290,7 +304,7 @@ export default function ProfileScreen() {
 
           <TouchableOpacity
             style={styles.menuRow}
-            onPress={() => navigation.navigate('AddAddress', {})}
+            onPress={() => navigation.navigate('DeliveryAddress' as any)}
           >
             <View style={styles.menuIconBg}>
               <Ionicons name="location-outline" size={18} color={Colors.primary} />

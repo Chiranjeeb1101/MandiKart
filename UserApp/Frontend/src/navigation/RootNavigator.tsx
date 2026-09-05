@@ -11,6 +11,7 @@ import ProductDetailsScreen from '../screens/product/ProductDetailsScreen';
 import FarmerProfileScreen from '../screens/product/FarmerProfileScreen';
 import SearchScreen from '../screens/product/SearchScreen';
 import AllCategoriesScreen from '../screens/main/CategoriesScreen';
+import ReviewListScreen from '../screens/product/ReviewListScreen';
 
 import DeliveryAddressScreen from '../screens/checkout/DeliveryAddressScreen';
 import CheckoutReviewScreen from '../screens/checkout/CheckoutReviewScreen';
@@ -88,6 +89,8 @@ export default function RootNavigator() {
           <RootStack.Screen name="BulkRequirement" component={BulkRequirementScreen as any} />
           <RootStack.Screen name="BulkMatchDiscovery" component={BulkMatchDiscoveryScreen as any} />
           <RootStack.Screen name="Analytics" component={AnalyticsDashboardScreen as any} />
+        </>
+      )}
         </>
       )}
     </RootStack.Navigator>

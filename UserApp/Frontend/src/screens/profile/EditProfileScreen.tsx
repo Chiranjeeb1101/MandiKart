@@ -8,6 +8,7 @@ import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { Colors, Spacing, BorderRadius, Shadows } from '../../theme';
 import PrimaryButton from '../../components/PrimaryButton';
+import { useAuth } from '../../context/AuthContext';
 
 type Gender = 'Male' | 'Female' | 'Other';
 
@@ -19,17 +20,19 @@ const AVATAR_OPTIONS = [
 ];
 
 export default function EditProfileScreen({ navigation }: any) {
+  const { user, updateUser } = useAuth();
+
   // Form State
-  const [fullName, setFullName] = useState('Ramesh Sharma');
-  const [email, setEmail] = useState('ramesh.sharma@example.com');
-  const [phone, setPhone] = useState('9876543210');
+  const [fullName, setFullName] = useState(user?.fullName || 'Ramesh Sharma');
+  const [email, setEmail] = useState(user?.email || 'ramesh.sharma@example.com');
+  const [phone, setPhone] = useState(user?.phone ? user.phone.replace(/^\+91\s?/, '') : '9876543210');
   const [gender, setGender] = useState<Gender>('Male');
   const [dob, setDob] = useState('14 Aug 1994');
-  const [preferredCity, setPreferredCity] = useState('Pune, Maharashtra');
+  const [preferredCity, setPreferredCity] = useState(user?.city ? `${user.city}, ${user.state || ''}` : 'Pune, Maharashtra');
 
   // Avatar & Image State
   const [selectedAvatar, setSelectedAvatar] = useState(AVATAR_OPTIONS[0]);
-  const [userImageUri, setUserImageUri] = useState<string | null>(null);
+  const [userImageUri, setUserImageUri] = useState<string | null>(user?.avatarUrl || null);
   const [avatarModalVisible, setAvatarModalVisible] = useState(false);
 
   // Preference toggles
@@ -57,9 +60,11 @@ export default function EditProfileScreen({ navigation }: any) {
       });
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
-        setUserImageUri(result.assets[0].uri);
+        const pickedUri = result.assets[0].uri;
+        setUserImageUri(pickedUri);
+        updateUser({ avatarUrl: pickedUri });
         setAvatarModalVisible(false);
-        Alert.alert('Photo Selected! 📸', 'Your new profile photo has been selected from gallery.');
+        Alert.alert('Photo Selected! 📸', 'Your new profile photo has been updated.');
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to pick image from gallery.');
@@ -79,6 +84,13 @@ export default function EditProfileScreen({ navigation }: any) {
       Alert.alert('Invalid Phone', 'Please enter a 10-digit mobile number.');
       return;
     }
+
+    updateUser({
+      fullName,
+      email,
+      phone: `+91 ${phone}`,
+      avatarUrl: userImageUri || user?.avatarUrl,
+    });
 
     Alert.alert(
       'Profile Updated! 🎉',
