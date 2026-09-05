@@ -21,6 +21,7 @@ interface AuthContextType {
   token: string | null;
   buyerMode: BuyerMode;
   setBuyerMode: (mode: BuyerMode) => void;
+  toggleBuyerMode: () => void;
   updateUser: (updatedFields: Partial<BuyerProfile>) => void;
   signIn: (phone: string, password?: string) => Promise<{ success: boolean; error?: string }>;
   signUp: (params: {

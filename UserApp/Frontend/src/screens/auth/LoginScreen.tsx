@@ -118,11 +118,6 @@ export default function LoginScreen({ navigation }: Props) {
             <Text style={styles.title}>Welcome back! 👋</Text>
             <Text style={styles.subtitle}>Sign in to access fresh produce & daily mandi prices</Text>
           </View>
-
-<<<<<<< HEAD
-=======
-
->>>>>>> 376ac94 (feat(user-app): remove demo buttons, fix product image fallbacks, update negotiation flow and prepare for realtime backend)
           {/* Login Method Tabs */}
           <View style={styles.tabContainer}>
             <TouchableOpacity

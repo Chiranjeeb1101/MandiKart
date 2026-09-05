@@ -91,8 +91,6 @@ export default function RootNavigator() {
           <RootStack.Screen name="Analytics" component={AnalyticsDashboardScreen as any} />
         </>
       )}
-        </>
-      )}
     </RootStack.Navigator>
   );
 }
