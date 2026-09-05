@@ -17,11 +17,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
-    { id: 'farmers', label: 'Farmer Directory', icon: 'agriculture', badge: '1,420', badgeType: 'info' },
+    { id: 'farmers', label: 'Farmer Directory', icon: 'agriculture', badge: '1', badgeType: 'info' },
     { id: 'orders', label: 'Orders & Settlements', icon: 'receipt_long' },
-    { id: 'disputes', label: 'Dispute Resolution', icon: 'gavel', badge: '3 Open', badgeType: 'warning' },
+    { id: 'disputes', label: 'Dispute Resolution', icon: 'gavel', badge: '1 Open', badgeType: 'warning' },
     { id: 'logistics', label: 'Logistics Overview', icon: 'local_shipping' },
     { id: 'ai-insights', label: 'AI Intelligence', icon: 'psychology', badge: 'Live', badgeType: 'success' },
+    { id: 'push-notifications', label: 'Push Notifications', icon: 'campaign', badge: 'Broadcast', badgeType: 'success' },
     { id: 'settings', label: 'System Settings', icon: 'settings' },
   ];
 

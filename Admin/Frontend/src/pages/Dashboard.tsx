@@ -6,6 +6,7 @@ import { KpiCard } from '../components/KpiCard';
 import { RecentOrdersTable } from '../components/RecentOrdersTable';
 import { AiInsightsCard } from '../components/AiInsightsCard';
 import { GeoActivityCard } from '../components/GeoActivityCard';
+import { PushNotificationModal } from '../components/PushNotificationModal';
 
 interface DashboardProps {
   user: AdminUser;
@@ -20,6 +21,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
   // Modal States
   const [showExportModal, setShowExportModal] = useState(false);
   const [showActionItemModal, setShowActionItemModal] = useState(false);
+  const [showPushModal, setShowPushModal] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<OrderSummary | null>(null);
   const [selectedAiInsight, setSelectedAiInsight] = useState<AiInsight | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
@@ -45,8 +47,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
     {
       id: 'kpi-1',
       label: 'Gross Market Volume',
-      value: '₹1.48 Cr',
-      change: '+14.2%',
+      value: '₹1',
+      change: '+1%',
       isPositive: true,
       period: 'last month',
       iconName: 'payments',
@@ -54,8 +56,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
     {
       id: 'kpi-2',
       label: 'Verified Farmers',
-      value: '1,420',
-      change: '+8.6%',
+      value: '1',
+      change: '+1%',
       isPositive: true,
       period: 'last month',
       iconName: 'agriculture',
@@ -63,8 +65,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
     {
       id: 'kpi-3',
       label: 'Active Orders',
-      value: '342',
-      change: '+18.4%',
+      value: '1',
+      change: '+1%',
       isPositive: true,
       period: 'last month',
       iconName: 'shopping_cart',
@@ -72,8 +74,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
     {
       id: 'kpi-4',
       label: 'Spoilage Risk Rate',
-      value: '0.8%',
-      change: '-4.1%',
+      value: '1%',
+      change: '-1%',
       isPositive: true,
       period: 'last month',
       iconName: 'eco',
@@ -88,54 +90,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
       farmerName: 'Ramesh Patel (Nasik Mandi)',
       buyerName: 'BigBasket Bulk Ops',
       produceName: 'Tomatoes (Hybrid Grade A)',
-      quantityKg: 2500,
-      totalAmount: 87500,
+      quantityKg: 1,
+      totalAmount: 1,
       status: 'IN_TRANSIT',
       timestamp: '10 mins ago',
-    },
-    {
-      id: 'ord-2',
-      orderNumber: '#MK-9401',
-      farmerName: 'Gurpreet Singh (Ludhiana Mandi)',
-      buyerName: 'Punjab Organic Retails',
-      produceName: 'Wheat (Sharbati Gold)',
-      quantityKg: 5000,
-      totalAmount: 165000,
-      status: 'PICKUP_SCHEDULED',
-      timestamp: '25 mins ago',
-    },
-    {
-      id: 'ord-3',
-      orderNumber: '#MK-9400',
-      farmerName: 'Anita Devi (Patna Mandi)',
-      buyerName: 'FreshCart Direct Consumer',
-      produceName: 'Potato (Jyoti Fresh)',
-      quantityKg: 1200,
-      totalAmount: 31200,
-      status: 'COMPLETED',
-      timestamp: '1 hour ago',
-    },
-    {
-      id: 'ord-4',
-      orderNumber: '#MK-9399',
-      farmerName: 'Suresh Kumar (Nagpur Mandi)',
-      buyerName: 'AgroExport Co-Op',
-      produceName: 'Oranges (Nagpur Grade 1)',
-      quantityKg: 800,
-      totalAmount: 56000,
-      status: 'DISPUTED',
-      timestamp: '2 hours ago',
-    },
-    {
-      id: 'ord-5',
-      orderNumber: '#MK-9398',
-      farmerName: 'Vikram Jadhav (Pune Mandi)',
-      buyerName: 'Hotel Taj Procurement',
-      produceName: 'Onion (Red Nashik)',
-      quantityKg: 3000,
-      totalAmount: 75000,
-      status: 'DELIVERED',
-      timestamp: '3 hours ago',
     },
   ]);
 
@@ -144,28 +102,17 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
     {
       id: 'ai-1',
       title: 'Spoilage Alert: Transport Truck #LOD-402',
-      description: 'Reefer container temp spiked to 24°C on Nagpur → Mumbai route. Spoilage risk for 800kg Oranges.',
+      description: 'Reefer container temp spiked to 24°C on Nagpur → Mumbai route. Spoilage risk for 1kg Oranges.',
       severity: 'HIGH',
       recommendedAction: 'Reroute to Cold Storage Hub (Thane #2)',
       category: 'SPOILAGE_RISK',
       timestamp: '5m ago',
     },
-    {
-      id: 'ai-2',
-      title: 'Price Volatility: Tomato Crop Forecast',
-      description: 'Heavy rains in Kolar & Nashik expected to reduce arrivals by 18%. Price surge of +12% forecasted for Delhi-NCR.',
-      severity: 'MEDIUM',
-      recommendedAction: 'Notify wholesale buyers to pre-book',
-      category: 'PRICE_VOLATILITY',
-      timestamp: '18m ago',
-    },
   ]);
 
   // Mock Regional Data
   const regionalActivity: RegionalActivity[] = [
-    { region: 'West Zone', state: 'Maharashtra & Gujarat', activeFarmers: 580, activeBuyers: 320, volumeTons: 650, healthScore: 94 },
-    { region: 'North Zone', state: 'Punjab & Haryana', activeFarmers: 490, activeBuyers: 210, volumeTons: 820, healthScore: 91 },
-    { region: 'East Zone', state: 'Bihar & West Bengal', activeFarmers: 350, activeBuyers: 180, volumeTons: 410, healthScore: 88 },
+    { region: 'West Zone', state: 'Maharashtra & Gujarat', activeFarmers: 1, activeBuyers: 1, volumeTons: 1, healthScore: 99 },
   ];
 
   // Handler for Exporting CSV/JSON Audit File
@@ -274,7 +221,14 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
               </p>
             </div>
 
-            <div className="flex items-center gap-2.5">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <button
+                onClick={() => setShowPushModal(true)}
+                className="px-3.5 py-1.5 bg-emerald-400 hover:bg-emerald-300 text-black rounded-lg text-xs font-black transition-colors flex items-center gap-1.5 shadow-sm"
+              >
+                <span className="material-symbols-outlined text-sm font-bold">campaign</span>
+                <span>Push App Alert</span>
+              </button>
               <button
                 onClick={() => setShowExportModal(true)}
                 className="px-3.5 py-1.5 bg-black hover:bg-slate-900 text-white border border-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5"
@@ -592,6 +546,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
           </div>
         </div>
       )}
+
+      {/* Push Notification Broadcast Modal */}
+      <PushNotificationModal
+        isOpen={showPushModal}
+        onClose={() => setShowPushModal(false)}
+        onSendSuccess={(payload) => {
+          setToastMessage(`Push alert "${payload.title}" broadcasted to ${payload.recipientCount} devices!`);
+          setTimeout(() => setToastMessage(null), 5000);
+        }}
+      />
 
       {/* ── TOAST NOTIFICATION OVERLAY ── */}
       {toastMessage && (

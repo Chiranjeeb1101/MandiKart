@@ -137,6 +137,18 @@ export const Header: React.FC<HeaderProps> = ({ user, onOpenMobileSidebar, onLog
           <span>System Active</span>
         </div>
 
+        {/* Push Broadcast Button */}
+        <button
+          onClick={() => {
+            if (onNavigateTab) onNavigateTab('push-notifications');
+          }}
+          className="p-1.5 text-white hover:bg-emerald-950 border border-emerald-400 hover:border-emerald-300 rounded-lg transition-colors relative flex items-center gap-1 font-mono text-xs font-bold text-emerald-400"
+          title="Push Broadcast Control Center"
+        >
+          <span className="material-symbols-outlined text-emerald-400">campaign</span>
+          <span className="hidden xl:inline text-[11px]">Push App Alert</span>
+        </button>
+
         {/* Notifications Button */}
         <div className="relative">
           <button
