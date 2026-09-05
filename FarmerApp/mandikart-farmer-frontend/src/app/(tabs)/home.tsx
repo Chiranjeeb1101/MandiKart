@@ -1,19 +1,21 @@
 /**
- * MandiKart — Home Dashboard Screen (UI UX Pro Max Redesign)
- * 
- * Features:
- * - Top App Bar: Farmer greeting, realtime detailed GPS address, interactive Notification Drawer
- * - Top Middle: "Today at a Glance" stat cards (Active Orders, Pickup Schedule, Monthly Earnings)
- * - Under Glance: Integrated Search Bar with interactive Voice Search & live filtering
- * - Hero "Sell Today" banner with "Add Product" CTA routing to /(tabs)/sell
- * - "Best Opportunity for You" 2-Sided Segmented Section:
- *     Side 1: "🔥 High Demanded to Sell" (Direct buyer bids & 1-tap Sell Now)
- *     Side 2: "🌱 Produce Recommendations" (High-yield crops & 1-tap Add to Produce)
- * - Working "View All" toggle expanding complete catalog of opportunities
- * - Live APMC Mandi Benchmark rates & Weather harvest advisory
+ * MandiKart Farmer App — Home Screen (UI UX Pro Max Refinement)
+ *
+ * Fully refined according to farmer UX requirements:
+ * 1. Farmer Profile Header: Tighter, compact (48x48 avatar, 42x42 bell), aligned more to the left
+ * 2. Search Bar with Interactive Auto-Suggestions Dropdown (tap/type reveals instant crop/buyer/rates suggestions)
+ * 3. Earnings Hero Card with Interactive "Financial Breakdown & Monthly Target Manager" modal
+ *    - Allows farmer to dynamically change monthly target with presets & stepper
+ *    - Displays itemized financial stats (Gross, Middleman Saved, Net Received, Escrow Pending)
+ * 4. Elevated tactile shadows on Quick Action cards and Your Crops cards
+ * 5. Important Updates section removed per request
+ * 6. "High Demanded to Sell" and "Produce Recommendations" 2-sided segmented intelligence section
+ *    - Side 1: Direct corporate buyer bids with 1-tap "Sell Now" navigation
+ *    - Side 2: Regional crop intelligence & margin forecasts with 1-tap "Add to Produce"
+ * 7. Smooth, fluid scrolling with bottom tab bar clearance (no screen sticking or cutoff)
  */
 
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   View,
   Text,
@@ -24,43 +26,48 @@ import {
   Modal,
   ScrollView,
   Alert,
+  Platform,
+  StatusBar,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
+import { LinearGradient } from 'expo-linear-gradient';
 import {
-  Bell,
   MapPin,
-  Plus,
-  Star,
-  Flame,
-  ArrowRight,
-  FileText,
-  Truck,
+  Bell,
+  Search,
+  Mic,
   Wallet,
   TrendingUp,
-  Mic,
-  MicOff,
-  CheckCircle2,
-  Search,
+  Leaf,
+  Sprout,
+  Tag,
+  Users,
+  BarChart3,
+  ChevronRight,
+  Flame,
+  ArrowRight,
+  Lightbulb,
+  Eye,
+  EyeOff,
   X,
+  Edit3,
   Sparkles,
   ShieldCheck,
-  ChevronRight,
-  Sun,
-  Clock,
-  Check,
+  CheckCircle2,
+  Calendar,
+  Building2,
+  Plus,
 } from 'lucide-react-native';
-import { MKScreen, MKSection, MKCard, MKButton, MKStatusBadge } from '@/components/ui';
+import { MKScreen } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
-import { useTranslation } from '@/hooks/useTranslation';
 import { useVoiceSearch } from '@/hooks/useVoiceSearch';
-import { MKColors } from '@/constants/colors';
-import { MKSpacing } from '@/constants/spacing';
 
 const FARMER_AVATAR_URI =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuDinV_e5owfh89gPtLCA76lilmicdcRz2kVnA2Yc9o1WkX48o_T_n3jQJM14Pd5TzCDO4wlsbaGX0MQobV3MiwbDMh_K5EKRmgf0eI8pRMYw_B6wqagFKWaxqrUJIgxjDZUOYpKdhuUafcuBaY-IYqkRsWsqFJBVqY9DNpM28aWfm0Bx3cC4BIZ7XuRvUVz2QESdXpE_HWcoRfFdn7bX6n8eMifz13XnCsxdFX-ybqll4FE_idueiq4kQ';
 
-const VEGGIE_BASKET_URI =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuDGWtbtdYEsJNCwEKZoi1xfJOZtPORnKD9GPoltpHd8eia8fYdHGOcijL8FHdga770RJTQzAlyHwu2wsbwtX555geY0I6OLsCVJnHMI3NO3tdHMP9YUctgl9S7vP0j7O9hSnek9ToXwIseCbKhXxVlUVQeix2P5A-k9Jo4H6Rlg7z1pLlsu7pgQsvSEkAow2Qvu0M777ZEEfveoswBRPceVJNWkptJtiy_PAbWmzMVcsTX143_2IR9_Kw';
+const HERO_PLANT_BG_URI =
+  'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=500&auto=format&fit=crop&q=80';
 
 const ONION_PHOTO_URI =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuCnSLJjSUyWgLdbXU3_H2F3g0FW9V1FkqNh60JzX2kcs1jUaS2rYWSwYwXwhowBfWfwhrhZjqYfxllcN5Xdcsts1A6kAt5O4LmQPny8e04Fp0y84FS6TpCEv6Ead9nuauzJ7PzfgHsXoqM7YL56z7eugidEni2b94tc7VaVKHgRQpgJqD0FmceLE7P-1C9I838IelI2xmVlACO7rX5mVD65970EQP4WrdCAJY1P_9-3zSyE78Vh_QrNBA';
@@ -71,1968 +78,1903 @@ const TOMATO_PHOTO_URI =
 const POTATO_PHOTO_URI =
   'https://lh3.googleusercontent.com/aida-public/AB6AXuC10xdTnKHpvZre-LhDKBTaZdjrNRAMZKasKH7sJK1nrX10RGhhP2dGCyuePJimnKwCfuueO0HuC0216Hy6PAuxsQXjsHtSvKxV7SDDJosrU95YRzT4oVRjJqioCNfX15LiH_iPMrU7YeT2od9_cv81dzfyjd6LRPtPRGTt1AbXyWGTo6qD1K7KloqXwfi7HTDD6X5PP72m_RLR77_lBfwoQWyjBj1HvTxGZsl55rQEEpNHyiMzAeHoHQ';
 
-interface NotificationItem {
-  id: string;
-  title: string;
-  description: string;
-  time: string;
-  type: 'order' | 'bid' | 'weather' | 'mandi';
-  unread: boolean;
-  actionText?: string;
-  actionRoute?: string;
-}
+const GARLIC_PHOTO_URI =
+  'https://images.unsplash.com/photo-1615477550926-db6d36e29780?w=300&auto=format&fit=crop&q=80';
+
+const CORN_PHOTO_URI =
+  'https://images.unsplash.com/photo-1551754655-cd27e38d2076?w=300&auto=format&fit=crop&q=80';
+
+const PEAS_PHOTO_URI =
+  'https://images.unsplash.com/photo-1592394533824-9440e5d68530?w=300&auto=format&fit=crop&q=80';
+
+const SEARCH_SUGGESTIONS = [
+  { id: 's1', label: '🧅 Nashik Red Onion (High Demand)', type: 'crop', query: 'Onion', route: '/(tabs)/sell' },
+  { id: 's2', label: '🍅 Hybrid Fresh Tomato (₹24/kg)', type: 'rate', query: 'Tomato', route: '/sell/best-options' },
+  { id: 's3', label: '🏢 Reliance Fresh Sourcing Hub', type: 'buyer', query: 'Reliance', route: '/sell/requests' },
+  { id: 's4', label: '🥔 Jyoti Washed Potato (Clean Table Quality)', type: 'crop', query: 'Potato', route: '/(tabs)/sell' },
+  { id: 's5', label: '🌾 APMC Wheat Benchmark Rates', type: 'rate', query: 'Wheat', route: '/sell/best-options' },
+  { id: 's6', label: '🚛 Farmgate Transit Vehicle Tracking', type: 'service', query: 'Tracking', route: '/orders/track-vehicle' },
+];
 
 export default function HomeScreen() {
   const router = useRouter();
   const { user } = useAuthStore();
-  const { language } = useTranslation();
 
-  // Search & Voice Search State
+  // Search & Suggestions State
   const [searchQuery, setSearchQuery] = useState('');
-  const { isListening, transcript, match, startListening, stopListening, resetVoiceSearch } =
+  const [searchFocused, setSearchFocused] = useState(false);
+
+  // Earnings & Monthly Target State
+  const [showEarningsAmount, setShowEarningsAmount] = useState(true);
+  const [monthlyTarget, setMonthlyTarget] = useState(100000);
+  const [tempTargetInput, setTempTargetInput] = useState('100000');
+  const [earningsModalVisible, setEarningsModalVisible] = useState(false);
+
+  // Two-Sided Intelligence Section State ('high_demand' vs 'recommendations')
+  const [activeIntelTab, setActiveIntelTab] = useState<'high_demand' | 'recommendations'>('high_demand');
+
+  // Voice Search
+  const { isListening, transcript, startListening, stopListening, resetVoiceSearch } =
     useVoiceSearch();
+  const [voiceModalVisible, setVoiceModalVisible] = useState(false);
 
-  // Two-Sided Best Opportunity State ('high_demand' vs 'recommendations')
-  const [opportunitySide, setOpportunitySide] = useState<'high_demand' | 'recommendations'>(
-    'high_demand'
-  );
-  const [showAllOpportunities, setShowAllOpportunities] = useState(false);
-
-  // Notification Drawer State
-  const [notificationModalVisible, setNotificationModalVisible] = useState(false);
-  const [notifications, setNotifications] = useState<NotificationItem[]>([
-    {
-      id: 'notif_1',
-      title: '🚛 Pickup Vehicle En Route',
-      description:
-        'Tata Ace (MH 15 BX 4022) is 6.2 km away from your farmgate for 1,000 KG Onion pickup.',
-      time: '10m ago',
-      type: 'order',
-      unread: true,
-      actionText: 'Track Live Vehicle',
-      actionRoute: '/orders/track-vehicle',
-    },
-    {
-      id: 'notif_2',
-      title: '💼 New Direct Corporate Bid',
-      description:
-        'Reliance Retail Mandi Hub offered ₹28.50/kg for Grade A Onion (+₹4.50 above APMC average).',
-      time: '35m ago',
-      type: 'bid',
-      unread: true,
-      actionText: 'View & Accept Offer',
-      actionRoute: '/(tabs)/sell',
-    },
-    {
-      id: 'notif_3',
-      title: '📈 APMC Mandi Surge Alert',
-      description:
-        'Nashik Red Onion price surged +4.2% today to ₹2,450/q with 15+ verified buyers bidding.',
-      time: '2h ago',
-      type: 'mandi',
-      unread: true,
-      actionText: 'View Market Rates',
-      actionRoute: '/(tabs)/produce',
-    },
-    {
-      id: 'notif_4',
-      title: '☀️ Optimal Harvest Weather',
-      description:
-        'Clear skies for next 72 hours. Humidity 48%. Ideal window for curing and farmgate dispatch.',
-      time: '4h ago',
-      type: 'weather',
-      unread: false,
-    },
-  ]);
-
-  const farmerName = user?.name ? user.name.split(' ')[0] : user?.phone ? user.phone : 'Farmer';
-  const locationName = (user as any)?.village
+  const farmerName = user?.firstName || (user?.name ? user.name.split(' ')[0] : user?.phone ? user.phone : 'Ramesh');
+  const farmerLocation = (user as any)?.village
     ? `${(user as any).village}, ${(user as any).city || user?.district || ''}, ${user?.state || ''}`
     : user?.district
     ? `${user.district}, ${user?.state || 'Maharashtra'}`
-    : user?.state
-    ? user.state
-    : 'Dindori, Nashik, Maharashtra';
+    : user?.state || 'Nashik, Maharashtra';
 
-  const [notifFilter, setNotifFilter] = useState<'all' | 'unread' | 'orders'>('all');
-  const [notifToast, setNotifToast] = useState<string | null>(null);
+  const targetProgressPct = Math.min(100, Math.round((48500 / monthlyTarget) * 100));
 
-  const unreadCount = notifications.filter((n) => n.unread).length;
-
-  function markAllNotificationsRead() {
-    setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
-    setNotifToast('All notifications marked as read');
-    setTimeout(() => {
-      setNotifToast(null);
-    }, 2500);
-  }
-
-  function handleNotificationPress(notif: (typeof notifications)[0]) {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === notif.id ? { ...n, unread: false } : n))
+  const filteredSuggestions = useMemo(() => {
+    if (!searchQuery.trim()) return SEARCH_SUGGESTIONS;
+    return SEARCH_SUGGESTIONS.filter((s) =>
+      s.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.query.toLowerCase().includes(searchQuery.toLowerCase())
     );
-    if (notif.actionRoute) {
-      setNotificationModalVisible(false);
-      router.push(notif.actionRoute as any);
+  }, [searchQuery]);
+
+  const handleSelectSuggestion = (item: (typeof SEARCH_SUGGESTIONS)[0]) => {
+    setSearchQuery(item.query);
+    setSearchFocused(false);
+    router.push(item.route as any);
+  };
+
+  const handleTriggerVoice = () => {
+    setVoiceModalVisible(true);
+    startListening();
+  };
+
+  const handleCloseVoice = () => {
+    stopListening();
+    resetVoiceSearch();
+    setVoiceModalVisible(false);
+  };
+
+  const handleSaveMonthlyTarget = (newVal?: number) => {
+    const targetVal = newVal !== undefined ? newVal : parseInt(tempTargetInput, 10);
+    if (isNaN(targetVal) || targetVal < 10000) {
+      Alert.alert('Invalid Target', 'Please enter a target amount of at least ₹10,000.');
+      return;
     }
-  }
+    setMonthlyTarget(targetVal);
+    setTempTargetInput(targetVal.toString());
+    Alert.alert('Target Updated', `Your monthly earning goal is now set to ₹${targetVal.toLocaleString()}.`);
+  };
 
-  const displayNotifications = notifications.filter((n) => {
-    if (notifFilter === 'unread') return n.unread;
-    if (notifFilter === 'orders') return n.type === 'order' || n.type === 'mandi';
-    return true;
-  });
-
-  // High Demanded Crops Data
-  const highDemandProducts = [
-    {
-      id: 'hd_1',
-      name: 'Onion • Grade A',
-      subname: 'Nashik Red Garwa Variety',
-      imageUri: ONION_PHOTO_URI,
-      match: '94% Match',
-      sellingPrice: '₹24.00 /kg',
-      netReturn: '₹22.00 /kg',
-      transport: '₹2.00 /kg',
-      demand: 'Very High',
-      buyers: '18 Active Buyers',
-      cropKey: 'Onion',
-      qty: '1,000 KG',
-      grade: 'Grade A',
-    },
-    {
-      id: 'hd_2',
-      name: 'Hybrid Tomato • Grade A',
-      subname: 'Semi-Ripe Fresh Harvest',
-      imageUri: TOMATO_PHOTO_URI,
-      match: '91% Match',
-      sellingPrice: '₹23.00 /kg',
-      netReturn: '₹21.50 /kg',
-      transport: '₹1.50 /kg',
-      demand: 'High',
-      buyers: '14 Active Buyers',
-      cropKey: 'Tomato',
-      qty: '500 KG',
-      grade: 'Grade A',
-    },
-    {
-      id: 'hd_3',
-      name: 'Jyoti Potato • Grade A',
-      subname: 'Clean Washed Table Quality',
-      imageUri: POTATO_PHOTO_URI,
-      match: '88% Match',
-      sellingPrice: '₹22.00 /kg',
-      netReturn: '₹20.20 /kg',
-      transport: '₹1.80 /kg',
-      demand: 'High',
-      buyers: '11 Active Buyers',
-      cropKey: 'Potato',
-      qty: '800 KG',
-      grade: 'Grade A',
-    },
-    {
-      id: 'hd_4',
-      name: 'Green Chilli (G-4 Hybrid)',
-      subname: 'Pungent Fresh Export Spec',
-      imageUri:
-        'https://images.unsplash.com/photo-1588252303782-cb80119abd6d?w=400&auto=format&fit=crop&q=80',
-      match: '96% Match',
-      sellingPrice: '₹68.00 /kg',
-      netReturn: '₹63.50 /kg',
-      transport: '₹4.50 /kg',
-      demand: 'Surging',
-      buyers: '22 Active Buyers',
-      cropKey: 'Green Chilli',
-      qty: '400 KG',
-      grade: 'Grade A',
-    },
-  ];
-
-  // Produce Recommendations Data
-  const produceRecommendations = [
-    {
-      id: 'rec_1',
-      cropName: 'Green Chilli (G-4 Hybrid)',
-      badge: 'High Profit (+35%)',
-      badgeColor: '#15803D',
-      expectedPrice: '₹62 - ₹68 /kg',
-      seasonWindow: 'Sow next 14 days',
-      cycle: '65 Days Cycle',
-      advice: 'Strong bulk demand from Mumbai & Pune retail aggregators. High heat tolerance.',
-      targetCrop: 'Green Chilli',
-    },
-    {
-      id: 'rec_2',
-      cropName: 'Garlic (Yamuna Safed)',
-      badge: 'Surging Demand',
-      badgeColor: '#C2410C',
-      expectedPrice: '₹135 - ₹150 /kg',
-      seasonWindow: 'Optimal Sowing Window',
-      cycle: '90 Days Cycle',
-      advice: 'Lowest storage perishability. Verified buyer contracts available in Nashik.',
-      targetCrop: 'Garlic',
-    },
-    {
-      id: 'rec_3',
-      cropName: 'Ginger (Mahim Variety)',
-      badge: 'Export Standard',
-      badgeColor: '#4338CA',
-      expectedPrice: '₹80 - ₹95 /kg',
-      seasonWindow: 'Early Season Prep',
-      cycle: '120 Days Cycle',
-      advice: 'Resistant to rhizome rot. Direct sourcing agreements open for FPO farmers.',
-      targetCrop: 'Ginger',
-    },
-  ];
-
-  // Live filtered items based on search query
-  const effectiveQuery = searchQuery.trim().toLowerCase();
-  const filteredHighDemand = highDemandProducts.filter(
-    (p) =>
-      p.name.toLowerCase().includes(effectiveQuery) ||
-      p.subname.toLowerCase().includes(effectiveQuery) ||
-      p.cropKey.toLowerCase().includes(effectiveQuery)
-  );
-  const filteredRecommendations = produceRecommendations.filter(
-    (r) =>
-      r.cropName.toLowerCase().includes(effectiveQuery) ||
-      r.advice.toLowerCase().includes(effectiveQuery)
-  );
+  const insets = useSafeAreaInsets();
+  const safeTopPadding = Math.max(
+    insets.top,
+    Platform.OS === 'android' ? (StatusBar.currentHeight || 28) : 20
+  ) + 10;
 
   return (
-    <MKScreen scrollable contentContainerStyle={styles.screenScrollContent}>
-      {/* ── 1. Top App Bar ── */}
-      <View style={styles.topAppBar}>
-        <Pressable
-          style={styles.farmerProfileHeader}
-          onPress={() => router.push('/more/profile')}
-        >
-          <View style={styles.avatarWrapper}>
-            <Image source={{ uri: FARMER_AVATAR_URI }} style={styles.avatarImage} />
-            <View style={styles.onlineBadgeDot} />
+    <MKScreen
+      scrollable
+      contentContainerStyle={[
+        styles.screenScrollContent,
+        { paddingTop: safeTopPadding },
+      ]}
+      bottomClearanceExtra={24}
+    >
+      {/* ── 1. Farmer Profile Header (Shifted Left & Compact) ─ */}
+      <View style={styles.headerRow}>
+        <View style={styles.headerLeftCol}>
+          {/* Circular Avatar with Online Badge */}
+          <View style={styles.avatarWrap}>
+            <Image
+              source={{ uri: user?.avatarUri || FARMER_AVATAR_URI }}
+              style={styles.avatarImg}
+            />
+            <View style={styles.onlineBadge} />
           </View>
-          <View style={styles.greetingContainer}>
-            <Text numberOfLines={1} style={styles.greetingTitle}>
-              {language === 'or'
-                ? `ନମସ୍କାର, ${farmerName}`
-                : language === 'hi'
-                ? `नमस्ते, ${farmerName}`
-                : language === 'mr'
-                ? `नमस्कार, ${farmerName}`
-                : `Namaste, ${farmerName}`} 👋
+
+          {/* Greeting & Location */}
+          <View style={styles.profileTextCol}>
+            <Text numberOfLines={1} style={styles.greetingText}>
+              Namaste, {farmerName} 👋
             </Text>
             <View style={styles.locationRow}>
-              <MapPin size={13} color="#15803D" strokeWidth={2.4} />
+              <MapPin size={13} color="#16A34A" strokeWidth={2.4} />
               <Text numberOfLines={1} style={styles.locationText}>
-                {locationName}
+                {farmerLocation}
               </Text>
             </View>
           </View>
-        </Pressable>
+        </View>
 
-        {/* Interactive Notification Bell */}
+        {/* Circular Notification Bell */}
         <Pressable
-          style={({ pressed }) => [
-            styles.notificationBtn,
-            pressed && { transform: [{ scale: 0.92 }], opacity: 0.85 },
-          ]}
           accessibilityRole="button"
           accessibilityLabel="Notifications"
-          onPress={() => setNotificationModalVisible(true)}
+          style={({ pressed }) => [styles.bellBtn, pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] }]}
+          onPress={() => router.push('/more/notifications')}
+          hitSlop={8}
         >
-          <Bell size={20} color="#1A1C1E" strokeWidth={2.2} />
-          {unreadCount > 0 && (
-            <View style={styles.notificationBadge}>
-              <Text style={styles.notificationBadgeText}>{unreadCount}</Text>
-            </View>
-          )}
+          <Bell size={19} color="#111827" strokeWidth={2.2} />
+          <View style={styles.unreadDot} />
         </Pressable>
       </View>
 
-      {/* ── 2. Top Middle Section: Today at a Glance ── */}
-      <View style={styles.glanceSectionContainer}>
-        <View style={styles.glanceHeaderRow}>
-          <Text style={styles.glanceSectionTitle}>Today at a Glance</Text>
-        </View>
-
-        <View style={styles.metricsRow}>
-          {/* Card 1: Active Orders */}
-          <Pressable
-            onPress={() => router.push('/(tabs)/orders')}
-            style={({ pressed }) => [
-              styles.metricCard,
-              pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 },
-            ]}
-          >
-            <View style={[styles.metricIconCircle, { backgroundColor: '#FFF2E8' }]}>
-              <FileText size={19} color="#D9531E" strokeWidth={2.4} />
-            </View>
-            <Text style={styles.metricBigNumber}>2</Text>
-            <Text numberOfLines={1} style={styles.metricLabel}>
-              Active Orders
-            </Text>
-            <View style={styles.metricStatusPillOrange}>
-              <Text numberOfLines={1} style={styles.metricStatusPillOrangeText}>1 En Route</Text>
-            </View>
-          </Pressable>
-
-          {/* Card 2: Pickup Schedule */}
-          <Pressable
-            onPress={() => router.push('/orders/track-vehicle')}
-            style={({ pressed }) => [
-              styles.metricCard,
-              pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 },
-            ]}
-          >
-            <View style={[styles.metricIconCircle, { backgroundColor: '#E8F5E9' }]}>
-              <Truck size={19} color="#15803D" strokeWidth={2.4} />
-            </View>
-            <Text numberOfLines={1} style={styles.metricBigText}>
-              Tomorrow
-            </Text>
-            <Text numberOfLines={1} style={styles.metricLabel}>
-              Pickup Slot
-            </Text>
-            <View style={styles.metricStatusPillGreen}>
-              <Text numberOfLines={1} style={styles.metricStatusPillGreenText}>08:30 AM</Text>
-            </View>
-          </Pressable>
-
-          {/* Card 3: Monthly Earnings */}
-          <Pressable
-            onPress={() => router.push('/earnings')}
-            style={({ pressed }) => [
-              styles.metricCard,
-              styles.metricCardLast,
-              pressed && { transform: [{ scale: 0.96 }], opacity: 0.9 },
-            ]}
-          >
-            <View style={[styles.metricIconCircle, { backgroundColor: '#E8F5E9' }]}>
-              <Wallet size={19} color="#15803D" strokeWidth={2.4} />
-            </View>
-            <Text numberOfLines={1} style={styles.metricBigTextGreen}>
-              ₹48.5k
-            </Text>
-            <Text numberOfLines={1} style={styles.metricLabel}>
-              Net Payouts
-            </Text>
-            <View style={styles.metricStatusPillGreen}>
-              <Text numberOfLines={1} style={styles.metricStatusPillGreenText}>+18% MTD</Text>
-            </View>
-          </Pressable>
-        </View>
-      </View>
-
-      {/* ── 3. Under Glance: High Aesthetic Search Bar with Voice Feature ── */}
-      <View style={styles.searchBarWrapper}>
-        <View style={styles.searchBarInner}>
-          <Search size={20} color="#64748B" style={styles.searchIcon} />
+      {/* ── 2. Search Bar with Live Suggestions Dropdown ────── */}
+      <View style={styles.searchSectionWrap}>
+        <View style={[styles.searchBarContainer, searchFocused && styles.searchBarContainerFocused]}>
+          <Search size={19} color={searchFocused ? '#16A34A' : '#64748B'} style={styles.searchIcon} />
           <TextInput
             style={styles.searchInput}
-            placeholder="Search crops, buyers, mandi rates (e.g. Onion, Tomato)..."
+            placeholder="Search crops, buyers, mandi rates..."
             placeholderTextColor="#94A3B8"
             value={searchQuery}
             onChangeText={setSearchQuery}
+            onFocus={() => setSearchFocused(true)}
             returnKeyType="search"
           />
           {searchQuery.length > 0 && (
-            <Pressable onPress={() => setSearchQuery('')} style={styles.searchClearBtn}>
+            <Pressable onPress={() => setSearchQuery('')} hitSlop={6} style={{ padding: 4, marginRight: 2 }}>
               <X size={16} color="#64748B" />
             </Pressable>
           )}
-
-          {/* Integrated Voice Search Button */}
           <Pressable
-            onPress={isListening ? stopListening : startListening}
-            style={[styles.voiceMicBtn, isListening && styles.voiceMicBtnListening]}
             accessibilityRole="button"
-            accessibilityLabel="Voice Search"
-          >
-            {isListening ? (
-              <MicOff size={20} color="#FFFFFF" strokeWidth={2.4} />
-            ) : (
-              <Mic size={20} color="#FFFFFF" strokeWidth={2.4} />
-            )}
-          </Pressable>
-        </View>
-
-        {/* Live Speech Recognition Card */}
-        {isListening && (
-          <View style={styles.voiceListeningBanner}>
-            <View style={styles.voicePulseDot} />
-            <Text style={styles.voiceListeningText}>
-              Listening in Hindi, Odia, Marathi, English... Speak crop name now
-            </Text>
-          </View>
-        )}
-
-        {(transcript || match) && (
-          <View style={styles.voiceMatchCard}>
-            <View style={styles.voiceMatchHeader}>
-              <CheckCircle2 size={15} color="#15803D" />
-              <Text style={styles.voiceMatchHeaderText}>Voice Recognized Crop:</Text>
-            </View>
-            <Text style={styles.voiceMatchCropName}>
-              {match ? match.cropName : transcript}{' '}
-              {match?.vernacularLabel ? `(${match.vernacularLabel})` : ''}
-            </Text>
-            <View style={styles.voiceMatchActionsRow}>
-              <Pressable
-                style={styles.voiceMatchBtnPrimary}
-                onPress={() => {
-                  setSearchQuery(match?.cropName || transcript);
-                  router.push({
-                    pathname: '/sell/best-options',
-                    params: { crop: match?.cropName || transcript, qty: '1000 KG', grade: 'Grade A' },
-                  });
-                }}
-              >
-                <Text style={styles.voiceMatchBtnPrimaryText}>Find Best Buyers Now</Text>
-              </Pressable>
-              <Pressable style={styles.voiceMatchBtnSecondary} onPress={resetVoiceSearch}>
-                <Text style={styles.voiceMatchBtnSecondaryText}>Clear</Text>
-              </Pressable>
-            </View>
-          </View>
-        )}
-      </View>
-
-      {/* ── 3.5 Live Notifications & Urgent Alerts Bar ── */}
-      <View style={styles.liveNotifSection}>
-        <View style={styles.liveNotifHeaderRow}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <View style={styles.liveNotifPulseDot} />
-            <Text style={styles.liveNotifSectionTitle}>Live Alerts & Updates</Text>
-          </View>
-          <Pressable
-            onPress={() => setNotificationModalVisible(true)}
-            hitSlop={8}
-            style={{ flexDirection: 'row', alignItems: 'center', gap: 2 }}
-          >
-            <Text style={styles.liveNotifViewAllText}>
-              View all ({notifications.length})
-            </Text>
-            <ChevronRight size={13} color="#15803D" />
-          </Pressable>
-        </View>
-
-        {/* Highlight Card for Top Active Notification */}
-        {notifications.length > 0 && (
-          <Pressable
-            style={({ pressed }) => [
-              styles.liveNotifCard,
-              pressed && { opacity: 0.88 },
-            ]}
-            onPress={() => handleNotificationPress(notifications[0])}
+            accessibilityLabel="Voice search"
+            style={({ pressed }) => [styles.micCircleBtn, pressed && { transform: [{ scale: 0.94 }] }]}
+            onPress={handleTriggerVoice}
             hitSlop={6}
           >
-            <View style={styles.liveNotifIconBox}>
-              <Bell size={16} color="#15803D" />
+            <Mic size={17} color="#FFFFFF" strokeWidth={2.4} />
+          </Pressable>
+        </View>
+
+        {/* Suggestions Panel (Dropdown) */}
+        {searchFocused && (
+          <View style={styles.suggestionsContainer}>
+            <View style={styles.suggestionsHeader}>
+              <Text style={styles.suggestionsTitle}>Suggested Searches</Text>
+              <Pressable onPress={() => setSearchFocused(false)} hitSlop={8}>
+                <Text style={styles.suggestionsCloseText}>Close</Text>
+              </Pressable>
             </View>
-            <View style={{ flex: 1, marginLeft: 10 }}>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                <Text style={styles.liveNotifTitle} numberOfLines={1}>
-                  {notifications[0].title}
+
+            {filteredSuggestions.slice(0, 4).map((item) => (
+              <Pressable
+                key={item.id}
+                style={({ pressed }) => [styles.suggestionRow, pressed && { backgroundColor: '#F1F5F9' }]}
+                onPress={() => handleSelectSuggestion(item)}
+              >
+                <Search size={14} color="#16A34A" />
+                <Text numberOfLines={1} style={styles.suggestionLabel}>
+                  {item.label}
                 </Text>
-                <Text style={styles.liveNotifTime}>{notifications[0].time}</Text>
-              </View>
-              <Text style={styles.liveNotifBody} numberOfLines={1}>
-                {notifications[0].description}
-              </Text>
-            </View>
-            <ChevronRight size={16} color="#9CA3AF" style={{ marginLeft: 6 }} />
-          </Pressable>
-        )}
-      </View>
-
-      {/* ── 4. Sell Today Hero Card ── */}
-      <Pressable
-        onPress={() => router.push('/(tabs)/produce')}
-        style={({ pressed }) => [
-          styles.heroSellCard,
-          pressed && { transform: [{ scale: 0.98 }], opacity: 0.92 },
-        ]}
-      >
-        <View style={styles.heroSellContent}>
-          <Text style={styles.heroSellTitle}>What do you want{'\n'}to sell today?</Text>
-          <Text style={styles.heroSellSubtitle}>
-            Direct corporate buyers, guaranteed pickup & same-day settlement.
-          </Text>
-          <View style={styles.inlineAddBtn}>
-            <Plus size={16} color="#FFFFFF" strokeWidth={2.6} />
-            <Text style={styles.inlineAddBtnText}>Add Product</Text>
-          </View>
-        </View>
-        <Image source={{ uri: VEGGIE_BASKET_URI }} style={styles.heroBasketImage} />
-      </Pressable>
-
-      {/* ── 5. Best Opportunity for You (Two Sides / Segmented Switcher) ── */}
-      <View style={styles.opportunitySectionWrap}>
-        <View style={styles.sectionHeaderRow}>
-          <Text style={styles.sectionHeadingTitle}>Best Opportunity for You</Text>
-          <Pressable
-            onPress={() => setShowAllOpportunities(!showAllOpportunities)}
-            style={styles.viewAllBtn}
-          >
-            <Text style={styles.viewAllBtnText}>
-              {showAllOpportunities ? 'Show Less' : 'View all'}
-            </Text>
-            <ChevronRight size={14} color="#15803D" strokeWidth={2.4} />
-          </Pressable>
-        </View>
-
-        {/* 2-Sided Segmented Tab Controls */}
-        <View style={styles.segmentedTabContainer}>
-          <Pressable
-            style={[
-              styles.segmentTab,
-              opportunitySide === 'high_demand' && styles.segmentTabActive,
-            ]}
-            onPress={() => setOpportunitySide('high_demand')}
-          >
-            <Flame
-              size={15}
-              color={opportunitySide === 'high_demand' ? '#EA580C' : '#64748B'}
-              fill={opportunitySide === 'high_demand' ? '#EA580C' : 'none'}
-            />
-            <Text
-              style={[
-                styles.segmentTabText,
-                opportunitySide === 'high_demand' && styles.segmentTabTextActive,
-              ]}
-            >
-              High Demanded to Sell
-            </Text>
-          </Pressable>
-
-          <Pressable
-            style={[
-              styles.segmentTab,
-              opportunitySide === 'recommendations' && styles.segmentTabActive,
-            ]}
-            onPress={() => setOpportunitySide('recommendations')}
-          >
-            <Sparkles
-              size={15}
-              color={opportunitySide === 'recommendations' ? '#15803D' : '#64748B'}
-            />
-            <Text
-              style={[
-                styles.segmentTabText,
-                opportunitySide === 'recommendations' && styles.segmentTabTextActive,
-              ]}
-            >
-              Produce Recommendations
-            </Text>
-          </Pressable>
-        </View>
-
-        {/* ── Side 1: High Demanded Products to Sell ── */}
-        {opportunitySide === 'high_demand' && (
-          <View style={styles.opportunityCardsList}>
-            {(showAllOpportunities ? filteredHighDemand : filteredHighDemand.slice(0, 2)).map(
-              (prod) => (
-                <View key={prod.id} style={styles.opportunityCard}>
-                  <View style={styles.opportunityCardTop}>
-                    <Image source={{ uri: prod.imageUri }} style={styles.oppCropThumb} />
-                    <View style={styles.oppCropDetails}>
-                      <Text numberOfLines={1} style={styles.oppCropTitle}>{prod.name}</Text>
-                      <Text numberOfLines={1} style={styles.oppCropSub}>{prod.subname}</Text>
-                    </View>
-                    <View style={styles.oppDemandPill}>
-                      <Flame size={13} color="#EA580C" fill="#EA580C" />
-                      <Text style={styles.oppDemandText}>{prod.demand}</Text>
-                    </View>
-                  </View>
-
-                  {/* Clean 2-Zone Pricing Spotlight Bar (Fixed overwriting boxes) */}
-                  <View style={styles.oppPriceBanner}>
-                    <View style={styles.oppPricePrimary}>
-                      <Text style={styles.oppPricePrimaryLabel}>Net Farmer Rate</Text>
-                      <Text style={styles.oppPricePrimaryValue}>{prod.netReturn}</Text>
-                    </View>
-                    <View style={styles.oppPriceDivider} />
-                    <View style={styles.oppPriceSecondary}>
-                      <Text style={styles.oppPriceSecondaryLabel}>Mandi Benchmark</Text>
-                      <Text style={styles.oppPriceSecondaryValue}>{prod.sellingPrice}</Text>
-                    </View>
-                  </View>
-
-                  {/* Buyer Badge & Direct Action Button */}
-                  <View style={styles.oppBottomRow}>
-                    <View style={styles.oppBuyerBadge}>
-                      <ShieldCheck size={14} color="#15803D" strokeWidth={2.4} />
-                      <Text numberOfLines={1} style={styles.oppBuyerBadgeText}>{prod.buyers}</Text>
-                    </View>
-                    <Pressable
-                      style={({ pressed }) => [
-                        styles.oppActionBtn,
-                        pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] },
-                      ]}
-                      onPress={() =>
-                        router.push({
-                          pathname: '/sell/best-options',
-                          params: { crop: prod.cropKey, qty: prod.qty, grade: prod.grade },
-                        })
-                      }
-                    >
-                      <Text style={styles.oppActionBtnText}>Sell Harvest</Text>
-                      <ArrowRight size={14} color="#FFFFFF" strokeWidth={2.4} />
-                    </Pressable>
-                  </View>
-                </View>
-              )
-            )}
-          </View>
-        )}
-
-        {/* ── Side 2: Produce Recommendations for You ── */}
-        {opportunitySide === 'recommendations' && (
-          <View style={styles.opportunityCardsList}>
-            {(showAllOpportunities
-              ? filteredRecommendations
-              : filteredRecommendations.slice(0, 2)
-            ).map((rec) => (
-              <View key={rec.id} style={styles.recCard}>
-                <View style={styles.recCardHeader}>
-                  <View style={{ flex: 1 }}>
-                    <View
-                      style={[
-                        styles.recBadgePill,
-                        { backgroundColor: `${rec.badgeColor}15` },
-                      ]}
-                    >
-                      <Sparkles size={11} color={rec.badgeColor} />
-                      <Text style={[styles.recBadgeText, { color: rec.badgeColor }]}>
-                        {rec.badge}
-                      </Text>
-                    </View>
-                    <Text style={styles.recCropTitle}>{rec.cropName}</Text>
-                  </View>
-                  <View style={styles.recPriceWrap}>
-                    <Text style={styles.recPriceLabel}>Forecast Rate</Text>
-                    <Text style={styles.recPriceVal}>{rec.expectedPrice}</Text>
-                  </View>
-                </View>
-
-                <Text style={styles.recAdviceText}>{rec.advice}</Text>
-
-                <View style={styles.recFooterRow}>
-                  <View style={styles.recCyclePill}>
-                    <Clock size={12} color="#64748B" />
-                    <Text style={styles.recCycleText}>{rec.cycle}</Text>
-                  </View>
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.recAddProduceBtn,
-                      pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] },
-                    ]}
-                    onPress={() => router.push('/(tabs)/produce')}
-                  >
-                    <Plus size={14} color="#15803D" strokeWidth={2.5} />
-                    <Text style={styles.recAddProduceText}>Add to Produce</Text>
-                  </Pressable>
-                </View>
-              </View>
+                <ChevronRight size={14} color="#94A3B8" />
+              </Pressable>
             ))}
           </View>
         )}
       </View>
 
-      {/* ── 6. Section: Live APMC Mandi Benchmark Rates ── */}
-      <MKSection
-        title="Live APMC Mandi Rates"
-        actionText="Price Trends"
-        onActionPress={() => router.push('/(tabs)/produce')}
+      {/* ── 3. Earnings Hero Card (Interactive) ─────────────── */}
+      <Pressable
+        style={({ pressed }) => [styles.earningsCard, pressed && { opacity: 0.97 }]}
+        onPress={() => setEarningsModalVisible(true)}
       >
-        <MKCard style={styles.apmcCard}>
-          <View style={styles.apmcHeader}>
-            <View style={styles.apmcTitleWrap}>
-              <TrendingUp size={18} color="#15803D" />
-              <Text style={styles.apmcTitle}>Nashik & Pune APMC Benchmarks</Text>
+        <LinearGradient
+          colors={['#126B38', '#168A45']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.earningsGradient}
+        >
+          {/* Background image & gradient blend */}
+          <Image
+            source={{ uri: HERO_PLANT_BG_URI }}
+            style={styles.earningsPlantBg}
+            resizeMode="cover"
+          />
+          <LinearGradient
+            colors={['rgba(18, 107, 56, 0.96)', 'rgba(22, 138, 69, 0.75)', 'rgba(22, 138, 69, 0.45)']}
+            start={{ x: 0.45, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={StyleSheet.absoluteFill}
+          />
+
+          {/* Top Row: Total Earnings & Withdraw */}
+          <View style={styles.earningsTopRow}>
+            {/* Left Column */}
+            <View style={styles.earningsLeftCol}>
+              <Pressable
+                onPress={(e) => {
+                  e.stopPropagation();
+                  setShowEarningsAmount(!showEarningsAmount);
+                }}
+                style={styles.earningsTitleRow}
+                hitSlop={8}
+              >
+                <Text style={styles.earningsTitleText}>Total Earnings</Text>
+                {showEarningsAmount ? (
+                  <Eye size={14} color="#DCFCE7" />
+                ) : (
+                  <EyeOff size={14} color="#DCFCE7" />
+                )}
+              </Pressable>
+
+              <Text style={styles.earningsAmountText}>
+                {showEarningsAmount ? '₹48,500' : '••••••'}
+              </Text>
+
+              <View style={styles.earningsTrendRow}>
+                <TrendingUp size={13} color="#86EFAC" strokeWidth={2.5} />
+                <Text style={styles.earningsTrendText}>+18% this month</Text>
+              </View>
             </View>
-            <View style={styles.livePill}>
-              <View style={styles.livePillDot} />
-              <Text style={styles.livePillText}>Live Agmarknet</Text>
+
+            {/* Right Column: Withdraw Button & Quote */}
+            <View style={styles.earningsRightCol}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Withdraw Earnings"
+                style={({ pressed }) => [styles.withdrawBtn, pressed && { opacity: 0.88, transform: [{ scale: 0.98 }] }]}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  router.push('/earnings');
+                }}
+                hitSlop={8}
+              >
+                <Wallet size={13} color="#168A45" strokeWidth={2.3} />
+                <Text style={styles.withdrawBtnText}>Withdraw</Text>
+                <ArrowRight size={12} color="#168A45" strokeWidth={2.5} />
+              </Pressable>
+
+              <View style={styles.quoteWrap}>
+                <Sprout size={11} color="#86EFAC" style={{ marginTop: 2 }} />
+                <Text style={styles.quoteText}>
+                  "Good farming today,{"\n"}better tomorrow."
+                </Text>
+              </View>
             </View>
           </View>
 
-          <View style={styles.apmcGrid}>
-            <View style={styles.apmcItem}>
-              <Text style={styles.apmcCrop}>Nashik Red Onion</Text>
-              <Text style={styles.apmcPrice}>
-                ₹2,450 <Text style={styles.apmcUnit}>/q</Text>
+          {/* Bottom Inset Container: Monthly Target */}
+          <View style={styles.monthlyTargetContainer}>
+            <View style={styles.targetHeaderRow}>
+              <View style={styles.targetTitleLeft}>
+                <View style={styles.targetLeafWrap}>
+                  <Leaf size={11} color="#86EFAC" strokeWidth={2.4} />
+                </View>
+                <Text style={styles.targetTitleText}>Monthly Target</Text>
+                <View style={styles.editTargetMiniTag}>
+                  <Edit3 size={10} color="#DCFCE7" />
+                  <Text style={styles.editTargetMiniText}>Tap to set</Text>
+                </View>
+              </View>
+              <Text style={styles.targetAmountText}>
+                ₹48,500 / ₹{monthlyTarget.toLocaleString()}
               </Text>
-              <Text style={[styles.apmcTrend, { color: '#15803D' }]}>▲ +4.2% today</Text>
             </View>
-            <View style={styles.apmcDividerV} />
-            <View style={styles.apmcItem}>
-              <Text style={styles.apmcCrop}>Tomato Hybrid</Text>
-              <Text style={styles.apmcPrice}>
-                ₹1,820 <Text style={styles.apmcUnit}>/q</Text>
-              </Text>
-              <Text style={[styles.apmcTrend, { color: '#B91C1C' }]}>▼ -1.5% today</Text>
-            </View>
-            <View style={styles.apmcDividerV} />
-            <View style={styles.apmcItem}>
-              <Text style={styles.apmcCrop}>Potato Jyoti</Text>
-              <Text style={styles.apmcPrice}>
-                ₹1,540 <Text style={styles.apmcUnit}>/q</Text>
-              </Text>
-              <Text style={[styles.apmcTrend, { color: '#15803D' }]}>▲ +2.1% today</Text>
+
+            {/* Progress Bar */}
+            <View style={styles.progressBarRow}>
+              <View style={styles.progressTrack}>
+                <View style={[styles.progressFill, { width: `${targetProgressPct}%` }]} />
+              </View>
+              <Text style={styles.progressPctText}>{targetProgressPct}%</Text>
             </View>
           </View>
-        </MKCard>
-      </MKSection>
+        </LinearGradient>
+      </Pressable>
 
-      {/* ── 7. Weather & Harvest Advisory Card ── */}
+      {/* ── 4. Quick Actions (With Enhanced Shadows) ───────── */}
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionTitle}>Quick Actions</Text>
+      </View>
+
+      <View style={styles.quickActionsGrid}>
+        {/* Action 1: My Crops */}
+        <Pressable
+          style={({ pressed }) => [styles.quickCard, { backgroundColor: '#ECFDF3', borderColor: '#BBF7D0' }, pressed && styles.cardPressed]}
+          onPress={() => router.push('/(tabs)/produce')}
+          hitSlop={6}
+        >
+          <Sprout size={26} color="#168A45" strokeWidth={2.2} />
+          <View style={styles.quickCardTextCol}>
+            <Text numberOfLines={1} style={styles.quickCardTitle}>My Crops</Text>
+            <Text numberOfLines={1} style={styles.quickCardSub}>View & Manage</Text>
+          </View>
+          <View style={styles.quickMiniArrow}>
+            <ChevronRight size={13} color="#111827" strokeWidth={2.4} />
+          </View>
+        </Pressable>
+
+        {/* Action 2: Market Prices */}
+        <Pressable
+          style={({ pressed }) => [styles.quickCard, { backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }, pressed && styles.cardPressed]}
+          onPress={() => router.push('/market-prices')}
+          hitSlop={8}
+        >
+          <Tag size={26} color="#F97316" strokeWidth={2.2} />
+          <View style={styles.quickCardTextCol}>
+            <Text numberOfLines={1} style={styles.quickCardTitle}>Market Prices</Text>
+            <Text numberOfLines={1} style={styles.quickCardSub}>Check Rates</Text>
+          </View>
+          <View style={styles.quickMiniArrow}>
+            <ChevronRight size={13} color="#111827" strokeWidth={2.4} />
+          </View>
+        </Pressable>
+
+        {/* Action 3: Buyer Requests */}
+        <Pressable
+          style={({ pressed }) => [styles.quickCard, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE' }, pressed && styles.cardPressed]}
+          onPress={() => router.push('/sell/requests')}
+          hitSlop={8}
+        >
+          <View style={{ position: 'relative' }}>
+            <Users size={26} color="#2563EB" strokeWidth={2.2} />
+            <View style={styles.requestBadge}>
+              <Text style={styles.requestBadgeText}>3</Text>
+            </View>
+          </View>
+          <View style={styles.quickCardTextCol}>
+            <Text numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.8} style={styles.quickCardTitle}>Buyer Requests</Text>
+            <Text numberOfLines={1} style={styles.quickCardSub}>New Requests</Text>
+          </View>
+          <View style={styles.quickMiniArrow}>
+            <ChevronRight size={13} color="#111827" strokeWidth={2.4} />
+          </View>
+        </Pressable>
+
+        {/* Action 4: Market Trends */}
+        <Pressable
+          style={({ pressed }) => [styles.quickCard, { backgroundColor: '#F5F3FF', borderColor: '#DDD6FE' }, pressed && styles.cardPressed]}
+          onPress={() => router.push('/market-trends')}
+          hitSlop={8}
+        >
+          <BarChart3 size={26} color="#7C3AED" strokeWidth={2.2} />
+          <View style={styles.quickCardTextCol}>
+            <Text numberOfLines={1} style={styles.quickCardTitle}>Market Trends</Text>
+            <Text numberOfLines={1} style={styles.quickCardSub}>See What's Rising</Text>
+          </View>
+          <View style={styles.quickMiniArrow}>
+            <ChevronRight size={13} color="#111827" strokeWidth={2.4} />
+          </View>
+        </Pressable>
+      </View>
+
+      {/* ── 5. Your Crops (Enhanced Shadows & Tactile Feel) ── */}
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionTitle}>Your Crops</Text>
+      </View>
+
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        contentContainerStyle={styles.cropRowScroll}
+      >
+        {/* Onion Card */}
+        <Pressable
+          style={({ pressed }) => [styles.cropCard, pressed && styles.cardPressed]}
+          onPress={() => router.push('/(tabs)/produce')}
+          hitSlop={6}
+        >
+          <Image source={{ uri: ONION_PHOTO_URI }} style={styles.cropCardThumb} />
+          <View style={styles.cropCardTextCol}>
+            <Text numberOfLines={1} style={styles.cropCardName}>Onion</Text>
+            <Text numberOfLines={1} style={styles.cropCardQty}>1,000 kg</Text>
+          </View>
+          <ChevronRight size={15} color="#94A3B8" strokeWidth={2.4} />
+        </Pressable>
+
+        {/* Tomato Card */}
+        <Pressable
+          style={({ pressed }) => [styles.cropCard, pressed && styles.cardPressed]}
+          onPress={() => router.push('/(tabs)/produce')}
+          hitSlop={6}
+        >
+          <Image source={{ uri: TOMATO_PHOTO_URI }} style={styles.cropCardThumb} />
+          <View style={styles.cropCardTextCol}>
+            <Text numberOfLines={1} style={styles.cropCardName}>Tomato</Text>
+            <Text numberOfLines={1} style={styles.cropCardQty}>500 kg</Text>
+          </View>
+          <ChevronRight size={15} color="#94A3B8" strokeWidth={2.4} />
+        </Pressable>
+
+        {/* Potato Card */}
+        <Pressable
+          style={({ pressed }) => [styles.cropCard, pressed && styles.cardPressed]}
+          onPress={() => router.push('/(tabs)/produce')}
+          hitSlop={6}
+        >
+          <Image source={{ uri: POTATO_PHOTO_URI }} style={styles.cropCardThumb} />
+          <View style={styles.cropCardTextCol}>
+            <Text numberOfLines={1} style={styles.cropCardName}>Potato</Text>
+            <Text numberOfLines={1} style={styles.cropCardQty}>800 kg</Text>
+          </View>
+          <ChevronRight size={15} color="#94A3B8" strokeWidth={2.4} />
+        </Pressable>
+      </ScrollView>
+
+      {/* ── 6. Two-Sided Market Intelligence Section ────────── */}
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionTitle}>Best Opportunity for You</Text>
+      </View>
+
+      <View style={styles.intelHeaderBlock}>
+        <View style={styles.segmentedToggleContainer}>
+          <Pressable
+            style={[styles.segmentBtn, activeIntelTab === 'high_demand' && styles.segmentBtnActive]}
+            onPress={() => setActiveIntelTab('high_demand')}
+          >
+            <Flame size={14} color={activeIntelTab === 'high_demand' ? '#EA580C' : '#64748B'} strokeWidth={2.4} />
+            <Text style={[styles.segmentBtnText, activeIntelTab === 'high_demand' && styles.segmentBtnTextActive]}>
+              High Demanded to Sell
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={[styles.segmentBtn, activeIntelTab === 'recommendations' && styles.segmentBtnActive]}
+            onPress={() => setActiveIntelTab('recommendations')}
+          >
+            <Sparkles size={14} color={activeIntelTab === 'recommendations' ? '#168A45' : '#64748B'} strokeWidth={2.4} />
+            <Text style={[styles.segmentBtnText, activeIntelTab === 'recommendations' && styles.segmentBtnTextActive]}>
+              Produce Recommendations
+            </Text>
+          </Pressable>
+        </View>
+      </View>
+
+      {/* SIDE 1: High Demanded to Sell Cards */}
+      {activeIntelTab === 'high_demand' ? (
+        <View style={styles.intelCardsContainer}>
+          {/* Card 1: Onion */}
+          <View style={styles.oppCard}>
+            <View style={styles.oppTopRow}>
+              <Image source={{ uri: ONION_PHOTO_URI }} style={styles.oppCropThumb} />
+              <View style={styles.oppHeaderInfo}>
+                <Text numberOfLines={1} style={styles.oppCropTitle}>Onion • Grade A</Text>
+                <Text numberOfLines={1} style={styles.oppCropSubtitle}>Nashik Red Garwa Variety</Text>
+              </View>
+              <View style={styles.oppBadgePill}>
+                <Flame size={12} color="#EA580C" strokeWidth={2.5} />
+                <Text style={styles.oppBadgeText}>Very High</Text>
+              </View>
+            </View>
+
+            <View style={styles.oppRateBox}>
+              <View style={styles.oppRateCol}>
+                <Text style={styles.oppRateTag}>NET FARMER RATE</Text>
+                <Text style={styles.oppRateVal}>
+                  ₹22.00 <Text style={styles.oppRateUnit}>/kg</Text>
+                </Text>
+              </View>
+              <View style={styles.oppRateDivider} />
+              <View style={styles.oppRateCol}>
+                <Text style={styles.oppBenchmarkTag}>Mandi Benchmark</Text>
+                <Text style={styles.oppBenchmarkVal}>
+                  ₹24.00 <Text style={styles.oppBenchmarkUnit}>/kg</Text>
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.oppBottomRow}>
+              <View style={styles.buyersPill}>
+                <ShieldCheck size={14} color="#168A45" strokeWidth={2.4} />
+                <Text style={styles.buyersPillText}>18 Active Buyers</Text>
+              </View>
+
+              <Pressable
+                style={({ pressed }) => [styles.sellHarvestBtn, pressed && { opacity: 0.9 }]}
+                onPress={() => router.push('/(tabs)/sell')}
+              >
+                <Text style={styles.sellHarvestBtnText}>Sell Harvest</Text>
+                <ArrowRight size={13} color="#FFFFFF" strokeWidth={2.5} />
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Card 2: Hybrid Tomato */}
+          <View style={styles.oppCard}>
+            <View style={styles.oppTopRow}>
+              <Image source={{ uri: TOMATO_PHOTO_URI }} style={styles.oppCropThumb} />
+              <View style={styles.oppHeaderInfo}>
+                <Text numberOfLines={1} style={styles.oppCropTitle}>Hybrid Tomato • Grade A</Text>
+                <Text numberOfLines={1} style={styles.oppCropSubtitle}>Semi-Ripe Fresh Harvest</Text>
+              </View>
+              <View style={styles.oppBadgePill}>
+                <Flame size={12} color="#EA580C" strokeWidth={2.5} />
+                <Text style={styles.oppBadgeText}>High</Text>
+              </View>
+            </View>
+
+            <View style={styles.oppRateBox}>
+              <View style={styles.oppRateCol}>
+                <Text style={styles.oppRateTag}>NET FARMER RATE</Text>
+                <Text style={styles.oppRateVal}>
+                  ₹21.50 <Text style={styles.oppRateUnit}>/kg</Text>
+                </Text>
+              </View>
+              <View style={styles.oppRateDivider} />
+              <View style={styles.oppRateCol}>
+                <Text style={styles.oppBenchmarkTag}>Mandi Benchmark</Text>
+                <Text style={styles.oppBenchmarkVal}>
+                  ₹23.00 <Text style={styles.oppBenchmarkUnit}>/kg</Text>
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.oppBottomRow}>
+              <View style={styles.buyersPill}>
+                <ShieldCheck size={14} color="#168A45" strokeWidth={2.4} />
+                <Text style={styles.buyersPillText}>14 Active Buyers</Text>
+              </View>
+
+              <Pressable
+                style={({ pressed }) => [styles.sellHarvestBtn, pressed && { opacity: 0.9 }]}
+                onPress={() => router.push('/(tabs)/sell')}
+              >
+                <Text style={styles.sellHarvestBtnText}>Sell Harvest</Text>
+                <ArrowRight size={13} color="#FFFFFF" strokeWidth={2.5} />
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      ) : (
+        /* SIDE 2: Produce Recommendations Cards */
+        <View style={styles.intelCardsContainer}>
+          {/* Recommendation 1: Garlic */}
+          <View style={styles.oppCard}>
+            <View style={styles.oppTopRow}>
+              <Image source={{ uri: GARLIC_PHOTO_URI }} style={styles.oppCropThumb} />
+              <View style={styles.oppHeaderInfo}>
+                <Text numberOfLines={1} style={styles.oppCropTitle}>Garlic (Ooty Hybrid) • Grade A</Text>
+                <Text numberOfLines={1} style={styles.oppCropSubtitle}>High Export Demand • 90 Days Cycle</Text>
+              </View>
+              <View style={[styles.oppBadgePill, { backgroundColor: '#F3E8FF' }]}>
+                <TrendingUp size={12} color="#7C3AED" strokeWidth={2.5} />
+                <Text style={[styles.oppBadgeText, { color: '#7C3AED' }]}>+42% Margin</Text>
+              </View>
+            </View>
+
+            <View style={styles.oppRateBox}>
+              <View style={styles.oppRateCol}>
+                <Text style={styles.oppRateTag}>EST. HARVEST RATE</Text>
+                <Text style={styles.oppRateVal}>
+                  ₹180.00 <Text style={styles.oppRateUnit}>/kg</Text>
+                </Text>
+              </View>
+              <View style={styles.oppRateDivider} />
+              <View style={styles.oppRateCol}>
+                <Text style={styles.oppBenchmarkTag}>Mandi Benchmark</Text>
+                <Text style={styles.oppBenchmarkVal}>
+                  ₹150.00 <Text style={styles.oppBenchmarkUnit}>/kg</Text>
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.oppBottomRow}>
+              <View style={styles.buyersPill}>
+                <ShieldCheck size={14} color="#168A45" strokeWidth={2.4} />
+                <Text style={styles.buyersPillText}>22 Active Buyers</Text>
+              </View>
+
+              <Pressable
+                style={({ pressed }) => [styles.sellHarvestBtn, pressed && { opacity: 0.9 }]}
+                onPress={() => router.push('/produce/add')}
+              >
+                <Plus size={14} color="#FFFFFF" strokeWidth={2.8} />
+                <Text style={styles.sellHarvestBtnText}>Add Crop</Text>
+              </Pressable>
+            </View>
+          </View>
+
+          {/* Recommendation 2: Baby Corn */}
+          <View style={styles.oppCard}>
+            <View style={styles.oppTopRow}>
+              <Image source={{ uri: CORN_PHOTO_URI }} style={styles.oppCropThumb} />
+              <View style={styles.oppHeaderInfo}>
+                <Text numberOfLines={1} style={styles.oppCropTitle}>Baby Corn (Golden Sweet) • Grade A</Text>
+                <Text numberOfLines={1} style={styles.oppCropSubtitle}>Quick Turnaround • 60 Days Harvest</Text>
+              </View>
+              <View style={[styles.oppBadgePill, { backgroundColor: '#FEF3C7' }]}>
+                <TrendingUp size={12} color="#D97706" strokeWidth={2.5} />
+                <Text style={[styles.oppBadgeText, { color: '#D97706' }]}>+35% Margin</Text>
+              </View>
+            </View>
+
+            <View style={styles.oppRateBox}>
+              <View style={styles.oppRateCol}>
+                <Text style={styles.oppRateTag}>EST. HARVEST RATE</Text>
+                <Text style={styles.oppRateVal}>
+                  ₹65.00 <Text style={styles.oppRateUnit}>/kg</Text>
+                </Text>
+              </View>
+              <View style={styles.oppRateDivider} />
+              <View style={styles.oppRateCol}>
+                <Text style={styles.oppBenchmarkTag}>Mandi Benchmark</Text>
+                <Text style={styles.oppBenchmarkVal}>
+                  ₹52.00 <Text style={styles.oppBenchmarkUnit}>/kg</Text>
+                </Text>
+              </View>
+            </View>
+
+            <View style={styles.oppBottomRow}>
+              <View style={styles.buyersPill}>
+                <ShieldCheck size={14} color="#168A45" strokeWidth={2.4} />
+                <Text style={styles.buyersPillText}>16 Active Buyers</Text>
+              </View>
+
+              <Pressable
+                style={({ pressed }) => [styles.sellHarvestBtn, pressed && { opacity: 0.9 }]}
+                onPress={() => router.push('/produce/add')}
+              >
+                <Plus size={14} color="#FFFFFF" strokeWidth={2.8} />
+                <Text style={styles.sellHarvestBtnText}>Add Crop</Text>
+              </Pressable>
+            </View>
+          </View>
+        </View>
+      )}
+
+      {/* ── 7. Live APMC Mandi Rates ─────────────────────────── */}
+      <View style={styles.sectionHeaderRow}>
+        <Text style={styles.sectionTitle}>Live APMC Mandi Rates</Text>
+        <Pressable onPress={() => router.push('/market-trends')} hitSlop={8}>
+          <Text style={styles.priceTrendsText}>Price Trends</Text>
+        </Pressable>
+      </View>
+
+      <View style={styles.mandiRatesCard}>
+        <View style={styles.mandiRatesHeader}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+            <TrendingUp size={16} color="#168A45" strokeWidth={2.4} />
+            <Text style={styles.mandiRatesTitle}>Nashik & Pune APMC Benchmarks</Text>
+          </View>
+          <View style={styles.liveAgmarknetBadge}>
+            <View style={styles.liveGreenDot} />
+            <Text style={styles.liveAgmarknetText}>Live Agmarknet</Text>
+          </View>
+        </View>
+
+        <View style={styles.mandiRatesGrid}>
+          <View style={styles.mandiRateCol}>
+            <Text style={styles.mandiCropName}>Nashik Red Onion</Text>
+            <Text style={styles.mandiPrice}>₹2,450 <Text style={styles.mandiUnit}>/q</Text></Text>
+            <Text style={[styles.mandiTrendText, { color: '#16A34A' }]}>▲ +4.2% today</Text>
+          </View>
+          <View style={styles.mandiDivider} />
+          <View style={styles.mandiRateCol}>
+            <Text style={styles.mandiCropName}>Tomato Hybrid</Text>
+            <Text style={styles.mandiPrice}>₹1,820 <Text style={styles.mandiUnit}>/q</Text></Text>
+            <Text style={[styles.mandiTrendText, { color: '#DC2626' }]}>▼ -1.5% today</Text>
+          </View>
+          <View style={styles.mandiDivider} />
+          <View style={styles.mandiRateCol}>
+            <Text style={styles.mandiCropName}>Potato Jyoti</Text>
+            <Text style={styles.mandiPrice}>₹1,540 <Text style={styles.mandiUnit}>/q</Text></Text>
+            <Text style={[styles.mandiTrendText, { color: '#16A34A' }]}>▲ +2.1% today</Text>
+          </View>
+        </View>
+      </View>
+
+      {/* ── 8. Weather & Harvest Advisory ────────────────────── */}
       <View style={styles.weatherCard}>
         <View style={styles.weatherHeader}>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-            <Sun size={18} color="#EA580C" />
+            <Text style={{ fontSize: 18 }}>☀️</Text>
             <Text style={styles.weatherTitle}>Weather & Harvest Advisory</Text>
           </View>
-          <View style={styles.weatherTempBadge}>
-            <Text style={styles.weatherTempText}>29°C Sunny</Text>
+          <View style={styles.weatherBadge}>
+            <Text style={styles.weatherBadgeText}>29°C Sunny</Text>
           </View>
         </View>
-        <Text style={styles.weatherBody}>
-          Dry conditions expected for next 72 hours with 48% humidity. Perfect window for
-          harvesting, curing and loading crops onto transit vehicles.
+        <Text style={styles.weatherSub}>
+          Sunny conditions expected for next 72 hours with 42% humidity. Optimal conditions for onion drying and open field harvest.
         </Text>
       </View>
 
-      {/* ════ Interactive Notifications Drawer / Modal ════ */}
+      {/* ── 7. Interactive Earnings & Monthly Target Modal ──── */}
       <Modal
-        visible={notificationModalVisible}
+        visible={earningsModalVisible}
         transparent
         animationType="slide"
-        onRequestClose={() => setNotificationModalVisible(false)}
+        onRequestClose={() => setEarningsModalVisible(false)}
       >
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalCard}>
+        <View style={styles.modalOverlay}>
+          <View style={styles.earningsModalSheet}>
+            {/* Modal Header */}
             <View style={styles.modalHeaderRow}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                <Bell size={20} color="#15803D" />
-                <Text style={styles.modalHeaderTitle}>Notifications</Text>
-                {unreadCount > 0 && (
-                  <View style={styles.modalUnreadBadge}>
-                    <Text style={styles.modalUnreadText}>{unreadCount} New</Text>
-                  </View>
-                )}
+                <Wallet size={20} color="#168A45" strokeWidth={2.4} />
+                <Text style={styles.modalTitle}>Financial Intelligence</Text>
               </View>
-              <Pressable
-                style={styles.modalCloseBtn}
-                onPress={() => setNotificationModalVisible(false)}
-              >
-                <X size={20} color="#475569" />
+              <Pressable onPress={() => setEarningsModalVisible(false)} hitSlop={10}>
+                <X size={20} color="#64748B" />
               </Pressable>
             </View>
 
-            {/* Confirmation Toast Feedback Banner */}
-            {notifToast && (
-              <View style={styles.notifToastBanner}>
-                <CheckCircle2 size={15} color="#15803D" />
-                <Text style={styles.notifToastText}>{notifToast}</Text>
-              </View>
-            )}
-
-            <View style={styles.modalSubActionsRow}>
-              <Text style={styles.modalSubtext}>Recent updates for your farm and sales</Text>
-              <Pressable
-                style={styles.markAllReadBtn}
-                onPress={markAllNotificationsRead}
-              >
-                <Check size={13} color="#15803D" strokeWidth={2.5} />
-                <Text style={styles.markAllReadText}>Mark all read</Text>
-              </Pressable>
-            </View>
-
-            {/* Notification Filter Chips */}
-            <View style={styles.notifFilterRow}>
-              <Pressable
-                style={[
-                  styles.notifFilterChip,
-                  notifFilter === 'all' && styles.notifFilterChipActive,
-                ]}
-                onPress={() => setNotifFilter('all')}
-              >
-                <Text
-                  style={[
-                    styles.notifFilterChipText,
-                    notifFilter === 'all' && styles.notifFilterChipTextActive,
-                  ]}
-                >
-                  All ({notifications.length})
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[
-                  styles.notifFilterChip,
-                  notifFilter === 'unread' && styles.notifFilterChipActive,
-                ]}
-                onPress={() => setNotifFilter('unread')}
-              >
-                <Text
-                  style={[
-                    styles.notifFilterChipText,
-                    notifFilter === 'unread' && styles.notifFilterChipTextActive,
-                  ]}
-                >
-                  Unread ({unreadCount})
-                </Text>
-              </Pressable>
-              <Pressable
-                style={[
-                  styles.notifFilterChip,
-                  notifFilter === 'orders' && styles.notifFilterChipActive,
-                ]}
-                onPress={() => setNotifFilter('orders')}
-              >
-                <Text
-                  style={[
-                    styles.notifFilterChipText,
-                    notifFilter === 'orders' && styles.notifFilterChipTextActive,
-                  ]}
-                >
-                  Orders & Transit
-                </Text>
-              </Pressable>
-            </View>
-
-            <ScrollView style={styles.notifScrollView} showsVerticalScrollIndicator={false}>
-              {displayNotifications.length === 0 ? (
-                <View style={styles.notifEmptyWrap}>
-                  <View style={styles.notifEmptyIconCircle}>
-                    <CheckCircle2 size={32} color="#15803D" />
-                  </View>
-                  <Text style={styles.notifEmptyTitle}>All caught up!</Text>
-                  <Text style={styles.notifEmptySub}>
-                    {notifFilter === 'unread'
-                      ? 'No unread notifications at the moment.'
-                      : 'No notifications found in this category.'}
-                  </Text>
+            <ScrollView showsVerticalScrollIndicator={false}>
+              {/* Gross vs Net Breakdown Cards */}
+              <View style={styles.financialStatsBox}>
+                <Text style={styles.financialSectionHeading}>This Month Performance</Text>
+                <View style={styles.statRow}>
+                  <Text style={styles.statLabel}>Total Realized Sales</Text>
+                  <Text style={styles.statVal}>₹56,200</Text>
                 </View>
-              ) : (
-                displayNotifications.map((n) => (
-                  <Pressable
-                    key={n.id}
-                    style={[styles.notifItemCard, n.unread && styles.notifItemUnread]}
-                    onPress={() => handleNotificationPress(n)}
-                  >
-                    <View style={styles.notifItemHeader}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flex: 1 }}>
-                        {n.unread && <View style={styles.notifItemUnreadDot} />}
-                        <Text numberOfLines={1} style={styles.notifItemTitle}>
-                          {n.title}
-                        </Text>
-                      </View>
-                      <Text style={styles.notifItemTime}>{n.time}</Text>
-                    </View>
-                    <Text style={styles.notifItemBody}>{n.description}</Text>
+                <View style={styles.statRow}>
+                  <Text style={styles.statLabel}>Direct MandiKart Benefit (Zero Middleman)</Text>
+                  <Text style={[styles.statVal, { color: '#168A45' }]}>+ ₹7,700 Saved</Text>
+                </View>
+                <View style={styles.statRow}>
+                  <Text style={styles.statLabel}>Transit Fees & Weighbridge</Text>
+                  <Text style={[styles.statVal, { color: '#DC2626' }]}>- ₹0.00 (Free Pickup)</Text>
+                </View>
+                <View style={styles.dividerLine} />
+                <View style={styles.statRow}>
+                  <Text style={styles.statTotalLabel}>Net Farmer Take-Home</Text>
+                  <Text style={styles.statTotalVal}>₹48,500</Text>
+                </View>
+              </View>
 
-                    {n.actionText && n.actionRoute && (
-                      <Pressable
-                        style={styles.notifActionBtn}
-                        onPress={() => {
-                          setNotificationModalVisible(false);
-                          router.push(n.actionRoute as any);
-                        }}
-                      >
-                        <Text style={styles.notifActionBtnText}>{n.actionText}</Text>
-                        <ArrowRight size={14} color="#15803D" strokeWidth={2.4} />
-                      </Pressable>
-                    )}
-                  </Pressable>
-                ))
-              )}
+              {/* Set New Monthly Target Section */}
+              <View style={styles.targetSetterCard}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 8 }}>
+                  <Leaf size={16} color="#168A45" />
+                  <Text style={styles.targetSetterTitle}>Update Monthly Target</Text>
+                </View>
+                <Text style={styles.targetSetterSub}>
+                  Set your personal revenue goal to track sales motivation and progress.
+                </Text>
+
+                {/* Target Value Input */}
+                <View style={styles.targetInputRow}>
+                  <Text style={styles.targetRupeeSymbol}>₹</Text>
+                  <TextInput
+                    style={styles.targetTextInput}
+                    keyboardType="numeric"
+                    value={tempTargetInput}
+                    onChangeText={setTempTargetInput}
+                    placeholder="100000"
+                  />
+                </View>
+
+                {/* Quick Target Presets */}
+                <Text style={styles.presetLabel}>Quick Presets:</Text>
+                <View style={styles.presetsRow}>
+                  {[75000, 100000, 150000, 200000].map((val) => (
+                    <Pressable
+                      key={val}
+                      style={[
+                        styles.presetPill,
+                        monthlyTarget === val && styles.presetPillActive,
+                      ]}
+                      onPress={() => {
+                        setTempTargetInput(val.toString());
+                        handleSaveMonthlyTarget(val);
+                      }}
+                    >
+                      <Text style={[styles.presetText, monthlyTarget === val && styles.presetTextActive]}>
+                        ₹{(val / 1000)}k
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+
+                {/* Save Target CTA */}
+                <Pressable
+                  style={styles.saveTargetBtn}
+                  onPress={() => {
+                    handleSaveMonthlyTarget();
+                    setEarningsModalVisible(false);
+                  }}
+                >
+                  <CheckCircle2 size={16} color="#FFFFFF" strokeWidth={2.4} />
+                  <Text style={styles.saveTargetBtnText}>Save Target Goal</Text>
+                </Pressable>
+              </View>
             </ScrollView>
           </View>
         </View>
+      </Modal>
+
+      {/* ── 8. Voice Search Modal ──────────────────────────── */}
+      <Modal
+        visible={voiceModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleCloseVoice}
+      >
+        <Pressable style={styles.modalOverlay} onPress={handleCloseVoice}>
+          <View style={styles.voiceModalCard}>
+            <View style={styles.voiceMicCircle}>
+              <Mic size={32} color="#FFFFFF" strokeWidth={2.4} />
+            </View>
+            <Text style={styles.voiceModalTitle}>Listening to your voice...</Text>
+            <Text style={styles.voiceModalHint}>
+              Speak crop name, buyer query, or mandi rates
+            </Text>
+            {transcript ? (
+              <View style={styles.transcriptBox}>
+                <Text style={styles.transcriptText}>"{transcript}"</Text>
+              </View>
+            ) : null}
+            <Pressable style={styles.voiceCloseBtn} onPress={handleCloseVoice}>
+              <Text style={styles.voiceCloseBtnText}>Done / Close</Text>
+            </Pressable>
+          </View>
+        </Pressable>
       </Modal>
     </MKScreen>
   );
 }
 
-// ─── Styles ──────────────────────────────────────────────────────────────────
-
 const styles = StyleSheet.create({
   screenScrollContent: {
-    paddingHorizontal: 10,
-    width: '100%',
+    paddingHorizontal: 12,
+    backgroundColor: 'transparent',
   },
 
-  /* ── 1. Top Bar ── */
-  topAppBar: {
+  /* ── 1. Farmer Profile Header (Shifted Left & Compact) ── */
+  headerRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
-    width: '100%',
+    marginBottom: 14,
   },
-  farmerProfileHeader: {
+  headerLeftCol: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
-    marginRight: MKSpacing.md,
-  },
-  avatarWrapper: {
-    position: 'relative',
     marginRight: 10,
   },
-  avatarImage: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    borderWidth: 2,
-    borderColor: '#FFFFFF',
+  avatarWrap: {
+    width: 48,
+    height: 48,
+    position: 'relative',
   },
-  onlineBadgeDot: {
+  avatarImg: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+    backgroundColor: '#E2E8F0',
+  },
+  onlineBadge: {
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: 12,
-    height: 12,
-    borderRadius: 6,
-    backgroundColor: '#22C55E',
-    borderWidth: 2,
+    width: 11,
+    height: 11,
+    borderRadius: 5.5,
+    backgroundColor: '#16A34A',
+    borderWidth: 1.5,
     borderColor: '#FFFFFF',
   },
-  greetingContainer: {
+  profileTextCol: {
+    marginLeft: 10,
     flex: 1,
-    minWidth: 0,
   },
-  greetingTitle: {
-    fontSize: 17,
+  greetingText: {
+    fontSize: 18.5,
     fontWeight: '800',
-    color: '#1A1C1E',
+    color: '#111827',
     letterSpacing: -0.3,
   },
   locationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 2,
+    gap: 3,
+    marginTop: 1,
   },
   locationText: {
-    fontSize: 11.5,
-    color: '#4B5563',
+    fontSize: 12.5,
     fontWeight: '600',
-    marginLeft: 3,
-    flexShrink: 1,
+    color: '#64748B',
   },
-  notificationBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#FFFFFF',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#E3DCCF',
-    elevation: 2,
-    shadowColor: '#1A1C1E',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 3,
-    flexShrink: 0,
-  },
-  notificationBadge: {
-    position: 'absolute',
-    top: 2,
-    right: 2,
-    width: 16,
-    height: 16,
-    borderRadius: 8,
-    backgroundColor: '#EA580C',
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#FFFFFF',
-  },
-  notificationBadgeText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-
-  /* ── 2. Today at a Glance (Top Middle) ── */
-  glanceSectionContainer: {
-    marginBottom: 12,
-  },
-  glanceHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  glanceSectionTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1A1C1E',
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    width: '100%',
-    gap: 8,
-  },
-  metricCard: {
-    flex: 1,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    paddingVertical: 18,
-    paddingHorizontal: 6,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderWidth: 1.5,
-    borderColor: '#E3DCCF',
-    minHeight: 148,
-    elevation: 3,
-    shadowColor: '#1A1C1E',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    minWidth: 0,
-  },
-  metricCardLast: {},
-  metricIconCircle: {
+  bellBtn: {
     width: 42,
     height: 42,
     borderRadius: 21,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.2,
+    borderColor: '#E8E3DA',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 6,
-  },
-  metricBigNumber: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: '#1A1C1E',
-    marginBottom: 2,
-  },
-  metricBigText: {
-    fontSize: 14,
-    fontWeight: '900',
-    color: '#1A1C1E',
-    textAlign: 'center',
-    marginBottom: 2,
-  },
-  metricBigTextGreen: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#15803D',
-    textAlign: 'center',
-    marginBottom: 2,
-  },
-  metricLabel: {
-    fontSize: 12,
-    lineHeight: 15,
-    color: '#64748B',
-    textAlign: 'center',
-    fontWeight: '700',
-    marginBottom: 6,
-  },
-  metricStatusPillOrange: {
-    backgroundColor: '#FFEDD5',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  metricStatusPillOrangeText: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    color: '#C2410C',
-  },
-  metricStatusPillGreen: {
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  metricStatusPillGreenText: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    color: '#15803D',
-  },
-
-  /* ── 3. Search Bar with Voice Feature (Height 56px) ── */
-  searchBarWrapper: {
-    marginBottom: 12,
-  },
-  searchBarInner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: '#E3DCCF',
-    paddingHorizontal: 16,
-    height: 56,
+    elevation: 3,
     shadowColor: '#1A1C1E',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 5,
-    elevation: 3,
-  },
-  searchIcon: {
-    marginRight: 10,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#1E293B',
-    paddingVertical: 0,
-  },
-  searchClearBtn: {
-    padding: 4,
-    marginRight: 6,
-  },
-  voiceMicBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#15803D',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#15803D',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
-    elevation: 2,
-  },
-  voiceMicBtnListening: {
-    backgroundColor: '#DC2626',
-    transform: [{ scale: 1.08 }],
-  },
-  voiceListeningBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FEF2F2',
-    borderRadius: 10,
-    padding: 8,
-    marginTop: 8,
-    borderWidth: 1,
-    borderColor: '#FECACA',
-  },
-  voicePulseDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#DC2626',
-    marginRight: 8,
-  },
-  voiceListeningText: {
-    fontSize: 11.5,
-    fontWeight: '600',
-    color: '#B91C1C',
-    flex: 1,
-  },
-  voiceMatchCard: {
-    marginTop: 8,
-    backgroundColor: '#F0FDF4',
-    borderRadius: 12,
-    padding: 10,
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
-  },
-  voiceMatchHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  voiceMatchHeaderText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#15803D',
-    textTransform: 'uppercase',
-  },
-  voiceMatchCropName: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#14532D',
-    marginTop: 2,
-  },
-  voiceMatchActionsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 8,
-  },
-  voiceMatchBtnPrimary: {
-    flex: 1,
-    backgroundColor: '#15803D',
-    paddingVertical: 7,
-    borderRadius: 8,
-    alignItems: 'center',
-  },
-  voiceMatchBtnPrimaryText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '700',
-  },
-  voiceMatchBtnSecondary: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
-    borderRadius: 8,
-    backgroundColor: '#E2E8F0',
-    alignItems: 'center',
-  },
-  voiceMatchBtnSecondaryText: {
-    color: '#475569',
-    fontSize: 12,
-    fontWeight: '600',
-  },
-  /* ── 3.5 Live Notifications & Alerts Bar ── */
-  liveNotifSection: {
-    marginBottom: 12,
-    width: '100%',
-  },
-  liveNotifHeaderRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 6,
-    paddingHorizontal: 2,
-  },
-  liveNotifPulseDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#15803D',
-  },
-  liveNotifSectionTitle: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#15803D',
-    letterSpacing: 0.2,
-  },
-  liveNotifViewAllText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#15803D',
-  },
-  liveNotifCard: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderWidth: 1.5,
-    borderColor: '#DCFCE7',
-    elevation: 2,
-    shadowColor: '#15803D',
-    shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 4,
   },
-  liveNotifIconBox: {
-    width: 32,
-    height: 32,
+  unreadDot: {
+    position: 'absolute',
+    top: 9,
+    right: 10,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
+  },
+
+  /* ── 2. Search Section & Suggestions ── */
+  searchSectionWrap: {
+    marginBottom: 16,
+    position: 'relative',
+    zIndex: 10,
+  },
+  searchBarContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    height: 48,
     borderRadius: 16,
-    backgroundColor: '#F0FDF4',
+    borderWidth: 1.2,
+    borderColor: '#E5DFD5',
+    paddingHorizontal: 12,
+    elevation: 2,
+    shadowColor: '#1A1C1E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
+  },
+  searchBarContainerFocused: {
+    borderColor: '#16A34A',
+    backgroundColor: '#FAFCF8',
+  },
+  searchIcon: {
+    marginRight: 6,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13.5,
+    fontWeight: '500',
+    color: '#111827',
+    paddingVertical: 0,
+  },
+  micCircleBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#16A34A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginLeft: 4,
+    elevation: 2,
+    shadowColor: '#16A34A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.3,
+    shadowRadius: 2,
+  },
+  suggestionsContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1.2,
+    borderColor: '#E2D9CC',
+    marginTop: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    elevation: 4,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+  },
+  suggestionsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1EBE1',
+    marginBottom: 4,
+  },
+  suggestionsTitle: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  suggestionsCloseText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#16A34A',
+  },
+  suggestionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 8,
+    paddingHorizontal: 6,
+    borderRadius: 8,
+    gap: 8,
+  },
+  suggestionLabel: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#1F2937',
+    flex: 1,
+  },
+
+  /* ── 3. Earnings Hero Card ── */
+  earningsCard: {
+    borderRadius: 20,
+    overflow: 'hidden',
+    marginBottom: 20,
+    elevation: 4,
+    shadowColor: '#126B38',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.18,
+    shadowRadius: 8,
+  },
+  earningsGradient: {
+    padding: 15,
+    position: 'relative',
+  },
+  earningsPlantBg: {
+    position: 'absolute',
+    right: 0,
+    top: 0,
+    bottom: 0,
+    width: '55%',
+    opacity: 0.45,
+  },
+  earningsTopRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    zIndex: 2,
+  },
+  earningsLeftCol: {
+    flex: 1,
+  },
+  earningsTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  earningsTitleText: {
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: '#DCFCE7',
+  },
+  earningsAmountText: {
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    marginTop: 2,
+    letterSpacing: -0.4,
+  },
+  earningsTrendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 2,
+  },
+  earningsTrendText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#86EFAC',
+  },
+  earningsRightCol: {
+    alignItems: 'flex-end',
+    flexShrink: 0,
+  },
+  withdrawBtn: {
+    backgroundColor: '#FFFFFF',
+    height: 36,
+    paddingHorizontal: 12,
+    borderRadius: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    elevation: 2,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+  },
+  withdrawBtnText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#168A45',
+  },
+  quoteWrap: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 4,
+    marginTop: 6,
+  },
+  quoteText: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: '#DCFCE7',
+    textAlign: 'right',
+    lineHeight: 14,
+  },
+  monthlyTargetContainer: {
+    backgroundColor: 'rgba(0, 0, 0, 0.22)',
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    marginTop: 12,
+    zIndex: 2,
+  },
+  targetHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 5,
+  },
+  targetTitleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+  },
+  targetLeafWrap: {
+    width: 18,
+    height: 18,
+    borderRadius: 9,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
     alignItems: 'center',
     justifyContent: 'center',
   },
-  liveNotifTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#111827',
-    maxWidth: '75%',
-  },
-  liveNotifTime: {
-    fontSize: 11,
-    color: '#9CA3AF',
-    fontWeight: '500',
-  },
-  liveNotifBody: {
+  targetTitleText: {
     fontSize: 11.5,
-    color: '#4B5563',
-    marginTop: 2,
+    fontWeight: '600',
+    color: '#E2E8F0',
   },
-
-  /* ── 4. Hero Sell Card ── */
-  heroSellCard: {
-    width: '100%',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 18,
-    borderWidth: 1.5,
-    borderColor: '#E3DCCF',
-    elevation: 3,
-    shadowColor: '#1A1C1E',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8,
-    minHeight: 156,
-    overflow: 'hidden',
-    marginBottom: 12,
+  editTargetMiniTag: {
     flexDirection: 'row',
     alignItems: 'center',
+    gap: 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.16)',
+    paddingHorizontal: 5,
+    paddingVertical: 1.5,
+    borderRadius: 8,
+    marginLeft: 4,
   },
-  heroSellContent: {
-    flex: 1,
-    paddingRight: 8,
-    minWidth: 0,
+  editTargetMiniText: {
+    fontSize: 9.5,
+    color: '#DCFCE7',
+    fontWeight: '700',
   },
-  heroSellTitle: {
-    fontSize: 18,
-    fontWeight: '900',
-    color: '#1A1C1E',
-    marginBottom: 4,
-    lineHeight: 23,
-  },
-  heroSellSubtitle: {
-    fontSize: 12,
-    color: '#4B5563',
-    marginBottom: 12,
-    lineHeight: 17,
-  },
-  inlineAddBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#15803D',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    alignSelf: 'flex-start',
-    gap: 6,
-    elevation: 2,
-    shadowColor: '#15803D',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.25,
-    shadowRadius: 3,
-  },
-  inlineAddBtnText: {
-    fontSize: 13,
+  targetAmountText: {
+    fontSize: 11.5,
     fontWeight: '800',
     color: '#FFFFFF',
   },
-  heroBasketImage: {
-    width: 96,
-    height: 96,
-    resizeMode: 'contain',
-    flexShrink: 0,
+  progressBarRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  progressTrack: {
+    flex: 1,
+    height: 7,
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    borderRadius: 3.5,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#22C55E',
+    borderRadius: 3.5,
+  },
+  progressPctText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
 
-  /* ── 5. Best Opportunity 2-Sided Segmented Section ── */
-  opportunitySectionWrap: {
-    marginBottom: 12,
-  },
+  /* ── Headers & Section Titles ── */
   sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: 10,
   },
-  sectionHeadingTitle: {
-    fontSize: 16.5,
+  sectionTitle: {
+    fontSize: 18.5,
     fontWeight: '800',
-    color: '#1A1C1E',
+    color: '#111827',
+    letterSpacing: -0.3,
   },
-  viewAllBtn: {
+  seeAllText: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#16A34A',
+  },
+
+  /* ── 4. Quick Actions (Elevated Shadows) ── */
+  quickActionsGrid: {
+    flexDirection: 'row',
+    gap: 6,
+    marginBottom: 20,
+  },
+  quickCard: {
+    flex: 1,
+    height: 106,
+    borderRadius: 14,
+    borderWidth: 1.2,
+    paddingVertical: 8,
+    paddingHorizontal: 2,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    elevation: 3,
+    shadowColor: '#1A1C1E',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.08,
+    shadowRadius: 5,
+  },
+  quickCardTextCol: {
+    alignItems: 'center',
+    width: '100%',
+    paddingHorizontal: 1,
+  },
+  quickCardTitle: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#111827',
+    textAlign: 'center',
+  },
+  quickCardSub: {
+    fontSize: 9,
+    fontWeight: '600',
+    color: '#64748B',
+    textAlign: 'center',
+    marginTop: 1,
+  },
+  quickMiniArrow: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+  },
+  requestBadge: {
+    position: 'absolute',
+    top: -4,
+    right: -6,
+    width: 16,
+    height: 16,
+    borderRadius: 8,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: '#EFF6FF',
+  },
+  requestBadgeText: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: '#FFFFFF',
+  },
+
+  /* ── 5. Your Crops (Enhanced Tactile Elevation) ── */
+  cropRowScroll: {
+    gap: 10,
+    paddingRight: 6,
+    marginBottom: 20,
+  },
+  cropCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 2,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 15,
+    borderWidth: 1.2,
+    borderColor: '#E2D9CC',
+    padding: 8,
+    paddingRight: 10,
+    width: 142,
+    height: 60,
+    gap: 8,
+    elevation: 3,
+    shadowColor: '#1A1C1E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.07,
+    shadowRadius: 5,
   },
-  viewAllBtnText: {
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: '#15803D',
+  cropCardThumb: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
   },
-  segmentedTabContainer: {
+  cropCardTextCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  cropCardName: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  cropCardQty: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748B',
+    marginTop: 1,
+  },
+
+  /* ── 6. Two-Sided Intelligence Segmented Section ── */
+  intelHeaderBlock: {
+    marginBottom: 12,
+  },
+  segmentedToggleContainer: {
     flexDirection: 'row',
-    backgroundColor: '#EFE8DC',
+    backgroundColor: '#EAE4D9',
     borderRadius: 14,
     padding: 3,
-    marginBottom: 12,
     gap: 4,
   },
-  segmentTab: {
+  segmentBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 9,
-    paddingHorizontal: 10,
-    borderRadius: 11,
     gap: 6,
+    paddingVertical: 9,
+    borderRadius: 11,
   },
-  segmentTabActive: {
+  segmentBtnActive: {
     backgroundColor: '#FFFFFF',
+    elevation: 2,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.08,
     shadowRadius: 3,
-    elevation: 2,
   },
-  segmentTabText: {
+  segmentBtnText: {
     fontSize: 12,
     fontWeight: '600',
     color: '#64748B',
   },
-  segmentTabTextActive: {
+  segmentBtnTextActive: {
+    fontSize: 12.5,
     fontWeight: '800',
-    color: '#1A1C1E',
+    color: '#111827',
   },
-  segmentTabCountBadge: {
-    backgroundColor: '#E2E8F0',
-    paddingHorizontal: 5,
-    paddingVertical: 1.5,
-    borderRadius: 5,
-  },
-  segmentTabCountBadgeActive: {
-    backgroundColor: '#DCFCE7',
-  },
-  segmentTabCountText: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    color: '#475569',
-  },
-  segmentTabCountTextActive: {
-    color: '#15803D',
-  },
-  opportunityCardsList: {
+  intelCardsContainer: {
     gap: 12,
+    marginBottom: 20,
   },
-  opportunityCard: {
+
+  /* Opportunity & Recommendation Card (Master Image Match) */
+  oppCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 18,
-    borderWidth: 1.5,
-    borderColor: '#E3DCCF',
+    borderRadius: 20,
+    borderWidth: 1.2,
+    borderColor: '#E8E2D8',
+    padding: 14,
+    marginBottom: 14,
+    elevation: 3,
     shadowColor: '#1A1C1E',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOpacity: 0.07,
+    shadowRadius: 5,
   },
-  opportunityCardTop: {
+  oppTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     marginBottom: 10,
   },
   oppCropThumb: {
-    width: 52,
-    height: 52,
-    borderRadius: 16,
-    marginRight: 10,
-    borderWidth: 1,
-    borderColor: '#E5E7EB',
+    width: 48,
+    height: 48,
+    borderRadius: 14,
+    backgroundColor: '#F1F5F9',
   },
-  oppCropDetails: {
+  oppHeaderInfo: {
+    marginLeft: 12,
     flex: 1,
-    minWidth: 0,
-    paddingRight: 8,
   },
   oppCropTitle: {
-    fontSize: 16.5,
-    fontWeight: '900',
-    color: '#1A1C1E',
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#111827',
+    letterSpacing: -0.3,
   },
-  oppCropSub: {
-    fontSize: 12,
+  oppCropSubtitle: {
+    fontSize: 12.5,
+    fontWeight: '500',
     color: '#64748B',
     marginTop: 2,
   },
-  oppDemandPill: {
+  oppBadgePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#FFEDD5',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
-    flexShrink: 0,
+    backgroundColor: '#FFF7ED',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 12,
   },
-  oppDemandText: {
-    fontSize: 11,
+  oppBadgeText: {
+    fontSize: 11.5,
     fontWeight: '800',
     color: '#EA580C',
   },
-  oppPriceBanner: {
+  oppRateBox: {
     flexDirection: 'row',
-    backgroundColor: '#F8FBF8',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
     borderRadius: 14,
     borderWidth: 1,
     borderColor: '#DCFCE7',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
     marginBottom: 12,
-    alignItems: 'center',
-    justifyContent: 'space-between',
   },
-  oppPricePrimary: {
+  oppRateCol: {
     flex: 1,
   },
-  oppPricePrimaryLabel: {
-    fontSize: 10.5,
-    fontWeight: '700',
-    color: '#15803D',
+  oppRateTag: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#16A34A',
     textTransform: 'uppercase',
-    letterSpacing: 0.3,
-    marginBottom: 2,
+    letterSpacing: 0.4,
   },
-  oppPricePrimaryValue: {
-    fontSize: 16.5,
+  oppRateVal: {
+    fontSize: 18,
     fontWeight: '900',
-    color: '#14532D',
+    color: '#111827',
+    marginTop: 2,
   },
-  oppPriceDivider: {
+  oppRateUnit: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  oppRateDivider: {
     width: 1,
-    height: 30,
+    height: 32,
     backgroundColor: '#BBF7D0',
-    marginHorizontal: 10,
+    marginHorizontal: 14,
   },
-  oppPriceSecondary: {
-    flex: 1,
-    alignItems: 'flex-end',
-  },
-  oppPriceSecondaryLabel: {
+  oppBenchmarkTag: {
     fontSize: 10.5,
     fontWeight: '600',
     color: '#64748B',
-    marginBottom: 2,
   },
-  oppPriceSecondaryValue: {
-    fontSize: 14,
+  oppBenchmarkVal: {
+    fontSize: 16,
     fontWeight: '800',
-    color: '#334155',
+    color: '#111827',
+    marginTop: 2,
+  },
+  oppBenchmarkUnit: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#64748B',
   },
   oppBottomRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 8,
   },
-  oppBuyerBadge: {
+  buyersPill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#ECFDF3',
+    borderRadius: 12,
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    flexShrink: 1,
-    minWidth: 0,
+    paddingVertical: 7,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
   },
-  oppBuyerBadgeText: {
-    fontSize: 11.5,
-    fontWeight: '700',
+  buyersPillText: {
+    fontSize: 12,
+    fontWeight: '800',
     color: '#15803D',
   },
-  oppActionBtn: {
+  sellHarvestBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#15803D',
-    paddingHorizontal: 15,
+    backgroundColor: '#168A45',
+    borderRadius: 20,
+    paddingHorizontal: 16,
     paddingVertical: 9,
-    borderRadius: 12,
-    flexShrink: 0,
     elevation: 2,
+    shadowColor: '#168A45',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
   },
-  oppActionBtnText: {
+  sellHarvestBtnText: {
     fontSize: 13,
     fontWeight: '800',
     color: '#FFFFFF',
   },
 
-  /* ── Produce Recommendations Cards ── */
-  recCard: {
+  /* ── 7. Live APMC Mandi Rates ── */
+  mandiRatesCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 18,
-    borderWidth: 1.5,
-    borderColor: '#E3DCCF',
+    borderRadius: 20,
+    borderWidth: 1.2,
+    borderColor: '#E8E2D8',
+    padding: 14,
+    marginBottom: 16,
+    elevation: 3,
     shadowColor: '#1A1C1E',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowRadius: 5,
   },
-  recCardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 10,
-  },
-  recBadgePill: {
+  mandiRatesHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    alignSelf: 'flex-start',
-    marginBottom: 4,
-  },
-  recBadgeText: {
-    fontSize: 10.5,
-    fontWeight: '800',
-  },
-  recCropTitle: {
-    fontSize: 16.5,
-    fontWeight: '900',
-    color: '#1A1C1E',
-  },
-  recPriceWrap: {
-    alignItems: 'flex-end',
-  },
-  recPriceLabel: {
-    fontSize: 10.5,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  recPriceVal: {
-    fontSize: 16,
-    fontWeight: '900',
-    color: '#15803D',
-    marginTop: 2,
-  },
-  recAdviceText: {
-    fontSize: 13,
-    color: '#475569',
-    lineHeight: 19,
+    justifyContent: 'space-between',
     marginBottom: 12,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1EBE1',
   },
-  recFooterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+  mandiRatesTitle: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: '#111827',
   },
-  recCyclePill: {
+  liveAgmarknetBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-  },
-  recCycleText: {
-    fontSize: 11.5,
-    fontWeight: '600',
-    color: '#475569',
-  },
-  recAddProduceBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#E8F5E9',
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#C8E6C9',
-  },
-  recAddProduceText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#15803D',
-  },
-
-  /* ── 6. APMC Mandi Rates ── */
-  apmcCard: {
-    padding: 18,
-    borderRadius: 22,
-    borderWidth: 1.5,
-    borderColor: '#E3DCCF',
-  },
-  apmcHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  apmcTitleWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  apmcTitle: {
-    fontSize: 14.5,
-    fontWeight: '800',
-    color: '#1F2937',
-  },
-  livePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
     backgroundColor: '#DCFCE7',
-    paddingHorizontal: 8,
+    borderRadius: 10,
+    paddingHorizontal: 7,
     paddingVertical: 3,
-    borderRadius: 999,
-    gap: 4,
   },
-  livePillDot: {
+  liveGreenDot: {
     width: 6,
     height: 6,
     borderRadius: 3,
-    backgroundColor: '#15803D',
+    backgroundColor: '#16A34A',
   },
-  livePillText: {
-    fontSize: 10,
+  liveAgmarknetText: {
+    fontSize: 10.5,
     fontWeight: '700',
     color: '#15803D',
   },
-  apmcGrid: {
+  mandiRatesGrid: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
   },
-  apmcItem: {
+  mandiRateCol: {
     flex: 1,
     alignItems: 'center',
   },
-  apmcDividerV: {
-    width: 1,
-    height: 38,
-    backgroundColor: '#E5E7EB',
-  },
-  apmcCrop: {
-    fontSize: 12,
-    color: '#6B7280',
+  mandiCropName: {
+    fontSize: 11,
     fontWeight: '600',
-    marginBottom: 2,
+    color: '#64748B',
+    textAlign: 'center',
   },
-  apmcPrice: {
-    fontSize: 17,
+  mandiPrice: {
+    fontSize: 15,
     fontWeight: '900',
     color: '#111827',
+    marginTop: 2,
   },
-  apmcUnit: {
-    fontSize: 11.5,
-    color: '#9CA3AF',
-    fontWeight: '600',
-  },
-  apmcTrend: {
+  mandiUnit: {
     fontSize: 11,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  mandiTrendText: {
+    fontSize: 10.5,
     fontWeight: '700',
     marginTop: 2,
   },
+  mandiDivider: {
+    width: 1,
+    height: 36,
+    backgroundColor: '#F1EBE1',
+  },
+  priceTrendsText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#16A34A',
+  },
 
-  /* ── 7. Weather Card ── */
+  /* ── 8. Weather & Harvest Advisory ── */
   weatherCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
-    padding: 18,
-    borderWidth: 1.5,
-    borderColor: '#E3DCCF',
-    marginTop: 12,
+    borderRadius: 18,
+    borderWidth: 1.2,
+    borderColor: '#E8E2D8',
+    padding: 14,
+    marginBottom: 20,
+    elevation: 2,
+    shadowColor: '#1A1C1E',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 4,
   },
   weatherHeader: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    marginBottom: 6,
   },
   weatherTitle: {
-    fontSize: 14.5,
+    fontSize: 13.5,
     fontWeight: '800',
-    color: '#1A1C1E',
+    color: '#111827',
   },
-  weatherTempBadge: {
-    backgroundColor: '#FFEDD5',
+  weatherBadge: {
+    backgroundColor: '#FFF7ED',
+    borderRadius: 10,
     paddingHorizontal: 8,
     paddingVertical: 3,
-    borderRadius: 8,
   },
-  weatherTempText: {
-    fontSize: 11.5,
+  weatherBadgeText: {
+    fontSize: 11,
     fontWeight: '800',
-    color: '#C2410C',
+    color: '#EA580C',
   },
-  weatherBody: {
-    fontSize: 12.5,
-    color: '#4B5563',
-    lineHeight: 18,
+  weatherSub: {
+    fontSize: 11.5,
+    fontWeight: '500',
+    color: '#64748B',
+    lineHeight: 16,
   },
 
-  /* ── Notification Modal ── */
-  modalBackdrop: {
+  /* ── 7. Earnings Breakdown & Target Modal ── */
+  modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.52)',
     justifyContent: 'flex-end',
   },
-  modalCard: {
+  earningsModalSheet: {
     backgroundColor: '#FFFFFF',
-    borderTopLeftRadius: 26,
-    borderTopRightRadius: 26,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
     padding: 20,
-    maxHeight: '75%',
+    maxHeight: '85%',
   },
   modalHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1EBE1',
+    marginBottom: 14,
   },
-  modalHeaderTitle: {
-    fontSize: 19,
-    fontWeight: '900',
-    color: '#1A1C1E',
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
   },
-  modalUnreadBadge: {
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 8,
+  financialStatsBox: {
+    backgroundColor: '#F8FAF6',
+    borderRadius: 14,
+    borderWidth: 1.2,
+    borderColor: '#E2E8DC',
+    padding: 14,
+    marginBottom: 16,
   },
-  modalUnreadText: {
-    fontSize: 11,
+  financialSectionHeading: {
+    fontSize: 13.5,
     fontWeight: '800',
     color: '#15803D',
-  },
-  modalCloseBtn: {
-    padding: 4,
-  },
-  notifToastBanner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#DCFCE7',
-    borderRadius: 10,
-    padding: 8,
     marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
   },
-  notifToastText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#15803D',
-  },
-  modalSubActionsRow: {
+  statRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 12,
-    paddingBottom: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    paddingVertical: 5,
   },
-  modalSubtext: {
-    fontSize: 12,
-    color: '#64748B',
+  statLabel: {
+    fontSize: 12.5,
+    color: '#475569',
+    fontWeight: '600',
   },
-  markAllReadBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#F0FDF4',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#BBF7D0',
-  },
-  markAllReadText: {
-    fontSize: 11.5,
+  statVal: {
+    fontSize: 13,
     fontWeight: '800',
+    color: '#1E293B',
+  },
+  dividerLine: {
+    height: 1,
+    backgroundColor: '#CBD5E1',
+    marginVertical: 8,
+  },
+  statTotalLabel: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  statTotalVal: {
+    fontSize: 18,
+    fontWeight: '900',
     color: '#15803D',
   },
-  notifFilterRow: {
+  targetSetterCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1.2,
+    borderColor: '#E2D9CC',
+    padding: 14,
+    marginBottom: 20,
+  },
+  targetSetterTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  targetSetterSub: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 12,
+    lineHeight: 16,
+  },
+  targetInputRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#16A34A',
+    paddingHorizontal: 12,
+    height: 48,
+    marginBottom: 12,
+  },
+  targetRupeeSymbol: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#16A34A',
+    marginRight: 6,
+  },
+  targetTextInput: {
+    flex: 1,
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#111827',
+  },
+  presetLabel: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#64748B',
+    marginBottom: 6,
+  },
+  presetsRow: {
     flexDirection: 'row',
     gap: 8,
-    marginBottom: 12,
+    marginBottom: 16,
   },
-  notifFilterChip: {
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
+  presetPill: {
+    flex: 1,
+    height: 36,
+    borderRadius: 10,
     backgroundColor: '#F1F5F9',
-  },
-  notifFilterChipActive: {
-    backgroundColor: '#15803D',
-  },
-  notifFilterChipText: {
-    fontSize: 11.5,
-    fontWeight: '600',
-    color: '#64748B',
-  },
-  notifFilterChipTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '800',
-  },
-  notifScrollView: {
-    marginBottom: 10,
-  },
-  notifEmptyWrap: {
-    alignItems: 'center',
-    paddingVertical: 36,
-  },
-  notifEmptyIconCircle: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#DCFCE7',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
-  },
-  notifEmptyTitle: {
-    fontSize: 16,
-    fontWeight: '800',
-    color: '#1A1C1E',
-    marginBottom: 4,
-  },
-  notifEmptySub: {
-    fontSize: 12.5,
-    color: '#64748B',
-  },
-  notifItemCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
-  notifItemUnread: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#BBF7D0',
+  presetPillActive: {
+    backgroundColor: '#DCFCE7',
+    borderColor: '#86EFAC',
   },
-  notifItemHeader: {
+  presetText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  presetTextActive: {
+    color: '#15803D',
+    fontWeight: '800',
+  },
+  saveTargetBtn: {
+    backgroundColor: '#168A45',
+    height: 44,
+    borderRadius: 12,
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  saveTargetBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+
+  /* ── 8. Voice Search Modal ── */
+  voiceModalCard: {
+    width: '90%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 22,
+    padding: 24,
+    alignItems: 'center',
+    alignSelf: 'center',
+    marginTop: 'auto',
+    marginBottom: 'auto',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15,
+    shadowRadius: 10,
+  },
+  voiceMicCircle: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    backgroundColor: '#16A34A',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 14,
+  },
+  voiceModalTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#111827',
     marginBottom: 4,
   },
-  notifItemUnreadDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: '#15803D',
+  voiceModalHint: {
+    fontSize: 12.5,
+    color: '#64748B',
+    textAlign: 'center',
+    marginBottom: 12,
   },
-  notifItemTitle: {
+  transcriptBox: {
+    width: '100%',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 10,
+    marginBottom: 14,
+  },
+  transcriptText: {
     fontSize: 13.5,
-    fontWeight: '800',
-    color: '#1E293B',
-    flex: 1,
-  },
-  notifItemTime: {
-    fontSize: 10.5,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: '#168A45',
+    textAlign: 'center',
   },
-  notifItemBody: {
-    fontSize: 12,
+  voiceCloseBtn: {
+    paddingVertical: 8,
+    paddingHorizontal: 18,
+    backgroundColor: '#F1F5F9',
+    borderRadius: 10,
+  },
+  voiceCloseBtnText: {
+    fontSize: 12.5,
+    fontWeight: '700',
     color: '#475569',
-    lineHeight: 16,
-    marginBottom: 8,
   },
-  notifActionBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    alignSelf: 'flex-start',
-    backgroundColor: '#DCFCE7',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 8,
-  },
-  notifActionBtnText: {
-    fontSize: 11.5,
-    fontWeight: '800',
-    color: '#15803D',
+  cardPressed: {
+    opacity: 0.78,
   },
 });

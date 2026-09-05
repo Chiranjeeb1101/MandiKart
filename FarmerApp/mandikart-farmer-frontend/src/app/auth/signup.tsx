@@ -18,6 +18,7 @@ import {
   TextInputProps,
   View,
   Modal,
+  Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
@@ -50,6 +51,8 @@ import { MKShadows } from '@/constants/shadows';
 import { useAppStore } from '@/store/appStore';
 import { useAuthStore } from '@/store/authStore';
 import { apiClient } from '@/services/apiClient';
+import { GoogleAuthModal } from '@/components/GoogleAuthModal';
+import { firebaseAuthService } from '@/services/firebaseAuthService';
 
 type OtpMethod = 'sms' | 'whatsapp';
 type FieldTone = 'green' | 'orange' | 'neutral';
@@ -76,7 +79,7 @@ const COUNTRY_CODES = [
 export default function SignUpScreen() {
   const router = useRouter();
   const { language } = useAppStore();
-  const { setPhoneNumber, setUser, setIsAuthenticated } = useAuthStore();
+  const { setPhoneNumber, setUser, setIsAuthenticated, setAuthenticated } = useAuthStore();
   const { t } = useTranslation();
 
   const [firstName, setFirstName] = useState('');
@@ -94,34 +97,40 @@ export default function SignUpScreen() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleModalVisible, setGoogleModalVisible] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  const handleGoogleSignUp = () => {
-    setGoogleLoading(true);
-    setTimeout(() => {
-      const googleUser = {
-        id: `farmer_google_${Date.now()}`,
-        name: 'Ramesh Patil',
-        fullName: 'Ramesh Patil',
-        firstName: 'Ramesh',
-        lastName: 'Patil',
-        phone: '+91 98234 56789',
-        email: 'ramesh.patil.farmer@gmail.com',
-        isEmailVerified: true,
-        language: 'en',
-        state: 'Maharashtra',
-        district: 'Nashik',
-        village: 'Dindori',
-        farmSizeAcres: 8,
-        isVerified: true,
-        role: 'FARMER',
-      };
-      setPhoneNumber('+919823456789');
-      setUser(googleUser);
-      setIsAuthenticated(true);
-      setGoogleLoading(false);
-      router.replace('/(tabs)/home');
-    }, 600);
+  const handleGoogleSignUp = async () => {
+    if (Platform.OS === 'web') {
+      setGoogleLoading(true);
+      try {
+        const cleanPhone = mobile.replace(/\D/g, '').slice(-10);
+        const result = await firebaseAuthService.signInWithGoogleFirebase(
+          cleanPhone ? `${countryCode}${cleanPhone}` : undefined
+        );
+
+        if (result.error === 'REDIRECTING') {
+          return;
+        }
+
+        if (!result.success || !result.farmer) {
+          if (result.error && !result.error.includes('cancelled')) {
+            Alert.alert('Google Sign-Up', result.error);
+          }
+          return;
+        }
+
+        router.replace('/onboarding/farmer-profile');
+      } catch (err: any) {
+        Alert.alert('Google Sign-Up Error', err?.message || 'Could not connect to authentication service.');
+      } finally {
+        setGoogleLoading(false);
+      }
+      return;
+    }
+
+    // On Native (Android / iOS): Open in-app Google Auth Modal
+    setGoogleModalVisible(true);
   };
 
   const selectedLanguage = languageLabels[language] ?? 'English';
@@ -161,16 +170,14 @@ export default function SignUpScreen() {
     const normalizedPhone = `${countryCode}${mobile.trim()}`;
     const cleanPhone = mobile.replace(/\D/g, '').slice(-10);
 
+    let simulatedCode = '';
     try {
-      await apiClient.post('/auth/signup', {
-        phone: cleanPhone,
-        fullName,
-        password,
-        method: otpMethod === 'whatsapp' ? 'whatsapp' : 'sms',
-        preferredLanguage: language,
-      });
+      const otpRes = await firebaseAuthService.sendPhoneOtp(cleanPhone);
+      if (otpRes.simulatedCode) {
+        simulatedCode = otpRes.simulatedCode;
+      }
     } catch (e: any) {
-      console.warn('Farmer backend signup notice:', e?.message);
+      console.warn('Firebase Phone Auth signup notice:', e?.message);
     }
 
     setPhoneNumber(normalizedPhone);
@@ -196,6 +203,7 @@ export default function SignUpScreen() {
         name: fullName,
         email: email.trim() || '',
         method: otpMethod,
+        code: simulatedCode,
       },
     });
   };
@@ -526,6 +534,23 @@ export default function SignUpScreen() {
           </View>
         </Pressable>
       </Modal>
+
+      {/* In-App Google Firebase Auth Modal */}
+      <GoogleAuthModal
+        visible={googleModalVisible}
+        onClose={() => setGoogleModalVisible(false)}
+        pendingPhone={mobile ? `${countryCode}${mobile.replace(/\D/g, '').slice(-10)}` : undefined}
+        onSuccess={(farmer) => {
+          if (farmer.village || farmer.farmSizeAcres) {
+            router.replace('/(tabs)/home');
+          } else {
+            router.replace('/onboarding/farmer-profile');
+          }
+        }}
+        onError={(err) => {
+          Alert.alert('Google Sign-Up', err);
+        }}
+      />
     </MKBackground>
   );
 }

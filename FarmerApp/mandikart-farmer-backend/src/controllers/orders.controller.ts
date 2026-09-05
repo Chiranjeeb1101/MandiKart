@@ -11,7 +11,7 @@ import {
   VerifyPickupSchema,
   NegotiateSchema,
 } from '@mandikart/shared-types';
-import { canTransition, getSupabaseAdmin, auditLog } from '@mandikart/shared-core';
+import { canTransition, getSupabaseAdmin, isSupabaseConfigured, auditLog } from '@mandikart/shared-core';
 import { InventoryService } from '../services/inventory.service.js';
 import { NegotiationService } from '../services/negotiation.service.js';
 import { DashboardService } from '../services/dashboard.service.js';
@@ -25,22 +25,7 @@ export class OrdersController {
     const offset = (page - 1) * limit;
 
     try {
-      const supabase = getSupabaseAdmin();
-      let query = supabase
-        .from('orders')
-        .select('*, order_items(*)', { count: 'exact' })
-        .or(`farmer_id.eq.${farmerId},farmer_id.eq.d1111111-1111-1111-1111-111111111111`)
-        .order('created_at', { ascending: false });
-
-      if (statusFilter) {
-        const statuses = statusFilter.split(',');
-        query = query.in('status', statuses);
-      }
-
-      const { data, count, error } = await query.range(offset, offset + limit - 1);
-
-      if (error || !data || data.length === 0) {
-        // Authoritative prototype orders for demonstration
+      if (!isSupabaseConfigured()) {
         const fallback = [
           {
             id: 'ord_101',
@@ -111,6 +96,29 @@ export class OrdersController {
         res.status(200).json({
           data: fallback,
           meta: { page: 1, limit: 20, total: fallback.length, totalPages: 1 },
+          error: null,
+        });
+        return;
+      }
+
+      const supabase = getSupabaseAdmin();
+      let query = supabase
+        .from('orders')
+        .select('*, order_items(*)', { count: 'exact' })
+        .or(`farmer_id.eq.${farmerId},farmer_id.eq.d1111111-1111-1111-1111-111111111111`)
+        .order('created_at', { ascending: false });
+
+      if (statusFilter) {
+        const statuses = statusFilter.split(',');
+        query = query.in('status', statuses);
+      }
+
+      const { data, count, error } = await query.range(offset, offset + limit - 1);
+
+      if (error || !data || data.length === 0) {
+        res.status(200).json({
+          data: [],
+          meta: { page, limit, total: 0, totalPages: 1 },
           error: null,
         });
         return;

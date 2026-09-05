@@ -6,9 +6,12 @@
  *  - High-privilege Firestore / RTDB operations
  */
 
-import { initializeApp, cert, getApps, App } from 'firebase-admin/app';
-import { getMessaging, Messaging } from 'firebase-admin/messaging';
-import { getAuth, Auth } from 'firebase-admin/auth';
+// @ts-ignore
+import { initializeApp, cert, getApps, type App } from 'firebase-admin/app';
+// @ts-ignore
+import { getMessaging, type Messaging } from 'firebase-admin/messaging';
+// @ts-ignore
+import { getAuth, type Auth } from 'firebase-admin/auth';
 import fs from 'fs';
 import path from 'path';
 

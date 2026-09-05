@@ -15,12 +15,16 @@ import {
   Pressable,
   KeyboardAvoidingView,
   Platform,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Sprout, Lock, Eye, EyeOff, ArrowRight, KeyRound } from 'lucide-react-native';
 import { MKBackground, MKButton, MKInput, MKHeader, MKGoogleButton } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
 import { apiClient } from '@/services/apiClient';
+import { promptGoogleSignIn } from '@/services/googleAuth';
+import { firebaseAuthService } from '@/services/firebaseAuthService';
+import { GoogleAuthModal } from '@/components/GoogleAuthModal';
 
 export default function LoginScreen() {
   const router = useRouter();
@@ -30,33 +34,42 @@ export default function LoginScreen() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [googleLoading, setGoogleLoading] = useState(false);
+  const [googleModalVisible, setGoogleModalVisible] = useState(false);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
 
-  const handleGoogleLogin = () => {
-    setGoogleLoading(true);
-    setTimeout(() => {
-      setUser({
-        id: `farmer_google_${Date.now()}`,
-        name: 'Ramesh Patil',
-        fullName: 'Ramesh Patil',
-        firstName: 'Ramesh',
-        lastName: 'Patil',
-        phone: '+91 98234 56789',
-        email: 'ramesh.patil.farmer@gmail.com',
-        isEmailVerified: true,
-        language: 'en',
-        state: 'Maharashtra',
-        district: 'Nashik',
-        village: 'Dindori',
-        farmSizeAcres: 8,
-        isVerified: true,
-        role: 'FARMER',
-      });
-      setPhoneNumber('+919823456789');
-      setIsAuthenticated(true);
-      setGoogleLoading(false);
-      router.replace('/(tabs)/home');
-    }, 600);
+  const handleGoogleLogin = async () => {
+    if (Platform.OS === 'web') {
+      setGoogleLoading(true);
+      try {
+        const cleanPhone = mobile.replace(/\D/g, '').slice(-10);
+        const result = await firebaseAuthService.signInWithGoogleFirebase(
+          cleanPhone ? `+91${cleanPhone}` : undefined
+        );
+
+        if (result.error === 'REDIRECTING') return;
+
+        if (!result.success || !result.farmer) {
+          if (result.error && !result.error.includes('cancelled')) {
+            Alert.alert('Google Sign-In', result.error);
+          }
+          return;
+        }
+
+        if (result.farmer.village || result.farmer.farmSizeAcres) {
+          router.replace('/(tabs)/home');
+        } else {
+          router.replace('/onboarding/farmer-profile');
+        }
+      } catch (err: any) {
+        setErrors({ mobile: err?.message || 'Could not connect to Google authentication service.' });
+      } finally {
+        setGoogleLoading(false);
+      }
+      return;
+    }
+
+    // On Native (Android / iOS): Open in-app Google Auth Modal
+    setGoogleModalVisible(true);
   };
 
   const validate = () => {
@@ -89,16 +102,29 @@ export default function LoginScreen() {
     }
   };
 
-  const handleLoginWithOtp = () => {
+  const handleLoginWithOtp = async () => {
     if (!mobile.trim() || mobile.length < 10) {
       setErrors({ mobile: 'Enter your 10-digit number to receive OTP' });
       return;
     }
-    setPhoneNumber(`+91${mobile}`);
-    router.push({
-      pathname: '/auth/verify-otp',
-      params: { phone: `+91 ${mobile}` },
-    });
+    const cleanPhone = mobile.replace(/\D/g, '').slice(-10);
+    setPhoneNumber(`+91${cleanPhone}`);
+
+    try {
+      const res = await firebaseAuthService.sendPhoneOtp(mobile);
+      router.push({
+        pathname: '/auth/verify-otp',
+        params: {
+          phone: `+91 ${cleanPhone}`,
+          code: res.simulatedCode || '',
+        },
+      });
+    } catch {
+      router.push({
+        pathname: '/auth/verify-otp',
+        params: { phone: `+91 ${cleanPhone}` },
+      });
+    }
   };
 
   const handleSignUpNav = () => {
@@ -223,6 +249,23 @@ export default function LoginScreen() {
           </Pressable>
         </ScrollView>
       </KeyboardAvoidingView>
+
+      {/* In-App Google Firebase Auth Modal */}
+      <GoogleAuthModal
+        visible={googleModalVisible}
+        onClose={() => setGoogleModalVisible(false)}
+        pendingPhone={mobile ? `+91${mobile.replace(/\D/g, '').slice(-10)}` : undefined}
+        onSuccess={(farmer) => {
+          if (farmer.village || farmer.farmSizeAcres) {
+            router.replace('/(tabs)/home');
+          } else {
+            router.replace('/onboarding/farmer-profile');
+          }
+        }}
+        onError={(err) => {
+          Alert.alert('Google Sign-In', err);
+        }}
+      />
     </MKBackground>
   );
 }

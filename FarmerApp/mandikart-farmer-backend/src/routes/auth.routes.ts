@@ -12,5 +12,6 @@ authRouter.post('/send-otp', AuthController.sendOtp);
 authRouter.post('/verify-otp', AuthController.verifyOtp);
 authRouter.post('/login', AuthController.login);
 authRouter.post('/google', AuthController.loginWithGoogle);
+authRouter.post('/firebase-sync', AuthController.syncFirebase);
 authRouter.post('/refresh-session', AuthController.refreshSession);
 authRouter.post('/logout', AuthController.logout);

@@ -157,19 +157,6 @@ export default function ProduceScreen() {
 
         <View style={styles.headerActionsGroup}>
           <Pressable
-            style={({ pressed }) => [
-              styles.headerAddCropBtn,
-              pressed && { opacity: 0.75 },
-            ]}
-            onPress={() => router.push('/produce/add')}
-            hitSlop={8}
-            accessibilityLabel="Add New Crop"
-          >
-            <Plus size={16} color="#15803D" strokeWidth={2.5} />
-            <Text style={styles.headerAddCropBtnText}>Add Crop</Text>
-          </Pressable>
-
-          <Pressable
             style={styles.headerIconButton}
             onPress={() => router.push('/more/notifications')}
             accessibilityLabel="Notifications"
@@ -735,19 +722,6 @@ export default function ProduceScreen() {
         <View style={{ height: 60 }} />
       </ScrollView>
 
-      {/* ── Sticky Floating Action Button: Add New Crop ───────────── */}
-      <Pressable
-        style={({ pressed }) => [
-          styles.floatingAddBtn,
-          pressed && { opacity: 0.85, transform: [{ scale: 0.96 }] },
-        ]}
-        onPress={() => router.push('/produce/add')}
-        hitSlop={10}
-        accessibilityLabel="Add New Crop"
-      >
-        <Plus size={18} color="#FFFFFF" strokeWidth={2.5} />
-        <Text style={styles.floatingAddBtnText}>Add Crop</Text>
-      </Pressable>
 
       {/* ── Freshness Information Disclaimer Modal ─────────────────── */}
       <Modal
@@ -1329,30 +1303,6 @@ const styles = StyleSheet.create({
   pressedButton: {
     opacity: 0.85,
     transform: [{ scale: 0.98 }],
-  },
-  floatingAddBtn: {
-    position: 'absolute',
-    bottom: 24,
-    right: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#15803D',
-    paddingHorizontal: 18,
-    paddingVertical: 12,
-    borderRadius: 28,
-    elevation: 5,
-    shadowColor: '#000',
-    shadowOpacity: 0.25,
-    shadowRadius: 6,
-    shadowOffset: { width: 0, height: 3 },
-    gap: 6,
-    zIndex: 99,
-  },
-  floatingAddBtnText: {
-    fontSize: 14,
-    fontWeight: '800',
-    color: '#FFFFFF',
-    letterSpacing: 0.2,
   },
 
   // ── Alert Card ────────────────────────────────────────────────────

@@ -9,7 +9,7 @@ import { MarketPriceService } from '@mandikart/shared-core';
 
 export const marketRouter = Router();
 
-marketRouter.get('/rates', async (req: Request, res: Response): Promise<void> => {
+const handleMarketRates = async (req: Request, res: Response): Promise<void> => {
   const parse = MarketRatesQuerySchema.safeParse(req.query);
   const params = parse.success ? parse.data : {};
 
@@ -27,4 +27,7 @@ marketRouter.get('/rates', async (req: Request, res: Response): Promise<void> =>
       error: { code: 'MARKET_RATES_ERROR', message: (err as Error).message },
     });
   }
-});
+};
+
+marketRouter.get('/rates', handleMarketRates);
+marketRouter.get('/prices', handleMarketRates);

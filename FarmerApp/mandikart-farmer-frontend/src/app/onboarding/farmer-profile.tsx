@@ -35,9 +35,11 @@ import {
   LocateFixed,
   Upload,
   X,
+  Phone,
 } from 'lucide-react-native';
 import { MKBackground, MKButton, MKInput, MKHeader } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
+import { apiClient } from '@/services/apiClient';
 import { pickImageFromGallery, takePhotoWithCamera } from '@/services/imagePickerService';
 import {
   getCurrentFarmerLocation,
@@ -52,14 +54,35 @@ const AVATAR_PLACEHOLDER_URI =
 
 export default function FarmerProfileScreen() {
   const router = useRouter();
-  const { user, setUser } = useAuthStore();
+  const { user, setUser, setPhoneNumber } = useAuthStore();
 
   const [role, setRole] = useState<'INDIVIDUAL' | 'FPO'>('INDIVIDUAL');
-  const [fullName, setFullName] = useState(user?.name || 'Ramesh Patil');
+  const [fullName, setFullName] = useState(user?.fullName || user?.name || '');
+  const [phone, setPhone] = useState(
+    user?.phone && !user.phone.includes('9876543210')
+      ? user.phone.replace('+91', '').trim()
+      : ''
+  );
   const [village, setVillage] = useState(user?.village || '');
   const [experienceYears, setExperienceYears] = useState('10');
   const [avatarUri, setAvatarUri] = useState<string | undefined>(user?.avatarUri);
   const [photoModalVisible, setPhotoModalVisible] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  React.useEffect(() => {
+    if (user?.fullName || user?.name) {
+      setFullName(user.fullName || user.name || '');
+    }
+    if (user?.phone && !user.phone.includes('9876543210')) {
+      setPhone(user.phone.replace('+91', '').trim());
+    }
+    if (user?.avatarUri) {
+      setAvatarUri(user.avatarUri);
+    }
+    if (user?.village) {
+      setVillage(user.village);
+    }
+  }, [user]);
 
   // Realtime location states
   const [isLocating, setIsLocating] = useState(false);
@@ -141,20 +164,55 @@ export default function FarmerProfileScreen() {
   const validate = () => {
     const errs: { [key: string]: string } = {};
     if (!fullName.trim()) errs.fullName = 'Please enter your full name';
-    if (!village.trim()) errs.village = 'Please enter your village name';
+    
+    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      errs.phone = 'Please enter a valid 10-digit mobile number';
+    } else if (!/^[6-9]\d{9}$/.test(cleanPhone)) {
+      errs.phone = 'Indian mobile numbers must start with 6, 7, 8, or 9';
+    }
+
+    if (!village.trim()) errs.village = 'Please enter your village or city name';
     setErrors(errs);
     return Object.keys(errs).length === 0;
   };
 
-  const handleContinue = () => {
+  const handleContinue = async () => {
     if (!validate()) return;
 
-    if (user) {
-      setUser({
-        ...user,
-        name: fullName,
-        role: role === 'INDIVIDUAL' ? 'FARMER' : 'FPO_MANAGER',
+    setSaving(true);
+    const cleanPhone = phone.replace(/\D/g, '').slice(-10);
+    const formattedPhone = `+91${cleanPhone}`;
+
+    const updatedUser = {
+      ...user,
+      id: user?.id || 'farmer_ramesh_01',
+      name: fullName.trim(),
+      fullName: fullName.trim(),
+      phone: formattedPhone,
+      village: village.trim(),
+      experience: experienceYears,
+      avatarUri: avatarUri || user?.avatarUri,
+      role: (role === 'INDIVIDUAL' ? 'FARMER' : 'FPO_MANAGER') as any,
+    };
+
+    setUser(updatedUser);
+    setPhoneNumber(formattedPhone);
+
+    // Persist to backend API and Supabase database
+    try {
+      await apiClient.put('/farmers/profile', {
+        fullName: fullName.trim(),
+        phone: formattedPhone,
+        village: village.trim(),
+        avatarUrl: avatarUri || user?.avatarUri,
+        state: user?.state || 'Maharashtra',
+        district: user?.district || 'Nashik',
       });
+    } catch (err: any) {
+      console.warn('Profile save note:', err?.message);
+    } finally {
+      setSaving(false);
     }
 
     router.push('/onboarding/farm-details');
@@ -183,7 +241,14 @@ export default function FarmerProfileScreen() {
             <View style={styles.heroContent}>
               <MKHeader
                 showBack={true}
-                step={{ current: 1, total: 2, label: 'Profile' }}
+                onBack={() => {
+                  if (router.canGoBack()) {
+                    router.back();
+                  } else {
+                    router.replace('/auth/signup');
+                  }
+                }}
+                step={{ current: 1, total: 3, label: 'Profile' }}
                 style={styles.headerRow}
               />
 
@@ -301,6 +366,27 @@ export default function FarmerProfileScreen() {
                   leftIcon={<User size={18} color="#9AA0A6" />}
                 />
 
+                <MKInput
+                  label="MOBILE NUMBER *"
+                  placeholder="Enter 10-digit mobile number"
+                  value={phone}
+                  onChangeText={(val) => {
+                    const digits = val.replace(/\D/g, '').slice(0, 10);
+                    setPhone(digits);
+                    if (errors.phone) setErrors((prev) => ({ ...prev, phone: '' }));
+                  }}
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  error={errors.phone}
+                  leftIcon={
+                    <View style={{ flexDirection: 'row', alignItems: 'center', paddingRight: 4 }}>
+                      <Text style={{ fontSize: 16, marginRight: 4 }}>🇮🇳</Text>
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#1B6D24', marginRight: 4 }}>+91</Text>
+                      <Phone size={15} color="#9AA0A6" />
+                    </View>
+                  }
+                />
+
                 <View style={styles.locationInputHeaderRow}>
                   <Text style={styles.inputCustomLabel}>VILLAGE / CITY *</Text>
                   <Pressable
@@ -407,18 +493,18 @@ export default function FarmerProfileScreen() {
             {/* Action CTA & Progress */}
             <View style={styles.actionArea}>
               <MKButton
-                title="CONTINUE"
+                title={saving ? 'SAVING...' : 'CONTINUE'}
                 onPress={handleContinue}
                 variant="primary"
                 size="lg"
+                disabled={saving}
                 rightIcon={<ArrowRight size={20} color="#FFFFFF" strokeWidth={2.5} />}
               />
 
-              {/* Step dots (Step 1 of 2) */}
+              {/* Step dots (Step 2 of 3) */}
               <View style={styles.progressDotsRow}>
+                <View style={[styles.dot, styles.dotDone]} />
                 <View style={[styles.dot, styles.dotActive]} />
-                <View style={styles.dot} />
-                <View style={styles.dot} />
                 <View style={styles.dot} />
               </View>
 
@@ -752,6 +838,10 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     backgroundColor: '#E5D5C5',
+  },
+  dotDone: {
+    backgroundColor: '#1E5A2A',
+    width: 8,
   },
   dotActive: {
     backgroundColor: '#1E5A2A',

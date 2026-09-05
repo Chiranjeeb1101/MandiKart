@@ -39,17 +39,11 @@ import {
 } from 'lucide-react-native';
 import { MKBackground, MKHeader } from '@/components/ui';
 import { FrontendConsentService } from '@/services/consentService';
+import { useAuthStore } from '@/store/authStore';
 
 export default function PermissionsScreen() {
   const router = useRouter();
-
-  useEffect(() => {
-    FrontendConsentService.checkRequiresConsent().then((requires) => {
-      if (!requires) {
-        router.replace('/auth/signup');
-      }
-    });
-  }, [router]);
+  const { setIsAuthenticated, setOnboarded } = useAuthStore();
 
   const [terms, setTerms] = useState(true);
   const [privacy, setPrivacy] = useState(true);
@@ -82,8 +76,10 @@ export default function PermissionsScreen() {
     } catch (e) {
       console.warn('Consent recorded with fallback:', e);
     } finally {
+      setIsAuthenticated(true);
+      setOnboarded(true);
       setLoading(false);
-      router.push('/auth/signup');
+      router.replace('/(tabs)/home');
     }
   };
 
@@ -97,11 +93,11 @@ export default function PermissionsScreen() {
             if (router.canGoBack()) {
               router.back();
             } else {
-              router.replace('/language-select');
+              router.replace('/onboarding/farm-details');
             }
           }}
           title="Permissions & Agreement"
-          step={{ current: 2, total: 4, label: 'Permissions' }}
+          step={{ current: 3, total: 3, label: 'Permissions' }}
         />
 
         <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
@@ -224,11 +220,18 @@ export default function PermissionsScreen() {
               <ActivityIndicator color="#ffffff" />
             ) : (
               <View style={styles.btnRow}>
-                <Text style={styles.buttonText}>Agree & Continue 🌾</Text>
+                <Text style={styles.buttonText}>Agree & Launch Dashboard 🚀</Text>
                 <ArrowRight size={18} color="#ffffff" />
               </View>
             )}
           </Pressable>
+
+          {/* Step dots (Step 3 of 3) */}
+          <View style={styles.progressDotsRow}>
+            <View style={[styles.dot, styles.dotDone]} />
+            <View style={[styles.dot, styles.dotDone]} />
+            <View style={[styles.dot, styles.dotActive]} />
+          </View>
 
           <Text style={styles.footerNotice}>
             By continuing, you confirm acceptance of MandiKart platform terms. You can update hardware permissions at any time in device settings.
@@ -371,6 +374,27 @@ const styles = StyleSheet.create({
     marginTop: 14,
     lineHeight: 16,
     paddingHorizontal: 8,
+  },
+  progressDotsRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 18,
+    marginBottom: 4,
+  },
+  dot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#E5D5C5',
+  },
+  dotActive: {
+    backgroundColor: '#1E5A2A',
+    width: 18,
+  },
+  dotDone: {
+    backgroundColor: '#1E5A2A',
   },
 
   // Reader Modal Styles

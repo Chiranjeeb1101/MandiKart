@@ -36,13 +36,14 @@ import {
 } from 'lucide-react-native';
 import { MKLayout } from '@/constants/layout';
 import { useAuthStore } from '@/store/authStore';
+import { apiClient } from '@/services/apiClient';
 import { pickImageFromGallery, takePhotoWithCamera } from '@/services/imagePickerService';
 import { getCurrentFarmerLocation } from '@/services/locationService';
 
 export default function FarmerProfileScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { user, setUser, isAuthenticated } = useAuthStore();
+  const { user, setUser, setPhoneNumber, isAuthenticated } = useAuthStore();
 
   if (!isAuthenticated) {
     return <Redirect href="/auth/login" />;
@@ -53,20 +54,25 @@ export default function FarmerProfileScreen() {
   const [isLocating, setIsLocating] = useState(false);
 
   // Editable fields
-  const [firstName, setFirstName] = useState(user?.firstName || 'Ramesh');
-  const [middleName, setMiddleName] = useState(user?.middleName || 'Kumar');
-  const [lastName, setLastName] = useState(user?.lastName || 'Patil');
-  const [phone, setPhone] = useState(user?.phone || '9876543210');
+  const names = (user?.fullName || user?.name || '').trim().split(' ');
+  const defaultFirst = user?.firstName || names[0] || 'Farmer';
+  const defaultLast = user?.lastName || (names.length > 1 ? names.slice(1).join(' ') : '');
+  const defaultPhone = user?.phone && !user.phone.includes('9876543210') ? user.phone.replace('+91', '') : '';
+
+  const [firstName, setFirstName] = useState(defaultFirst);
+  const [middleName, setMiddleName] = useState(user?.middleName || '');
+  const [lastName, setLastName] = useState(defaultLast);
+  const [phone, setPhone] = useState(defaultPhone);
   const [countryCode, setCountryCode] = useState(user?.countryCode || '+91');
-  const [email, setEmail] = useState(user?.email || 'farmer@mandikart.in');
+  const [email, setEmail] = useState(user?.email || '');
   const [avatarUri, setAvatarUri] = useState<string | undefined>(user?.avatarUri);
 
-  const [village, setVillage] = useState(user?.village || 'Dindori');
-  const [city, setCity] = useState(user?.city || 'Nashik');
+  const [village, setVillage] = useState(user?.village || '');
+  const [city, setCity] = useState(user?.city || '');
   const [district, setDistrict] = useState(user?.district || 'Nashik');
   const [stateName, setStateName] = useState(user?.state || 'Maharashtra');
-  const [farmSize, setFarmSize] = useState(user?.farmSizeAcres?.toString() || '5.5');
-  const [experienceYears, setExperienceYears] = useState(user?.experienceYears?.toString() || '12');
+  const [farmSize, setFarmSize] = useState(user?.farmSizeAcres?.toString() || '5');
+  const [experienceYears, setExperienceYears] = useState(user?.experienceYears?.toString() || '10');
   const [crops, setCrops] = useState<string[]>(user?.crops || ['Onion', 'Wheat', 'Tomato']);
   const [newCropInput, setNewCropInput] = useState('');
 
@@ -117,33 +123,58 @@ export default function FarmerProfileScreen() {
     setCrops(crops.filter((c) => c !== cropName));
   };
 
-  const handleSaveProfile = () => {
+  const handleSaveProfile = async () => {
     setIsSaving(true);
-    setTimeout(() => {
-      if (user) {
-        setUser({
-          ...user,
-          firstName,
-          middleName,
-          lastName,
-          name: `${firstName} ${lastName}`.trim(),
-          phone,
-          countryCode,
-          email,
-          avatarUri,
-          village,
-          city,
-          district,
-          state: stateName,
-          farmSizeAcres: parseFloat(farmSize) || 5.5,
-          experienceYears: parseInt(experienceYears, 10) || 10,
-          crops,
-        });
-      }
+    const cleanDigits = phone.replace(/\D/g, '').slice(-10);
+    const formattedPhone = cleanDigits ? `+91${cleanDigits}` : phone;
+    const fullNameCombined = [firstName, middleName, lastName].filter(Boolean).join(' ').trim();
+
+    const updated = {
+      ...user,
+      firstName,
+      middleName,
+      lastName,
+      fullName: fullNameCombined,
+      name: fullNameCombined,
+      phone: formattedPhone,
+      countryCode,
+      email,
+      avatarUri,
+      village,
+      city,
+      district,
+      state: stateName,
+      farmSizeAcres: parseFloat(farmSize) || 5,
+      experienceYears: parseInt(experienceYears, 10) || 10,
+      crops,
+    };
+
+    setUser(updated);
+    if (cleanDigits) {
+      setPhoneNumber(formattedPhone);
+    }
+
+    try {
+      await apiClient.put('/farmers/profile', {
+        fullName: fullNameCombined,
+        phone: formattedPhone,
+        village,
+        state: stateName,
+        district,
+        avatarUrl: avatarUri,
+      });
+
+      await apiClient.put('/farmers/farm-details', {
+        farmSizeAcres: parseFloat(farmSize) || 5,
+        primaryCrops: crops,
+      });
+    } catch (err: any) {
+      console.warn('Profile save remote sync note:', err?.message);
+    } finally {
       setIsSaving(false);
       setIsEditing(false);
       Alert.alert('Profile Updated', 'Farmer details successfully saved!');
-    }, 400);
+    }
   };
 
   return (

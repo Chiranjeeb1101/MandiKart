@@ -71,10 +71,12 @@ export default function SellHomeScreen() {
   const crops = useProduceStore((state) => state.crops);
   const requests = useSellStore((state) => state.requests);
   const salesHistory = useSellStore((state) => state.salesHistory);
+  const buyers = useSellStore((state) => state.buyers);
   const createListing = useSellStore((state) => state.createListing);
   const acceptRequest = useSellStore((state) => state.acceptRequest);
   const rejectRequest = useSellStore((state) => state.rejectRequest);
   const counterOffer = useSellStore((state) => state.counterOffer);
+  const executeSale = useSellStore((state) => state.executeSale);
 
   // Active new / pending requests
   const newRequests = useMemo(() => {
@@ -116,6 +118,72 @@ export default function SellHomeScreen() {
     setSelectedPercentage(pct);
     const calculatedQty = Math.round((selectedCropForSell.availableKg * pct) / 100);
     setSellQuantityInput(calculatedQty.toString());
+  };
+
+  const handleDirectSell = () => {
+    if (!selectedCropForSell) return;
+    const qty = parseFloat(sellQuantityInput);
+    if (isNaN(qty) || qty <= 0) {
+      Alert.alert('Invalid Quantity', 'Please enter a valid quantity to sell.');
+      return;
+    }
+    if (qty > selectedCropForSell.availableKg) {
+      Alert.alert(
+        'Exceeds Available Stock',
+        `You have ${selectedCropForSell.availableKg.toLocaleString()} kg available. Please enter an amount equal to or less than your available stock.`
+      );
+      return;
+    }
+
+    const topBuyer = buyers[0] || {
+      name: 'ABC Foods & Agro Procurements',
+      businessType: 'Food Processor',
+    };
+
+    const targetPrice = selectedCropForSell.referencePricePerKg || 24;
+
+    Alert.alert(
+      'Confirm Instant Sale 🤝',
+      `Sell ${qty.toLocaleString()} kg of ${selectedCropForSell.cropName} directly to ${topBuyer.name} at ₹${targetPrice}/kg?\n\nGross Value: ₹${(qty * targetPrice).toLocaleString()}\nPickup: Farmgate Collection Scheduled`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm & Sell Now',
+          style: 'default',
+          onPress: () => {
+            setSellModalVisible(false);
+            const res = executeSale({
+              cropId: selectedCropForSell.id,
+              cropName: selectedCropForSell.cropName,
+              variety: selectedCropForSell.variety,
+              quantityKg: qty,
+              grade: selectedCropForSell.grade,
+              pricePerKg: targetPrice,
+              buyerName: topBuyer.name,
+              buyerType: topBuyer.businessType,
+              transportPerKg: 0.8,
+              cropImage: selectedCropForSell.imageUri,
+            });
+
+            if (res.success) {
+              Alert.alert(
+                'Produce Sold & Order Created! 🚛',
+                `Your order (${res.orderId}) is now live. Vehicle dispatch is underway and tracked in real-time in the Orders screen.`,
+                [
+                  {
+                    text: 'View in Orders',
+                    onPress: () => router.push('/(tabs)/orders'),
+                  },
+                  { text: 'Stay in Sell', style: 'cancel' },
+                ]
+              );
+            } else {
+              Alert.alert('Unable to Complete Sale', res.error || 'Please check stock.');
+            }
+          },
+        },
+      ]
+    );
   };
 
   const handleProceedToBestOptions = () => {
@@ -789,12 +857,41 @@ export default function SellHomeScreen() {
                 <Text style={styles.activeSalePayout}>
                   Est. Net Payout: <Text style={{ fontWeight: '800' }}>₹{sale.netPayout.toLocaleString()}</Text>
                 </Text>
-                <Pressable
-                  style={styles.viewOrderLink}
-                  onPress={() => router.push('/(tabs)/orders')}
-                >
-                  <Text style={styles.viewOrderLinkText}>Track in Orders →</Text>
-                </Pressable>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                  <Pressable
+                    style={[
+                      styles.viewOrderLink,
+                      {
+                        backgroundColor: '#E8F5E9',
+                        paddingHorizontal: 10,
+                        paddingVertical: 5,
+                        borderRadius: 6,
+                        flexDirection: 'row',
+                        alignItems: 'center',
+                      },
+                    ]}
+                    onPress={() =>
+                      router.push({
+                        pathname: '/orders/track-vehicle',
+                        params: {
+                          orderId: sale.orderId,
+                          crop: `${sale.cropName} (${sale.quantityKg} KG)`,
+                          buyer: sale.buyerName,
+                        },
+                      })
+                    }
+                  >
+                    <Truck size={13} color="#168A45" style={{ marginRight: 4 }} />
+                    <Text style={[styles.viewOrderLinkText, { color: '#168A45' }]}>Live Track</Text>
+                  </Pressable>
+
+                  <Pressable
+                    style={styles.viewOrderLink}
+                    onPress={() => router.push('/(tabs)/orders')}
+                  >
+                    <Text style={styles.viewOrderLinkText}>Orders →</Text>
+                  </Pressable>
+                </View>
               </View>
             </View>
           ))
@@ -909,13 +1006,28 @@ export default function SellHomeScreen() {
               </View>
             )}
 
-            <Pressable
-              style={styles.modalPrimaryBtn}
-              onPress={handleProceedToBestOptions}
-            >
-              <Text style={styles.modalPrimaryBtnText}>Find Best Selling Options</Text>
-              <ArrowRight size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
-            </Pressable>
+            <View style={{ gap: 10, marginTop: 6 }}>
+              <Pressable
+                style={[styles.modalPrimaryBtn, { backgroundColor: '#168A45' }]}
+                onPress={handleDirectSell}
+              >
+                <Sparkles size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
+                <Text style={styles.modalPrimaryBtnText}>⚡ Sell Now to Verified Buyer</Text>
+              </Pressable>
+
+              <Pressable
+                style={[
+                  styles.modalPrimaryBtn,
+                  { backgroundColor: '#FFFFFF', borderWidth: 1.5, borderColor: '#168A45' },
+                ]}
+                onPress={handleProceedToBestOptions}
+              >
+                <Text style={[styles.modalPrimaryBtnText, { color: '#168A45' }]}>
+                  Compare All Buyer Offers
+                </Text>
+                <ArrowRight size={18} color="#168A45" style={{ marginLeft: 6 }} />
+              </Pressable>
+            </View>
           </View>
         </View>
       </Modal>

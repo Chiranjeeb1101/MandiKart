@@ -5,7 +5,7 @@
 
 import { Request, Response } from 'express';
 import { CreateProductSchema, UpdateProductStockSchema, UserRole } from '@mandikart/shared-types';
-import { getSupabaseAdmin, auditLog } from '@mandikart/shared-core';
+import { getSupabaseAdmin, isSupabaseConfigured, auditLog } from '@mandikart/shared-core';
 import { CONSTANTS } from '@mandikart/shared-config';
 import { DashboardService } from '../services/dashboard.service.js';
 
@@ -18,23 +18,7 @@ export class ProductsController {
     const offset = (page - 1) * limit;
 
     try {
-      const supabase = getSupabaseAdmin();
-      let query = supabase
-        .from('products')
-        .select('*', { count: 'exact' })
-        .or(`farmer_id.eq.${farmerId},farmer_id.eq.d1111111-1111-1111-1111-111111111111`)
-        .order('created_at', { ascending: false });
-
-      if (status === 'active') {
-        query = query.eq('is_active', true).gt('available_quantity', 0);
-      } else if (status === 'sold_out') {
-        query = query.eq('available_quantity', 0);
-      }
-
-      const { data, count, error } = await query.range(offset, offset + limit - 1);
-
-      if (error || !data || data.length === 0) {
-        // Authoritative fallback listings for prototype/demo
+      if (!isSupabaseConfigured()) {
         const fallback = [
           {
             id: 'prod_1',
@@ -81,6 +65,30 @@ export class ProductsController {
         res.status(200).json({
           data: fallback,
           meta: { page: 1, limit: 20, total: fallback.length, totalPages: 1 },
+          error: null,
+        });
+        return;
+      }
+
+      const supabase = getSupabaseAdmin();
+      let query = supabase
+        .from('products')
+        .select('*', { count: 'exact' })
+        .or(`farmer_id.eq.${farmerId},farmer_id.eq.d1111111-1111-1111-1111-111111111111`)
+        .order('created_at', { ascending: false });
+
+      if (status === 'active') {
+        query = query.eq('is_active', true).gt('available_quantity', 0);
+      } else if (status === 'sold_out') {
+        query = query.eq('available_quantity', 0);
+      }
+
+      const { data, count, error } = await query.range(offset, offset + limit - 1);
+
+      if (error || !data || data.length === 0) {
+        res.status(200).json({
+          data: [],
+          meta: { page, limit, total: 0, totalPages: 1 },
           error: null,
         });
         return;

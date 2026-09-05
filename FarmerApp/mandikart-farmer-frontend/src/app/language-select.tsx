@@ -107,12 +107,7 @@ export default function LanguageSelectScreen() {
 
   const handleContinue = async () => {
     setLanguage(selectedLang);
-    const requiresConsent = await FrontendConsentService.checkRequiresConsent();
-    if (requiresConsent) {
-      router.push('/onboarding/permissions');
-    } else {
-      router.push('/auth/signup');
-    }
+    router.push('/auth/signup');
   };
 
   return (

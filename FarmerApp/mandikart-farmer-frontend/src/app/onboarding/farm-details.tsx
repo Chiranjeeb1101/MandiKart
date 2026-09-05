@@ -78,9 +78,14 @@ const CROPS_LIST: CropOption[] = [
 
 export default function FarmDetailsScreen() {
   const router = useRouter();
-  const { user, setUser, setIsAuthenticated } = useAuthStore();
+  const { user, setUser, setIsAuthenticated, setOnboarded } = useAuthStore();
 
-  const [farmLocation, setFarmLocation] = useState('Nashik, Maharashtra');
+  const defaultLocation = user?.village
+    ? `${user.village}${user.district ? `, ${user.district}` : ''}`
+    : user?.district
+    ? `${user.district}, ${user.state || 'Maharashtra'}`
+    : 'Nashik, Maharashtra';
+  const [farmLocation, setFarmLocation] = useState(defaultLocation);
   const [farmSize, setFarmSize] = useState('5.5');
   const [farmUnit, setFarmUnit] = useState<'Acres' | 'Hectares'>('Acres');
   const [cropsList, setCropsList] = useState<CropOption[]>(CROPS_LIST);
@@ -208,18 +213,38 @@ export default function FarmDetailsScreen() {
     }
   };
 
-  const handleFinishSetup = () => {
-    if (user) {
-      setUser({
-        ...user,
-        farmSizeAcres: parseFloat(farmSize) || 5,
-        isVerified: true,
-        crops: selectedCrops.map(
-          (cId) => cropsList.find((c) => c.id === cId)?.name || cId
-        ),
+  const [saving, setSaving] = useState(false);
+
+  const handleFinishSetup = async () => {
+    setSaving(true);
+    const numSize = parseFloat(farmSize) || 5;
+    const mappedCrops = selectedCrops.map(
+      (cId) => cropsList.find((c) => c.id === cId)?.name || cId
+    );
+
+    setUser({
+      ...user,
+      farmSizeAcres: numSize,
+      farmLocation,
+      isVerified: true,
+      crops: mappedCrops,
+    });
+
+    // Persist farm details directly to MandiKart Backend -> Supabase Database
+    try {
+      await apiClient.put('/farmers/farm-details', {
+        farmSizeAcres: numSize,
+        ownershipType: ownershipType,
+        primaryCrops: mappedCrops.length > 0 ? mappedCrops : ['Onion', 'Tomato'],
       });
+    } catch (err: any) {
+      console.warn('Farm details save note:', err?.message);
+    } finally {
+      setSaving(false);
     }
+
     setIsAuthenticated(true);
+    setOnboarded(true);
     setCelebrationVisible(true);
   };
 
@@ -242,7 +267,14 @@ export default function FarmDetailsScreen() {
           <View style={styles.heroContent}>
             <MKHeader
               showBack={true}
-              step={{ current: 2, total: 2, label: 'Farm Details' }}
+              onBack={() => {
+                if (router.canGoBack()) {
+                  router.back();
+                } else {
+                  router.replace('/onboarding/farmer-profile');
+                }
+              }}
+              step={{ current: 2, total: 3, label: 'Farm Details' }}
               style={styles.headerRow}
             />
 
@@ -552,19 +584,19 @@ export default function FarmDetailsScreen() {
           {/* Action CTA */}
           <View style={styles.footerAction}>
             <MKButton
-              title="FINISH SETUP"
+              title={saving ? 'SAVING...' : 'NEXT: PERMISSIONS'}
               onPress={handleFinishSetup}
               variant="primary"
               size="lg"
+              disabled={saving}
               rightIcon={<ArrowRight size={20} color="#FFFFFF" strokeWidth={2.5} />}
             />
 
-            {/* Step Dots (All Complete) */}
+            {/* Step Dots (Step 2 of 3 Complete) */}
             <View style={styles.progressDotsRow}>
               <View style={[styles.dot, styles.dotDone]} />
               <View style={[styles.dot, styles.dotDone]} />
-              <View style={[styles.dot, styles.dotDone]} />
-              <View style={[styles.dot, styles.dotDone]} />
+              <View style={styles.dot} />
             </View>
 
             <View style={styles.trustFooterRow}>
@@ -656,7 +688,7 @@ export default function FarmDetailsScreen() {
         visible={celebrationVisible}
         onContinue={() => {
           setCelebrationVisible(false);
-          router.replace('/(tabs)/home');
+          router.replace('/onboarding/permissions');
         }}
         farmerName={user?.firstName || user?.fullName || 'Farmer'}
         farmLocation={farmLocation}

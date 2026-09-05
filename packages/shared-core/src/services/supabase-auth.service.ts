@@ -8,7 +8,7 @@
  */
 
 import { UserRole } from '@mandikart/shared-types';
-import { getSupabaseAdmin } from '../db/supabase.js';
+import { getSupabaseAdmin, isSupabaseConfigured } from '../db/supabase.js';
 import { SessionManager } from '../auth/session.js';
 import { auditLog } from '../utils/auditLogger.js';
 
@@ -66,113 +66,115 @@ export class SupabaseAuthService {
     let existingFarmerRecord: any = null;
 
     // Sync / Upsert directly with Supabase Database
-    try {
-      if (payload.role === UserRole.BUYER) {
-        const { data: existing } = await supabase
-          .from('buyers')
-          .select('*')
-          .eq('email', cleanEmail)
-          .maybeSingle();
-
-        if (existing) {
-          existingBuyerRecord = existing;
-          userId = existing.id;
-          userPhone = existing.phone || userPhone || safePhone;
-          userFullName = payload.fullName || existing.full_name || userFullName;
-          userAvatarUrl = payload.avatarUrl || existing.avatar_url || userAvatarUrl;
-          await supabase
-            .from('buyers')
-            .update({
-              full_name: userFullName,
-              avatar_url: userAvatarUrl,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', userId);
-        } else {
-          isNewUser = true;
-          const { data: inserted } = await supabase
-            .from('buyers')
-            .insert({
-              phone: safePhone,
-              email: cleanEmail,
-              full_name: userFullName || 'MandiKart Buyer',
-              avatar_url: userAvatarUrl,
-              buyer_type: 'RETAIL',
-              is_verified: true,
-            })
-            .select()
-            .maybeSingle();
-
-          if (inserted) {
-            existingBuyerRecord = inserted;
-            userId = inserted.id;
-            userPhone = inserted.phone || safePhone;
-            userFullName = inserted.full_name || userFullName;
-          }
-        }
-      } else if (payload.role === UserRole.FARMER) {
-        const { data: existing } = await supabase
-          .from('farmers')
-          .select('*')
-          .eq('email', cleanEmail)
-          .maybeSingle();
-
-        if (existing) {
-          existingFarmerRecord = existing;
-          userId = existing.id;
-          userPhone = existing.phone || userPhone || safePhone;
-          userFullName = payload.fullName || existing.full_name || userFullName;
-          userAvatarUrl = payload.avatarUrl || existing.avatar_url || userAvatarUrl;
-          await supabase
-            .from('farmers')
-            .update({
-              full_name: userFullName,
-              avatar_url: userAvatarUrl,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('id', userId);
-        } else {
-          isNewUser = true;
-          const { data: inserted } = await supabase
-            .from('farmers')
-            .insert({
-              phone: safePhone,
-              email: cleanEmail,
-              full_name: userFullName || 'MandiKart Farmer',
-              avatar_url: userAvatarUrl,
-              is_verified: true,
-              state: 'Maharashtra',
-              district: 'Nashik',
-              farm_size_acres: 5,
-              ownership_type: 'Owner',
-              primary_crops: ['Onion', 'Tomato'],
-            })
-            .select()
-            .maybeSingle();
-
-          if (inserted) {
-            existingFarmerRecord = inserted;
-            userId = inserted.id;
-            userPhone = inserted.phone || safePhone;
-            userFullName = inserted.full_name || userFullName;
-          }
-        }
-      }
-
-      // Also register or sync with Supabase Auth admin
+    if (isSupabaseConfigured()) {
       try {
-        await supabase.auth.admin.createUser({
-          email: cleanEmail,
-          email_confirm: true,
-          user_metadata: {
-            fullName: userFullName,
-            phone: userPhone || safePhone,
-            role: payload.role,
-          },
-        });
-      } catch {}
-    } catch (e) {
-      console.warn('Google auth Supabase sync note:', e);
+        if (payload.role === UserRole.BUYER) {
+          const { data: existing } = await supabase
+            .from('buyers')
+            .select('*')
+            .eq('email', cleanEmail)
+            .maybeSingle();
+
+          if (existing) {
+            existingBuyerRecord = existing;
+            userId = existing.id;
+            userPhone = existing.phone || userPhone || safePhone;
+            userFullName = payload.fullName || existing.full_name || userFullName;
+            userAvatarUrl = payload.avatarUrl || existing.avatar_url || userAvatarUrl;
+            await supabase
+              .from('buyers')
+              .update({
+                full_name: userFullName,
+                avatar_url: userAvatarUrl,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', userId);
+          } else {
+            isNewUser = true;
+            const { data: inserted } = await supabase
+              .from('buyers')
+              .insert({
+                phone: safePhone,
+                email: cleanEmail,
+                full_name: userFullName || 'MandiKart Buyer',
+                avatar_url: userAvatarUrl,
+                buyer_type: 'RETAIL',
+                is_verified: true,
+              })
+              .select()
+              .maybeSingle();
+
+            if (inserted) {
+              existingBuyerRecord = inserted;
+              userId = inserted.id;
+              userPhone = inserted.phone || safePhone;
+              userFullName = inserted.full_name || userFullName;
+            }
+          }
+        } else if (payload.role === UserRole.FARMER) {
+          const { data: existing } = await supabase
+            .from('farmers')
+            .select('*')
+            .or(`email.eq.${cleanEmail},phone.eq.${safePhone}`)
+            .maybeSingle();
+
+          if (existing) {
+            existingFarmerRecord = existing;
+            userId = existing.id;
+            userPhone = existing.phone || userPhone || safePhone;
+            userFullName = payload.fullName || existing.full_name || userFullName;
+            userAvatarUrl = payload.avatarUrl || existing.avatar_url || userAvatarUrl;
+            await supabase
+              .from('farmers')
+              .update({
+                full_name: userFullName,
+                avatar_url: userAvatarUrl,
+                updated_at: new Date().toISOString(),
+              })
+              .eq('id', userId);
+          } else {
+            isNewUser = true;
+            const { data: inserted } = await supabase
+              .from('farmers')
+              .insert({
+                phone: safePhone,
+                email: cleanEmail,
+                full_name: userFullName || 'MandiKart Farmer',
+                avatar_url: userAvatarUrl,
+                is_verified: true,
+                state: 'Maharashtra',
+                district: 'Nashik',
+                farm_size_acres: 5,
+                ownership_type: 'Owner',
+                primary_crops: ['Onion', 'Tomato'],
+              })
+              .select()
+              .maybeSingle();
+
+            if (inserted) {
+              existingFarmerRecord = inserted;
+              userId = inserted.id;
+              userPhone = inserted.phone || safePhone;
+              userFullName = inserted.full_name || userFullName;
+            }
+          }
+        }
+
+        // Also register or sync with Supabase Auth admin
+        try {
+          await supabase.auth.admin.createUser({
+            email: cleanEmail,
+            email_confirm: true,
+            user_metadata: {
+              fullName: userFullName,
+              phone: userPhone || safePhone,
+              role: payload.role,
+            },
+          });
+        } catch {}
+      } catch (e) {
+        console.warn('Google auth Supabase sync note:', e);
+      }
     }
 
     // Issue 15-day rolling JWT Session
@@ -409,6 +411,3 @@ export class SupabaseAuthService {
     };
   }
 }
-
-// Backward-compatibility alias
-export const FirebaseAuthService = SupabaseAuthService;

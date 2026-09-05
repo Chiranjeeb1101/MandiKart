@@ -25,7 +25,11 @@ export function getSupabaseClient(): SupabaseClient {
 export function getSupabaseAdmin(): SupabaseClient {
   if (!adminClientInstance) {
     const env = getValidatedEnv();
-    adminClientInstance = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
+    const isServiceKeyValid =
+      Boolean(env.SUPABASE_SERVICE_ROLE_KEY) &&
+      !env.SUPABASE_SERVICE_ROLE_KEY.includes('placeholder');
+    const keyToUse = isServiceKeyValid ? env.SUPABASE_SERVICE_ROLE_KEY : env.SUPABASE_ANON_KEY;
+    adminClientInstance = createClient(env.SUPABASE_URL, keyToUse, {
       auth: {
         persistSession: false,
         autoRefreshToken: false,
@@ -34,3 +38,20 @@ export function getSupabaseAdmin(): SupabaseClient {
   }
   return adminClientInstance;
 }
+
+export function isSupabaseConfigured(): boolean {
+  try {
+    const env = getValidatedEnv();
+    const hasValidUrl =
+      Boolean(env.SUPABASE_URL) && !env.SUPABASE_URL.includes('placeholder');
+    const hasValidKey =
+      (Boolean(env.SUPABASE_SERVICE_ROLE_KEY) &&
+        !env.SUPABASE_SERVICE_ROLE_KEY.includes('placeholder')) ||
+      (Boolean(env.SUPABASE_ANON_KEY) &&
+        !env.SUPABASE_ANON_KEY.includes('placeholder'));
+    return hasValidUrl && hasValidKey;
+  } catch {
+    return false;
+  }
+}
+

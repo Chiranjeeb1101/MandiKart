@@ -52,182 +52,14 @@ import {
 import { MKScreen, MKCard } from '@/components/ui';
 import { MKColors } from '@/constants/colors';
 import { MKSpacing } from '@/constants/spacing';
-
-const ONION_CROP_URI =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuC5juCGxLQ_5fyI4TU5ZyfZdhObSJDnZM42ZAzHiJlSBs31EGGnUyK0QRdyoFAXloh0SkLFb_apbQR_O0o3CiqCV8ckf9U5kVPC_outsYrPisSJV7GpxGLs2L-xGzfoEsXeXb0RDHma0B3LZpqIpwp37q8QDENvGkvpIupjr3XK_RaWZAC1mYGgc0fh9NxnbqD6YkA-qI6_ktMQlwdFD5eo5P3iTDMZmUTjkFoBSsrDOCIoRU8BehqDTw';
-
-const TOMATO_CROP_URI =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuAQ3ecH_gXE_S9dnNXqZtMNZsTsKwUugK5npqrXQo96EGz87CNfJWQR-HFQcD_gqEoawXV7pG5-hAyd6KZco66Pdavo3jYBsP6NadIKCnghQ8lYLYXnuyMeQuBB2LxBykis0pTs786s14moakUB0ZH0QgH7VlNElFN4Ns5uWVxgvecQv248hBqi_2ENXcSCSj6gx8CL7fz5xwRqaIpshL2s-Xue0Qb10lRmnHBlDimQ82nr7RG_vmqfBw';
-
-const POTATO_CROP_URI =
-  'https://lh3.googleusercontent.com/aida-public/AB6AXuC10xdTnKHpvZre-LhDKBTaZdjrNRAMZKasKH7sJK1nrX10RGhhP2dGCyuePJimnKwCfuueO0HuC0216Hy6PAuxsQXjsHtSvKxV7SDDJosrU95YRzT4oVRjJqioCNfX15LiH_iPMrU7YeT2od9_cv81dzfyjd6LRPtPRGTt1AbXyWGTo6qD1K7KloqXwfi7HTDD6X5PP72m_RLR77_lBfwoQWyjBj1HvTxGZsl55rQEEpNHyiMzAeHoHQ';
-
-const WHEAT_CROP_URI =
-  'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=300&auto=format&fit=crop&q=80';
-
-type OrderTab = 'All' | 'Active' | 'Pending' | 'Completed';
-
-interface OrderItem {
-  id: string;
-  orderNumber: string;
-  tab: 'Active' | 'Pending' | 'Completed';
-  cropName: string;
-  cropVariety: string;
-  grade: string;
-  quantity: string;
-  cropImage: string;
-  buyerName: string;
-  buyerType: string;
-  totalValue: string;
-  ratePerKg: string;
-  netPayout: string;
-  transportDeduction: string;
-  pickupDate: string;
-  pickupTime: string;
-  location: string;
-  statusLabel: string;
-  statusType: 'en_route' | 'scheduled' | 'pending' | 'completed';
-  stepIndex: number; // 1 to 4
-  driverName?: string;
-  driverPhone?: string;
-  vehicleNumber?: string;
-  vehicleModel?: string;
-  etaMins?: number;
-  paymentMode?: string;
-}
-
-const ORDERS_DATA: OrderItem[] = [
-  {
-    id: 'ord_1',
-    orderNumber: '#MK1024',
-    tab: 'Active',
-    cropName: 'Red Onion',
-    cropVariety: 'Nashik Garwa Red',
-    grade: 'Grade A',
-    quantity: '1,000 KG',
-    cropImage: ONION_CROP_URI,
-    buyerName: 'ABC Foods & Retail Hub',
-    buyerType: 'Verified Corporate Buyer',
-    totalValue: '₹24,000',
-    ratePerKg: '₹24.00/kg',
-    netPayout: '₹22,000',
-    transportDeduction: '₹2,000',
-    pickupDate: 'Today, 15 Sept 2026',
-    pickupTime: '10:00 AM - 12:00 PM',
-    location: 'Farmgate, Dindori, Nashik',
-    statusLabel: 'Vehicle En Route (6.2 km away)',
-    statusType: 'en_route',
-    stepIndex: 3,
-    driverName: 'Ramesh Gurjar',
-    driverPhone: '+91 98234 56789',
-    vehicleNumber: 'MH 15 BX 4022',
-    vehicleModel: 'Tata Ace Gold (1.5T)',
-    etaMins: 22,
-    paymentMode: 'IMPS Escrow Guaranteed',
-  },
-  {
-    id: 'ord_2',
-    orderNumber: '#MK1031',
-    tab: 'Active',
-    cropName: 'Hybrid Tomato',
-    cropVariety: 'Semi-Ripe Fresh Harvest',
-    grade: 'Grade A',
-    quantity: '500 KG',
-    cropImage: TOMATO_CROP_URI,
-    buyerName: 'BigBasket Regional Sourcing',
-    buyerType: 'Organized Retail Aggregator',
-    totalValue: '₹11,500',
-    ratePerKg: '₹23.00/kg',
-    netPayout: '₹10,750',
-    transportDeduction: '₹750',
-    pickupDate: 'Tomorrow, 16 Sept 2026',
-    pickupTime: '08:30 AM - 10:30 AM',
-    location: 'Farmgate, Dindori, Nashik',
-    statusLabel: 'Pickup Slot Confirmed',
-    statusType: 'scheduled',
-    stepIndex: 2,
-    driverName: 'Sunil Jadhav',
-    driverPhone: '+91 94222 18904',
-    vehicleNumber: 'MH 15 CT 8812',
-    vehicleModel: 'Mahindra Bolero Maxi Truck',
-    paymentMode: 'Direct UPI on Dispatch',
-  },
-  {
-    id: 'ord_3',
-    orderNumber: '#MK1018',
-    tab: 'Pending',
-    cropName: 'Jyoti Potato',
-    cropVariety: 'Clean Washed Table Quality',
-    grade: 'Grade A',
-    quantity: '800 KG',
-    cropImage: POTATO_CROP_URI,
-    buyerName: 'Kalyan Agro Food Processors',
-    buyerType: 'Food Processing Industry',
-    totalValue: '₹18,000',
-    ratePerKg: '₹22.50/kg',
-    netPayout: '₹16,560',
-    transportDeduction: '₹1,440',
-    pickupDate: '17 Sept 2026 (Proposed)',
-    pickupTime: 'Flexible Afternoon',
-    location: 'Farmgate, Dindori, Nashik',
-    statusLabel: 'Buyer Offer Awaiting Farmer Action',
-    statusType: 'pending',
-    stepIndex: 1,
-    paymentMode: '100% Advance in Escrow',
-  },
-  {
-    id: 'ord_4',
-    orderNumber: '#MK1008',
-    tab: 'Completed',
-    cropName: 'Sharbati Wheat',
-    cropVariety: 'Golden Sharbati Grain',
-    grade: 'Premium Grade',
-    quantity: '2,000 KG',
-    cropImage: WHEAT_CROP_URI,
-    buyerName: 'ITC e-Choupal Sourcing',
-    buyerType: 'FMCG Corporate Client',
-    totalValue: '₹48,000',
-    ratePerKg: '₹24.00/kg',
-    netPayout: '₹45,000',
-    transportDeduction: '₹3,000',
-    pickupDate: 'Delivered on 01 Sept 2026',
-    pickupTime: 'Completed at 02:15 PM',
-    location: 'Delivered to Lasalgaon Hub',
-    statusLabel: 'Delivered • Payment Credited',
-    statusType: 'completed',
-    stepIndex: 4,
-    paymentMode: 'Paid via IMPS Ref #TXN9021',
-  },
-  {
-    id: 'ord_5',
-    orderNumber: '#MK0994',
-    tab: 'Completed',
-    cropName: 'Red Onion',
-    cropVariety: 'Early Kharif Red',
-    grade: 'Grade A',
-    quantity: '1,500 KG',
-    cropImage: ONION_CROP_URI,
-    buyerName: 'Reliance Fresh Mandi Hub',
-    buyerType: 'Direct Retail Network',
-    totalValue: '₹36,000',
-    ratePerKg: '₹24.00/kg',
-    netPayout: '₹33,600',
-    transportDeduction: '₹2,400',
-    pickupDate: 'Delivered on 26 Aug 2026',
-    pickupTime: 'Completed at 11:40 AM',
-    location: 'Delivered to Nashik Hub',
-    statusLabel: 'Delivered • Payment Settled',
-    statusType: 'completed',
-    stepIndex: 4,
-    paymentMode: 'Paid via NEFT Ref #TXN8842',
-  },
-];
+import { useOrderStore, OrderItem, OrderTab } from '@/store/orderStore';
 
 export default function OrdersScreen() {
   const router = useRouter();
   const [selectedTab, setSelectedTab] = useState<OrderTab>('Active');
   const [searchQuery, setSearchQuery] = useState('');
-  const [orders, setOrders] = useState<OrderItem[]>(ORDERS_DATA);
+  const orders = useOrderStore((state) => state.orders);
+  const acceptOrderOffer = useOrderStore((state) => state.acceptOrderOffer);
   const [selectedOrderDetails, setSelectedOrderDetails] = useState<OrderItem | null>(null);
 
   const activeCount = orders.filter((o) => o.tab === 'Active').length;
@@ -249,22 +81,10 @@ export default function OrdersScreen() {
   });
 
   function handleAcceptOffer(orderId: string) {
-    setOrders((prev) =>
-      prev.map((o) =>
-        o.id === orderId
-          ? {
-              ...o,
-              tab: 'Active',
-              statusType: 'scheduled',
-              statusLabel: 'Offer Accepted • Vehicle Scheduled',
-              stepIndex: 2,
-            }
-          : o
-      )
-    );
+    acceptOrderOffer(orderId);
     Alert.alert(
       'Offer Accepted! 🚛',
-      'Order is now Active. A MandiKart transit vehicle will be dispatched to your farmgate.'
+      'Order is now Active. A MandiKart transit vehicle has been scheduled for dispatch to your farmgate.'
     );
   }
 
@@ -559,10 +379,19 @@ export default function OrdersScreen() {
                         styles.trackVehicleActionBtn,
                         pressed && { opacity: 0.9, transform: [{ scale: 0.97 }] },
                       ]}
-                      onPress={() => router.push('/orders/track-vehicle')}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/orders/track-vehicle',
+                          params: {
+                            orderId: order.orderNumber,
+                            crop: `${order.cropName} (${order.quantity})`,
+                            buyer: order.buyerName,
+                          },
+                        })
+                      }
                     >
                       <Truck size={14} color="#FFFFFF" strokeWidth={2.4} />
-                      <Text numberOfLines={1} style={styles.trackVehicleActionText}>Track Order</Text>
+                      <Text numberOfLines={1} style={styles.trackVehicleActionText}>Track Vehicle</Text>
                       <ArrowRight size={13} color="#FFFFFF" strokeWidth={2.4} />
                     </Pressable>
                   </>

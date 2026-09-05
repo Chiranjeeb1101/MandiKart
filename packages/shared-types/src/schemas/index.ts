@@ -39,12 +39,13 @@ export const VerifyOtpSchema = z.object({
 // Farmer Profile Schemas
 export const UpdateFarmerProfileSchema = z.object({
   fullName: z.string().min(2).max(100).optional(),
+  phone: z.string().optional(),
   aadhaarNumber: z
     .string()
     .regex(/^\d{12}$/, 'Aadhaar must be exactly 12 digits')
     .optional(),
-  state: z.string().min(2).max(50),
-  district: z.string().min(2).max(50),
+  state: z.string().min(2).max(50).default('Maharashtra'),
+  district: z.string().min(2).max(50).default('Nashik'),
   taluka: z.string().max(50).optional(),
   village: z.string().max(50).optional(),
   avatarUrl: z.string().url().optional(),
@@ -52,7 +53,7 @@ export const UpdateFarmerProfileSchema = z.object({
 
 export const UpdateFarmDetailsSchema = z.object({
   farmSizeAcres: z.number().positive('Farm size must be greater than 0'),
-  ownershipType: z.enum(['Owner', 'Tenant', 'Sharecropper', 'Other']).default('Owner'),
+  ownershipType: z.enum(['Owner', 'Owned', 'Tenant', 'Leased', 'Sharecropper', 'Other']).default('Owner'),
   primaryCrops: z.array(z.string()).min(1, 'Select at least one crop'),
   irrigationType: z.string().optional(),
 });

@@ -84,7 +84,7 @@ export function FarmMapView({
           <Rect width="340" height="210" fill="url(#fieldGrad)" />
 
           {/* Scaled Layer containing plot, roads & pin */}
-          <G transform={`scale(${zoomLevel})`} origin="170, 105">
+          <G transform={`translate(170 105) scale(${zoomLevel}) translate(-170 -105)`}>
             {/* Grid & Elevation contours */}
             <Line x1="0" y1="50" x2="340" y2="50" stroke={gridLineColor} strokeWidth="1" strokeDasharray="4 4" />
             <Line x1="0" y1="105" x2="340" y2="105" stroke={gridLineColor} strokeWidth="1" strokeDasharray="4 4" />

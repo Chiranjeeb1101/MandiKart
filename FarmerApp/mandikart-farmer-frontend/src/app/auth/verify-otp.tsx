@@ -32,12 +32,13 @@ import { MKBackground, MKButton, MKHeader } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
 import { useTranslation } from '@/hooks/useTranslation';
 import { apiClient } from '@/services/apiClient';
+import { firebaseAuthService } from '@/services/firebaseAuthService';
 
 type VerificationMode = 'mobile' | 'email';
 
 export default function VerifyOtpScreen() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ phone?: string; name?: string; email?: string }>();
+  const params = useLocalSearchParams<{ phone?: string; name?: string; email?: string; code?: string }>();
   const { setPhoneNumber, setIsAuthenticated, setAuthenticated, user, setUser } = useAuthStore();
   const { t } = useTranslation();
 
@@ -61,8 +62,31 @@ export default function VerifyOtpScreen() {
   const [emailCanResend, setEmailCanResend] = useState<boolean>(false);
   const [emailError, setEmailError] = useState<string>('');
 
+  // Active development code (shown for instant 1-tap testing without waiting for carrier SMS)
+  const [activeCode, setActiveCode] = useState<string>(params.code || '');
+
   const mobileInputRefs = useRef<Array<TextInput | null>>([]);
   const emailInputRefs = useRef<Array<TextInput | null>>([]);
+
+  const autoFillOtp = (code: string) => {
+    if (!code) return;
+    const digits = code.trim().slice(0, 6).split('');
+    while (digits.length < 6) digits.push('');
+    if (mode === 'mobile') {
+      setMobileOtp(digits);
+      setMobileError('');
+    } else {
+      setEmailOtp(digits);
+      setEmailError('');
+    }
+  };
+
+  useEffect(() => {
+    if (params.code) {
+      setActiveCode(params.code);
+      autoFillOtp(params.code);
+    }
+  }, [params.code]);
 
   // Mobile Timer
   useEffect(() => {
@@ -124,23 +148,39 @@ export default function VerifyOtpScreen() {
     }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (mode === 'mobile') {
       if (!mobileCanResend) return;
       setMobileTimer(45);
       setMobileCanResend(false);
       setMobileOtp(['', '', '', '', '', '']);
       mobileInputRefs.current[0]?.focus();
-      const cleanPhone = displayPhone.replace(/\D/g, '').slice(-10);
-      apiClient.post('/auth/send-otp', { phone: cleanPhone, channel: 'SMS' }).catch(() => {});
-      Alert.alert('OTP Sent', `A new verification code was sent to ${displayPhone}`);
+      try {
+        const res = await firebaseAuthService.sendPhoneOtp(displayPhone);
+        if (res.simulatedCode) {
+          setActiveCode(res.simulatedCode);
+          autoFillOtp(res.simulatedCode);
+        }
+        Alert.alert('OTP Sent', res.message || `A new verification code was sent to ${displayPhone}`);
+      } catch (err: any) {
+        setMobileError(err?.message || 'Failed to dispatch OTP');
+      }
     } else {
       if (!emailCanResend) return;
       setEmailTimer(60);
       setEmailCanResend(false);
       setEmailOtp(['', '', '', '', '', '']);
       emailInputRefs.current[0]?.focus();
-      Alert.alert('Email OTP Sent', `A new verification code was sent to ${displayEmail}`);
+      try {
+        const res: any = await apiClient.post('/auth/send-otp', { email: displayEmail, channel: 'EMAIL' });
+        if (res?.data?.simulatedCode) {
+          setActiveCode(res.data.simulatedCode);
+          autoFillOtp(res.data.simulatedCode);
+        }
+        Alert.alert('Email OTP Sent', `A new verification code was sent to ${displayEmail}`);
+      } catch (err: any) {
+        setEmailError(err?.message || 'Failed to dispatch Email OTP');
+      }
     }
   };
 
@@ -154,25 +194,25 @@ export default function VerifyOtpScreen() {
 
       try {
         const cleanPhone = displayPhone.replace(/\D/g, '').slice(-10);
-        const res: any = await apiClient.post('/auth/verify-otp', {
-          phone: cleanPhone,
-          otp: enteredCode,
-        });
+        const result = await firebaseAuthService.verifyOtpAndSync(
+          displayPhone,
+          enteredCode,
+          params.name || user?.name
+        );
 
-        if (res?.data?.token && res?.data?.farmer) {
-          setAuthenticated(res.data.token, res.data.farmer);
+        if (result.success && result.token && result.farmer) {
           setUser({
             ...(user || {}),
-            id: res.data.farmer.id,
-            name: res.data.farmer.fullName || params.name || user?.name || `Farmer ${cleanPhone.slice(-4)}`,
-            phone: res.data.farmer.phone || displayPhone,
+            id: result.farmer.id,
+            name: result.farmer.fullName || params.name || user?.name || `Farmer ${cleanPhone.slice(-4)}`,
+            phone: result.farmer.phone || displayPhone,
             isVerified: true,
             role: 'FARMER',
           });
-          router.push('/onboarding/farmer-profile');
+          router.replace('/(tabs)/home');
           return;
         }
-        setMobileError(res?.error?.message || 'Invalid verification code. Please try again.');
+        setMobileError(result.error || 'Invalid verification code. Please try again.');
       } catch (err: any) {
         setMobileError(err?.message || 'Incorrect OTP or verification expired. Please try again.');
       }
@@ -183,22 +223,36 @@ export default function VerifyOtpScreen() {
         return;
       }
 
-      setIsAuthenticated(true);
-      setUser({
-        ...(user || {}),
-        id: user?.id || `farmer_${Date.now()}`,
-        name: params.name || user?.name || 'Ramesh Patil',
-        email: displayEmail,
-        isEmailVerified: true,
-        role: 'FARMER',
-      });
+      try {
+        const res: any = await apiClient.post('/auth/verify-otp', {
+          email: displayEmail,
+          otp: enteredCode,
+          name: params.name || user?.name,
+        });
 
-      Alert.alert('Email Verified', 'Your email address has been verified successfully.', [
-        {
-          text: 'Continue',
-          onPress: () => router.push('/onboarding/farmer-profile'),
-        },
-      ]);
+        if (res?.data?.token && res?.data?.farmer) {
+          setAuthenticated(res.data.token, res.data.farmer);
+          setUser({
+            ...(user || {}),
+            id: res.data.farmer.id,
+            name: res.data.farmer.fullName || params.name || user?.name || displayEmail.split('@')[0],
+            email: displayEmail,
+            isEmailVerified: true,
+            role: 'FARMER',
+          });
+
+          Alert.alert('Email Verified', 'Your email address has been verified successfully.', [
+            {
+              text: 'Continue',
+              onPress: () => router.replace('/(tabs)/home'),
+            },
+          ]);
+          return;
+        }
+        setEmailError(res?.error?.message || 'Invalid email verification code.');
+      } catch (err: any) {
+        setEmailError(err?.message || 'Verification failed. Please check the code.');
+      }
     }
   };
 
@@ -291,6 +345,20 @@ export default function VerifyOtpScreen() {
                   </Pressable>
                 </View>
 
+                {/* Active Test OTP Code Helper */}
+                {activeCode ? (
+                  <Pressable
+                    onPress={() => autoFillOtp(activeCode)}
+                    style={styles.devCodeBanner}
+                  >
+                    <View style={styles.devCodeHeader}>
+                      <Text style={styles.devCodeBadge}>⚡ TEST CODE AVAILABLE</Text>
+                      <Text style={styles.devCodeTapPrompt}>Tap to auto-fill</Text>
+                    </View>
+                    <Text style={styles.devCodeDigits}>{activeCode}</Text>
+                  </Pressable>
+                ) : null}
+
                 {/* OTP Section */}
                 <View style={styles.otpSection}>
                   <Text style={styles.otpLabel}>Enter 6-digit Mobile OTP</Text>
@@ -377,6 +445,20 @@ export default function VerifyOtpScreen() {
                     <Text style={styles.editText}>{isEditingEmail ? 'SAVE' : 'EDIT'}</Text>
                   </Pressable>
                 </View>
+
+                {/* Active Test OTP Code Helper */}
+                {activeCode ? (
+                  <Pressable
+                    onPress={() => autoFillOtp(activeCode)}
+                    style={styles.devCodeBanner}
+                  >
+                    <View style={styles.devCodeHeader}>
+                      <Text style={styles.devCodeBadge}>⚡ TEST CODE AVAILABLE</Text>
+                      <Text style={styles.devCodeTapPrompt}>Tap to auto-fill</Text>
+                    </View>
+                    <Text style={styles.devCodeDigits}>{activeCode}</Text>
+                  </Pressable>
+                ) : null}
 
                 {/* OTP Section */}
                 <View style={styles.otpSection}>
@@ -691,5 +773,40 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 10,
     elevation: 6,
+  },
+  devCodeBanner: {
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1.5,
+    borderColor: '#10B981',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginBottom: 16,
+    width: '100%',
+  },
+  devCodeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 4,
+  },
+  devCodeBadge: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#047857',
+    letterSpacing: 0.5,
+  },
+  devCodeTapPrompt: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#059669',
+    textDecorationLine: 'underline',
+  },
+  devCodeDigits: {
+    fontSize: 22,
+    fontWeight: '900',
+    color: '#065F46',
+    letterSpacing: 6,
+    textAlign: 'center',
   },
 });

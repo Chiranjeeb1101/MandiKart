@@ -14,7 +14,8 @@
     "@supabase/supabase-js": "^2.49.1",
     "express": "^4.21.2",
     "firebase": "^12.18.0",
-    "firebase-admin": "^14.3.0"
+    "firebase-admin": "^14.3.0",
+    "stripe": "^22.6.1"
   },
   "devDependencies": {
     "@types/express": "^5.0.0",

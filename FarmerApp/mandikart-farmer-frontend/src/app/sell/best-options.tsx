@@ -58,7 +58,8 @@ export default function BestSellingOptionsScreen() {
   const grade = params.grade || 'Grade A';
 
   const getOpportunitiesForCrop = useSellStore((state) => state.getOpportunitiesForCrop);
-  const acceptRequest = useSellStore((state) => state.acceptRequest);
+  const executeSale = useSellStore((state) => state.executeSale);
+  const crops = useProduceStore((state) => state.crops);
 
   // Get ranked opportunities
   const opportunities = useMemo(() => {
@@ -88,11 +89,27 @@ export default function BestSellingOptionsScreen() {
     if (!oppToAccept) return;
     setAcceptModalVisible(false);
 
+    const matchingCrop = crops.find(
+      (c) => c.cropName.toLowerCase() === cropName.toLowerCase()
+    );
+
     // Atomic order creation via sellStore + produceStore inventory allocation
-    const res = acceptRequest('req_101'); // link or create order
+    const res = executeSale({
+      cropId: matchingCrop?.id,
+      cropName: cropName,
+      variety: matchingCrop?.variety || 'Quality Harvest Batch',
+      quantityKg: quantityKg,
+      grade: grade,
+      pricePerKg: oppToAccept.offerPricePerKg,
+      buyerName: oppToAccept.buyer.name,
+      buyerType: oppToAccept.buyer.businessType,
+      transportPerKg: oppToAccept.estimatedTransportPerKg,
+      cropImage: matchingCrop?.imageUri || oppToAccept.buyer.avatar,
+    });
+
     if (res.success) {
       Alert.alert(
-        'Deal Accepted & Order Created!',
+        'Deal Accepted & Order Created! 🚛',
         `Your selling contract with ${oppToAccept.buyer.name} for ${quantityKg.toLocaleString()} kg of ${cropName} has been confirmed. Order ID: ${res.orderId}.\n\nVehicle dispatch and weighbridge tracking are now live in the Orders module.`,
         [
           {

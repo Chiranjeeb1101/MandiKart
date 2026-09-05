@@ -1,5 +1,5 @@
 import crypto from 'crypto';
-import { getSupabaseAdmin } from '../db/supabase.js';
+import { getSupabaseAdmin, isSupabaseConfigured } from '../db/supabase.js';
 
 export type OtpChannel = 'SMS' | 'EMAIL' | 'WHATSAPP';
 
@@ -17,9 +17,20 @@ export interface OtpVerificationResult {
   attemptsRemaining?: number;
 }
 
+interface InMemoryOtpRecord {
+  identifier: string;
+  codeHash: string;
+  channel: OtpChannel;
+  attempts: number;
+  maxAttempts: number;
+  isUsed: boolean;
+  expiresAt: string;
+}
+
 export class OtpService {
   private static OTP_EXPIRY_MINUTES = 5;
   private static MAX_ATTEMPTS = 5;
+  private static inMemoryOtps: Map<string, InMemoryOtpRecord> = new Map();
 
   private static formatIdentifier(id: string): string {
     const trimmed = id.trim();
@@ -41,31 +52,45 @@ export class OtpService {
     const codeHash = crypto.createHash('sha256').update(rawCode).digest('hex');
     const expiresAt = new Date(Date.now() + this.OTP_EXPIRY_MINUTES * 60 * 1000).toISOString();
 
-    const supabase = getSupabaseAdmin();
-    try {
-      // Invalidate existing unused OTPs for this identifier
-      await supabase
-        .from('otps')
-        .update({ is_used: true })
-        .eq('identifier', cleanId)
-        .eq('is_used', false);
+    // 1. Register in resilient memory store so OTP is never lost
+    this.inMemoryOtps.set(cleanId, {
+      identifier: cleanId,
+      codeHash,
+      channel,
+      attempts: 0,
+      maxAttempts: this.MAX_ATTEMPTS,
+      isUsed: false,
+      expiresAt,
+    });
 
-      // Insert fresh OTP into Supabase
-      const { error: insErr } = await supabase.from('otps').insert({
-        identifier: cleanId,
-        code_hash: codeHash,
-        channel,
-        attempts: 0,
-        max_attempts: this.MAX_ATTEMPTS,
-        is_used: false,
-        expires_at: expiresAt,
-      });
+    // 2. Attempt persistence to Supabase if configured
+    if (isSupabaseConfigured()) {
+      try {
+        const supabase = getSupabaseAdmin();
+        // Invalidate existing unused OTPs for this identifier
+        await supabase
+          .from('otps')
+          .update({ is_used: true })
+          .eq('identifier', cleanId)
+          .eq('is_used', false);
 
-      if (insErr) {
-        console.warn('[OtpService] Supabase OTP insert notice:', insErr.message);
+        // Insert fresh OTP into Supabase
+        const { error: insErr } = await supabase.from('otps').insert({
+          identifier: cleanId,
+          code_hash: codeHash,
+          channel,
+          attempts: 0,
+          max_attempts: this.MAX_ATTEMPTS,
+          is_used: false,
+          expires_at: expiresAt,
+        });
+
+        if (insErr) {
+          console.warn('[OtpService] Supabase OTP insert notice:', insErr.message);
+        }
+      } catch (e) {
+        console.warn('[OtpService] Supabase connection error:', e);
       }
-    } catch (e) {
-      console.warn('[OtpService] Supabase connection error:', e);
     }
 
     // Provider Dispatch Handler (Live SMS Gateway Integration via Fast2SMS)
@@ -173,58 +198,92 @@ export class OtpService {
     const cleanCode = code.trim();
 
     const inputHash = crypto.createHash('sha256').update(cleanCode).digest('hex');
-    const supabase = getSupabaseAdmin();
 
-    try {
-      const { data: record, error } = await supabase
-        .from('otps')
-        .select('*')
-        .eq('identifier', cleanId)
-        .eq('is_used', false)
-        .order('created_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      if (error || !record) {
-        return { success: false, message: 'No active OTP found. Please request a new verification code.' };
-      }
-
-      // Expiry check
-      if (new Date(record.expires_at) < new Date()) {
-        await supabase.from('otps').update({ is_used: true }).eq('id', record.id);
-        return { success: false, message: 'OTP has expired. Please request a new code.' };
-      }
-
-      // Attempts check
-      if (record.attempts >= record.max_attempts) {
-        await supabase.from('otps').update({ is_used: true }).eq('id', record.id);
-        return { success: false, message: 'Too many failed attempts. Please request a new code.' };
-      }
-
-      // Match check
-      if (record.code_hash !== inputHash) {
-        await supabase
+    // 1. Try Supabase verification if configured
+    if (isSupabaseConfigured()) {
+      try {
+        const supabase = getSupabaseAdmin();
+        const { data: record, error } = await supabase
           .from('otps')
-          .update({ attempts: record.attempts + 1 })
-          .eq('id', record.id);
+          .select('*')
+          .eq('identifier', cleanId)
+          .eq('is_used', false)
+          .order('created_at', { ascending: false })
+          .limit(1)
+          .maybeSingle();
 
-        return {
-          success: false,
-          message: 'Invalid OTP code. Please enter the correct code.',
-          attemptsRemaining: record.max_attempts - (record.attempts + 1),
-        };
+        if (!error && record) {
+          // Expiry check
+          if (new Date(record.expires_at) < new Date()) {
+            await supabase.from('otps').update({ is_used: true }).eq('id', record.id);
+            return { success: false, message: 'OTP has expired. Please request a new code.' };
+          }
+
+          // Attempts check
+          if (record.attempts >= record.max_attempts) {
+            await supabase.from('otps').update({ is_used: true }).eq('id', record.id);
+            return { success: false, message: 'Too many failed attempts. Please request a new code.' };
+          }
+
+          // Match check
+          if (record.code_hash !== inputHash) {
+            await supabase
+              .from('otps')
+              .update({ attempts: record.attempts + 1 })
+              .eq('id', record.id);
+
+            return {
+              success: false,
+              message: 'Invalid OTP code. Please enter the correct code.',
+              attemptsRemaining: record.max_attempts - (record.attempts + 1),
+            };
+          }
+
+          // Mark verified
+          await supabase
+            .from('otps')
+            .update({ is_used: true, verified_at: new Date().toISOString() })
+            .eq('id', record.id);
+
+          this.inMemoryOtps.delete(cleanId);
+          return { success: true, message: 'OTP verified successfully.' };
+        }
+      } catch (e: any) {
+        console.warn('[OtpService] Supabase verify note:', e?.message || e);
       }
-
-      // Mark verified
-      await supabase
-        .from('otps')
-        .update({ is_used: true, verified_at: new Date().toISOString() })
-        .eq('id', record.id);
-
-      return { success: true, message: 'OTP verified successfully.' };
-    } catch (e: any) {
-      console.warn('[OtpService] Supabase verify error:', e);
-      return { success: false, message: 'Verification service error. Please try again.' };
     }
+
+    // 2. Resilient memory store verification (active when Supabase is offline or not configured)
+    const memRecord = this.inMemoryOtps.get(cleanId);
+    if (!memRecord || memRecord.isUsed) {
+      return { success: false, message: 'No active OTP found. Please request a new verification code.' };
+    }
+
+    // Expiry check
+    if (new Date(memRecord.expiresAt) < new Date()) {
+      memRecord.isUsed = true;
+      return { success: false, message: 'OTP has expired. Please request a new code.' };
+    }
+
+    // Attempts check
+    if (memRecord.attempts >= memRecord.maxAttempts) {
+      memRecord.isUsed = true;
+      return { success: false, message: 'Too many failed attempts. Please request a new code.' };
+    }
+
+    // Match check
+    if (memRecord.codeHash !== inputHash) {
+      memRecord.attempts += 1;
+      return {
+        success: false,
+        message: 'Invalid OTP code. Please enter the correct code.',
+        attemptsRemaining: memRecord.maxAttempts - memRecord.attempts,
+      };
+    }
+
+    // Mark verified
+    memRecord.isUsed = true;
+    return { success: true, message: 'OTP verified successfully.' };
   }
 }
+

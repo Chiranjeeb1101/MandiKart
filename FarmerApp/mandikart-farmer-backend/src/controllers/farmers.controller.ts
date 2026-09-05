@@ -106,18 +106,22 @@ export class FarmersController {
       return;
     }
 
-    const { fullName, state, district, taluka, village, avatarUrl, aadhaarNumber } = parse.data;
+    const { fullName, phone, state, district, taluka, village, avatarUrl, aadhaarNumber } = parse.data;
 
     try {
       const supabase = getSupabaseAdmin();
 
       const updatePayload: Record<string, any> = {
-        state,
-        district,
+        state: state || 'Maharashtra',
+        district: district || 'Nashik',
         updated_at: new Date().toISOString(),
       };
 
       if (fullName) updatePayload.full_name = fullName;
+      if (phone) {
+        const cleanDigits = phone.replace(/\D/g, '').slice(-10);
+        if (cleanDigits) updatePayload.phone = `+91${cleanDigits}`;
+      }
       if (taluka) updatePayload.taluka = taluka;
       if (village) updatePayload.village = village;
       if (avatarUrl) updatePayload.avatar_url = avatarUrl;

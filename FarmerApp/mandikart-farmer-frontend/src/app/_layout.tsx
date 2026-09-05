@@ -2,29 +2,28 @@
  * MandiKart Farmer App — Root Navigation Layout (Per-Screen Custom Animations)
  */
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
+import { Platform } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { ConsentPermissionsModal } from '@/components/ConsentPermissionsModal';
-import { FrontendConsentService } from '@/services/consentService';
 import '../global.css';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-export default function RootLayout() {
-  const [showConsent, setShowConsent] = useState(false);
+if (
+  Platform.OS === 'web' &&
+  typeof window !== 'undefined' &&
+  window.location?.hostname === '10.179.209.101'
+) {
+  const newUrl = window.location.href.replace('10.179.209.101', '10.134.195.101');
+  window.location.replace(newUrl);
+}
 
+export default function RootLayout() {
   useEffect(() => {
     SplashScreen.hideAsync().catch(() => {});
-
-    // Check if user requires terms, cookies & device permissions onboarding
-    FrontendConsentService.checkRequiresConsent().then((needed) => {
-      if (needed) {
-        setShowConsent(true);
-      }
-    });
   }, []);
 
   return (
@@ -44,6 +43,7 @@ export default function RootLayout() {
         <Stack.Screen name="auth/signup" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="auth/login" options={{ animation: 'fade_from_bottom' }} />
         <Stack.Screen name="auth/verify-otp" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="auth/callback" options={{ animation: 'fade' }} />
         <Stack.Screen name="onboarding/farmer-profile" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="onboarding/farm-details" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="(tabs)" options={{ animation: 'fade' }} />
@@ -62,13 +62,9 @@ export default function RootLayout() {
         <Stack.Screen name="sell/history" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="produce/add" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="produce/[id]" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="market-prices" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="market-trends" options={{ animation: 'slide_from_right' }} />
       </Stack>
-
-      {/* Global Legal Consent, 15-Day Cookies & Hardware Permissions Modal */}
-      <ConsentPermissionsModal
-        visible={showConsent}
-        onConsentAccepted={() => setShowConsent(false)}
-      />
     </SafeAreaProvider>
   );
 }

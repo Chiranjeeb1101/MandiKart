@@ -12,6 +12,22 @@
 
 import { create } from 'zustand';
 import { useProduceStore } from './produceStore';
+import { useOrderStore } from './orderStore';
+
+export interface ExecuteSaleParams {
+  cropId?: string;
+  cropName: string;
+  variety?: string;
+  quantityKg: number;
+  grade?: string;
+  pricePerKg: number;
+  buyerName: string;
+  buyerType?: BuyerType | string;
+  transportPerKg?: number;
+  cropImage?: string;
+  paymentMethod?: string;
+  location?: string;
+}
 
 export type BuyerRequestStatus = 'New' | 'Pending' | 'Negotiating' | 'Accepted' | 'Rejected';
 export type ListingStatus = 'Available' | 'Buyer Interested' | 'Under Discussion' | 'Reserved' | 'Sold';
@@ -133,6 +149,7 @@ interface SellStoreState {
   salesHistory: CompletedSale[];
 
   // Actions
+  executeSale: (params: ExecuteSaleParams) => { success: boolean; orderId?: string; saleId?: string; error?: string };
   acceptRequest: (requestId: string) => { success: boolean; orderId?: string; error?: string };
   counterOffer: (requestId: string, counterPrice: number, counterQty: number, message?: string) => void;
   rejectRequest: (requestId: string, reason?: string) => void;
@@ -419,6 +436,83 @@ export const useSellStore = create<SellStoreState>((set, get) => ({
   listings: INITIAL_LISTINGS,
   salesHistory: INITIAL_SALES,
 
+  executeSale: (params: ExecuteSaleParams) => {
+    const produceStore = useProduceStore.getState();
+    const matchingCrop = params.cropId
+      ? produceStore.getCropById(params.cropId)
+      : produceStore.crops.find(
+          (c) => c.cropName.toLowerCase() === params.cropName.toLowerCase()
+        );
+
+    if (matchingCrop && matchingCrop.availableKg < params.quantityKg) {
+      return {
+        success: false,
+        error: `Insufficient available stock. You have ${matchingCrop.availableKg.toLocaleString()} kg available, but attempted to sell ${params.quantityKg.toLocaleString()} kg.`,
+      };
+    }
+
+    const grossVal = params.quantityKg * params.pricePerKg;
+    const transportTotal = Math.round(params.quantityKg * (params.transportPerKg ?? 0.8));
+    const netTotal = grossVal - transportTotal;
+    const saleId = `sale_${Date.now()}`;
+
+    // 1. Deduct from produceStore
+    if (matchingCrop) {
+      const remainingAvailable = Math.max(0, matchingCrop.availableKg - params.quantityKg);
+      const updatedSold = (matchingCrop.soldKg || 0) + params.quantityKg;
+      produceStore.updateCropDetails(matchingCrop.id, {
+        availableKg: remainingAvailable,
+        soldKg: updatedSold,
+        totalKg: remainingAvailable + matchingCrop.reservedKg + updatedSold,
+      });
+    }
+
+    // 2. Create real order in orderStore
+    const newOrder = useOrderStore.getState().createOrderFromSale({
+      cropName: params.cropName,
+      cropVariety: params.variety || matchingCrop?.variety || 'Harvest Batch',
+      grade: params.grade || matchingCrop?.grade || 'Grade A',
+      quantityKg: params.quantityKg,
+      cropImage: params.cropImage || matchingCrop?.imageUri,
+      buyerName: params.buyerName,
+      buyerType: typeof params.buyerType === 'string' ? params.buyerType : undefined,
+      ratePerKg: params.pricePerKg,
+      grossAmount: grossVal,
+      transportDeduction: transportTotal,
+      netPayout: netTotal,
+      location: params.location || matchingCrop?.location || 'Farmgate, Main Farm Storage',
+      paymentMode: params.paymentMethod || 'MandiKart Escrow Guaranteed',
+    });
+
+    const orderId = newOrder.orderNumber;
+
+    // 3. Record in salesHistory
+    const completedSale: CompletedSale = {
+      id: saleId,
+      orderId: orderId,
+      cropName: params.cropName,
+      variety: params.variety || matchingCrop?.variety,
+      quantityKg: params.quantityKg,
+      agreedPricePerKg: params.pricePerKg,
+      grossAmount: grossVal,
+      transportCost: transportTotal,
+      platformFee: 0,
+      netPayout: netTotal,
+      buyerName: params.buyerName,
+      buyerType: (params.buyerType as BuyerType) || 'Food Processor',
+      saleDate: 'Today (Just now)',
+      status: 'In Transit',
+      paymentMethod: params.paymentMethod || 'MandiKart Escrow (Guaranteed)',
+      transactionRef: `TXN-${orderId.replace('#', '')}`,
+    };
+
+    set((state) => ({
+      salesHistory: [completedSale, ...state.salesHistory],
+    }));
+
+    return { success: true, orderId, saleId };
+  },
+
   acceptRequest: (requestId: string) => {
     const req = get().requests.find((r) => r.id === requestId);
     if (!req) {
@@ -434,31 +528,53 @@ export const useSellStore = create<SellStoreState>((set, get) => ({
     if (matchingCrop && matchingCrop.availableKg < req.quantityKg) {
       return {
         success: false,
-        error: `Insufficient available stock. You have ${matchingCrop.availableKg} kg available, but the buyer requested ${req.quantityKg} kg.`,
+        error: `Insufficient available stock. You have ${matchingCrop.availableKg.toLocaleString()} kg available, but the buyer requested ${req.quantityKg.toLocaleString()} kg.`,
       };
     }
 
-    const orderId = `MK-ORD-${Math.floor(1000 + Math.random() * 9000)}`;
     const grossVal = req.quantityKg * req.offerPricePerKg;
     const transportTotal = Math.round(req.quantityKg * req.estimatedTransportPerKg);
     const netTotal = grossVal - transportTotal;
+    const saleId = `sale_${Date.now()}`;
 
-    // 1. Move available inventory to reserved/sold in produceStore
+    // 1. Move available inventory to sold in produceStore
     if (matchingCrop) {
-      const remainingAvailable = matchingCrop.availableKg - req.quantityKg;
-      const updatedReserved = matchingCrop.reservedKg + req.quantityKg;
-      produceStore.updateCropQuantity(matchingCrop.id, remainingAvailable, updatedReserved);
+      const remainingAvailable = Math.max(0, matchingCrop.availableKg - req.quantityKg);
+      const updatedSold = (matchingCrop.soldKg || 0) + req.quantityKg;
+      produceStore.updateCropDetails(matchingCrop.id, {
+        availableKg: remainingAvailable,
+        soldKg: updatedSold,
+        totalKg: remainingAvailable + matchingCrop.reservedKg + updatedSold,
+      });
     }
 
-    // 2. Mark request as Accepted
+    // 2. Create real order in orderStore
+    const newOrder = useOrderStore.getState().createOrderFromSale({
+      cropName: req.cropName,
+      cropVariety: req.variety || matchingCrop?.variety || 'Harvest Batch',
+      grade: req.qualityGrade || matchingCrop?.grade || 'Grade A',
+      quantityKg: req.quantityKg,
+      cropImage: matchingCrop?.imageUri || req.avatar,
+      buyerName: req.buyerName,
+      buyerType: req.buyerType,
+      ratePerKg: req.offerPricePerKg,
+      grossAmount: grossVal,
+      transportDeduction: transportTotal,
+      netPayout: netTotal,
+      location: matchingCrop?.location || 'Farmgate, Main Farm Storage',
+      paymentMode: 'Direct Bank Settlement (Escrow)',
+    });
+
+    const orderId = newOrder.orderNumber;
+
+    // 3. Mark request as Accepted & record in salesHistory
     set((state) => ({
       requests: state.requests.map((r) =>
         r.id === requestId ? { ...r, status: 'Accepted' } : r
       ),
-      // 3. Record in sales history
       salesHistory: [
         {
-          id: `sale_${Date.now()}`,
+          id: saleId,
           orderId: orderId,
           cropName: req.cropName,
           variety: req.variety,
@@ -470,10 +586,10 @@ export const useSellStore = create<SellStoreState>((set, get) => ({
           netPayout: netTotal,
           buyerName: req.buyerName,
           buyerType: req.buyerType,
-          saleDate: 'Today (04 Sep 2026)',
+          saleDate: 'Today (Just now)',
           status: 'In Transit',
           paymentMethod: 'Direct Bank Settlement (Escrow)',
-          transactionRef: `TXN-${orderId}`,
+          transactionRef: `TXN-${orderId.replace('#', '')}`,
         },
         ...state.salesHistory,
       ],
