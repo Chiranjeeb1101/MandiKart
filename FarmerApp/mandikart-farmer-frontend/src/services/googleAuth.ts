@@ -60,7 +60,7 @@ export function getHostIp(): string {
     }
   } catch {}
 
-  return '10.134.195.101';
+  return '10.179.209.101';
 }
 
 export function getAppDeepLinkUri(): string {

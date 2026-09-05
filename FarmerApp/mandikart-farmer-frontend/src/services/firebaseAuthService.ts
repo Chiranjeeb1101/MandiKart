@@ -36,6 +36,7 @@ export interface FirebaseSyncResult {
   success: boolean;
   token?: string;
   farmer?: any;
+  isNewUser?: boolean;
   error?: string;
 }
 
@@ -250,6 +251,7 @@ export const firebaseAuthService = {
           success: true,
           token: res.data.token,
           farmer: res.data.farmer,
+          isNewUser: res.data.isNewUser !== undefined ? res.data.isNewUser : (res.data.farmer?.village ? false : true),
         };
       }
 

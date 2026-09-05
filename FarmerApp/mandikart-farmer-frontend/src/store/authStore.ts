@@ -1,11 +1,5 @@
-/**
- * MandiKart — Zustand Auth Store
- *
- * Global client-side auth & farmer state.
- * Only for genuine client-side state that needs global access.
- */
-
 import { create } from 'zustand';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import type { Farmer } from '@/types';
 
 export interface UserProfile {
@@ -39,12 +33,14 @@ export interface UserProfile {
 interface AuthState {
   isAuthenticated: boolean;
   isOnboarded: boolean;
+  isHydrated: boolean;
   farmer: Farmer | null;
   user: UserProfile | null;
   token: string | null;
   phoneNumber: string;
 
   // Actions
+  hydrateAuth: () => Promise<void>;
   setPhoneNumber: (phone: string) => void;
   setUser: (user: Partial<UserProfile>) => void;
   setIsAuthenticated: (value: boolean) => void;
@@ -54,12 +50,48 @@ interface AuthState {
   logout: () => void;
 }
 
-const getStoredAuth = () => {
+const STORAGE_KEYS = {
+  TOKEN: 'mandikart_farmer_token',
+  USER: 'mandikart_farmer_user',
+  FARMER: 'mandikart_farmer_data',
+};
+
+const persistAuth = async (token: string, user: UserProfile, farmer: Farmer) => {
+  try {
+    await AsyncStorage.setItem(STORAGE_KEYS.TOKEN, token);
+    await AsyncStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+    await AsyncStorage.setItem(STORAGE_KEYS.FARMER, JSON.stringify(farmer));
+  } catch {}
   try {
     if (typeof window !== 'undefined' && window.localStorage) {
-      const token = localStorage.getItem('mandikart_farmer_token');
-      const user = localStorage.getItem('mandikart_farmer_user');
-      const farmer = localStorage.getItem('mandikart_farmer_data');
+      localStorage.setItem(STORAGE_KEYS.TOKEN, token);
+      localStorage.setItem(STORAGE_KEYS.USER, JSON.stringify(user));
+      localStorage.setItem(STORAGE_KEYS.FARMER, JSON.stringify(farmer));
+    }
+  } catch {}
+};
+
+const clearPersistedAuth = async () => {
+  try {
+    await AsyncStorage.removeItem(STORAGE_KEYS.TOKEN);
+    await AsyncStorage.removeItem(STORAGE_KEYS.USER);
+    await AsyncStorage.removeItem(STORAGE_KEYS.FARMER);
+  } catch {}
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.removeItem(STORAGE_KEYS.TOKEN);
+      localStorage.removeItem(STORAGE_KEYS.USER);
+      localStorage.removeItem(STORAGE_KEYS.FARMER);
+    }
+  } catch {}
+};
+
+const getStoredAuthSync = () => {
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+      const user = localStorage.getItem(STORAGE_KEYS.USER);
+      const farmer = localStorage.getItem(STORAGE_KEYS.FARMER);
       if (token && user) {
         return {
           isAuthenticated: true,
@@ -73,15 +105,47 @@ const getStoredAuth = () => {
   return { isAuthenticated: false, token: null, user: null, farmer: null };
 };
 
-const initialAuth = getStoredAuth();
+const initialAuth = getStoredAuthSync();
 
 export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: initialAuth.isAuthenticated,
   isOnboarded: initialAuth.isAuthenticated,
+  isHydrated: false,
   farmer: initialAuth.farmer,
   user: initialAuth.user,
   token: initialAuth.token,
   phoneNumber: '',
+
+  hydrateAuth: async () => {
+    try {
+      let token = await AsyncStorage.getItem(STORAGE_KEYS.TOKEN);
+      let userStr = await AsyncStorage.getItem(STORAGE_KEYS.USER);
+      let farmerStr = await AsyncStorage.getItem(STORAGE_KEYS.FARMER);
+
+      if (!token && typeof window !== 'undefined' && window.localStorage) {
+        token = localStorage.getItem(STORAGE_KEYS.TOKEN);
+        userStr = localStorage.getItem(STORAGE_KEYS.USER);
+        farmerStr = localStorage.getItem(STORAGE_KEYS.FARMER);
+      }
+
+      if (token && (userStr || farmerStr)) {
+        const user = userStr ? JSON.parse(userStr) : null;
+        const farmer = farmerStr ? JSON.parse(farmerStr) : null;
+        set({
+          isAuthenticated: true,
+          isOnboarded: true,
+          token,
+          user,
+          farmer,
+          isHydrated: true,
+        });
+        return;
+      }
+    } catch (e) {
+      console.warn('[authStore] hydrateAuth error:', e);
+    }
+    set({ isHydrated: true });
+  },
 
   setPhoneNumber: (phoneNumber) => set({ phoneNumber }),
 
@@ -103,36 +167,30 @@ export const useAuthStore = create<AuthState>((set) => ({
       isVerified: farmer.isVerified,
       role: 'FARMER',
     };
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.setItem('mandikart_farmer_token', token);
-        localStorage.setItem('mandikart_farmer_user', JSON.stringify(userProfile));
-        localStorage.setItem('mandikart_farmer_data', JSON.stringify(farmer));
-      }
-    } catch {}
+    persistAuth(token, userProfile, farmer);
     set({
       isAuthenticated: true,
+      isOnboarded: true,
       token,
       farmer,
       user: userProfile,
+      isHydrated: true,
     });
   },
 
   setOnboarded: (isOnboarded) => set({ isOnboarded }),
 
   updateFarmer: (updates) =>
-    set((state) => ({
-      farmer: state.farmer ? { ...state.farmer, ...updates } : null,
-    })),
+    set((state) => {
+      const updatedFarmer = state.farmer ? { ...state.farmer, ...updates } : null;
+      if (updatedFarmer && state.token && state.user) {
+        persistAuth(state.token, state.user, updatedFarmer);
+      }
+      return { farmer: updatedFarmer };
+    }),
 
   logout: () => {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.removeItem('mandikart_farmer_token');
-        localStorage.removeItem('mandikart_farmer_user');
-        localStorage.removeItem('mandikart_farmer_data');
-      }
-    } catch {}
+    clearPersistedAuth();
     set({
       isAuthenticated: false,
       isOnboarded: false,
@@ -140,6 +198,11 @@ export const useAuthStore = create<AuthState>((set) => ({
       user: null,
       token: null,
       phoneNumber: '',
+      isHydrated: true,
     });
   },
 }));
+
+// Auto-hydrate immediately upon module load
+useAuthStore.getState().hydrateAuth();
+

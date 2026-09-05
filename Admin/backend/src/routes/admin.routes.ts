@@ -9,3 +9,6 @@ adminRouter.get('/metrics', requireAuth, AdminController.getPlatformMetrics);
 adminRouter.post('/farmers/:farmerId/verify', requireAuth, requireIdempotency, AdminController.verifyFarmerKyc);
 adminRouter.post('/disputes/:orderId/resolve', requireAuth, requireIdempotency, AdminController.resolveDispute);
 adminRouter.get('/audit-logs', requireAuth, AdminController.getAuditLogs);
+adminRouter.get('/produce', AdminController.getAllProduce);
+adminRouter.post('/produce/:productId/approve', AdminController.approveProduce);
+adminRouter.post('/produce/:productId/reject', AdminController.rejectProduce);

@@ -4,7 +4,7 @@ import { StorageService, StorageBucket } from '../services/storage.service.js';
 export class StorageController {
   static async uploadImage(req: Request, res: Response): Promise<void> {
     try {
-      const file = req.file;
+      const file = (req as any).file;
       if (!file) {
         res.status(400).json({ error: 'No image file provided in request.' });
         return;

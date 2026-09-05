@@ -32,12 +32,19 @@ export interface FirebaseSyncResponse {
     fullName: string;
     phone?: string;
     email?: string;
+    avatarUrl?: string;
     state: string;
     district: string;
+    taluka?: string;
+    village?: string;
+    farmSizeAcres?: number;
+    primaryCrops?: string[];
+    ownershipType?: string;
     preferredLanguage: string;
     isVerified: boolean;
     role: string;
     firebaseUid?: string;
+    [key: string]: any;
   };
   isNewUser: boolean;
 }
@@ -190,8 +197,14 @@ export class FirebaseAuthService {
         fullName: farmerRecord.full_name || userFullName,
         phone: farmerRecord.phone || formattedPhone,
         email: farmerRecord.email || userEmail,
+        avatarUrl: farmerRecord.avatar_url || userAvatarUrl,
         state: farmerRecord.state || 'Maharashtra',
         district: farmerRecord.district || 'Nashik',
+        taluka: farmerRecord.taluka,
+        village: farmerRecord.village,
+        farmSizeAcres: farmerRecord.farm_size_acres ? Number(farmerRecord.farm_size_acres) : undefined,
+        primaryCrops: farmerRecord.primary_crops,
+        ownershipType: farmerRecord.ownership_type,
         preferredLanguage: farmerRecord.preferred_language || 'en',
         isVerified: true,
         role: 'FARMER',

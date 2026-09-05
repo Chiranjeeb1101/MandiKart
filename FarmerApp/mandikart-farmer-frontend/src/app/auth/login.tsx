@@ -255,8 +255,8 @@ export default function LoginScreen() {
         visible={googleModalVisible}
         onClose={() => setGoogleModalVisible(false)}
         pendingPhone={mobile ? `+91${mobile.replace(/\D/g, '').slice(-10)}` : undefined}
-        onSuccess={(farmer) => {
-          if (farmer.village || farmer.farmSizeAcres) {
+        onSuccess={(farmer, isNewUser) => {
+          if (!isNewUser || farmer?.village || farmer?.farmSizeAcres) {
             router.replace('/(tabs)/home');
           } else {
             router.replace('/onboarding/farmer-profile');

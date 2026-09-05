@@ -13,10 +13,19 @@ export interface Farmer {
   phone: string;
   email?: string;
   profileImageUrl?: string;
-  language: 'en' | 'hi' | 'or' | 'mr' | 'pa' | 'ta' | 'te' | 'bn' | 'gu' | 'kn';
+  avatarUrl?: string;
+  language: 'en' | 'hi' | 'or' | 'mr' | 'pa' | 'ta' | 'te' | 'bn' | 'gu' | 'kn' | string;
   isFPOMember: boolean;
   fpoId?: string;
   isVerified: boolean;
+  state?: string;
+  district?: string;
+  taluka?: string;
+  village?: string;
+  farmSizeAcres?: number | string;
+  primaryCrops?: string[];
+  ownershipType?: string;
+  isNewUser?: boolean;
   createdAt: string;
 }
 

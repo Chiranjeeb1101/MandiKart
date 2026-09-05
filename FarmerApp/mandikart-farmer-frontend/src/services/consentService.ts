@@ -8,6 +8,7 @@ import { Platform } from 'react-native';
 import * as Location from 'expo-location';
 import * as ImagePicker from 'expo-image-picker';
 import * as SecureStore from 'expo-secure-store';
+import { resolveFarmerApiBaseUrl } from './apiClient';
 
 const CONSENT_KEY = 'mandikart_consent_accepted';
 const SESSION_TOKEN_KEY = 'mandikart_session_token';
@@ -37,13 +38,11 @@ export const appStorage = {
 };
 
 export function getApiBaseUrl(): string {
-  if (process.env.EXPO_PUBLIC_API_URL) {
-    return process.env.EXPO_PUBLIC_API_URL;
+  try {
+    return resolveFarmerApiBaseUrl();
+  } catch {
+    return process.env.EXPO_PUBLIC_API_URL || 'http://10.179.209.101:4000/api/v1';
   }
-  if (Platform.OS === 'android') {
-    return 'http://10.179.209.97:4000/api/v1';
-  }
-  return 'http://localhost:4000/api/v1';
 }
 
 export class FrontendConsentService {
@@ -192,7 +191,7 @@ export class FrontendConsentService {
       await appStorage.setItem(CONSENT_KEY, 'true');
       return { success: true, pushToken };
     } catch (err) {
-      console.error('Consent submission error:', err);
+      console.warn('Consent submission background sync notice:', err);
       await appStorage.setItem(CONSENT_KEY, 'true');
       return { success: true };
     }

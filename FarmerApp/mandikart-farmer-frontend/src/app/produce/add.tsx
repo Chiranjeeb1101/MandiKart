@@ -50,6 +50,8 @@ import {
 import { MKColors } from '@/constants/colors';
 import { useProduceStore, QualityGrade, StorageType, CropCondition } from '@/store/produceStore';
 import { pickImageFromGallery, takePhotoWithCamera } from '@/services/imagePickerService';
+import { apiClient } from '@/services/apiClient';
+import { useAuthStore } from '@/store/authStore';
 
 // Curated crop presets with reliable default assets & market rates
 interface CropPreset {
@@ -215,7 +217,7 @@ export default function AddProduceScreen() {
 
     const expPriceNum = parseFloat(expectedPrice) || selectedPreset.refPrice;
 
-    // Build crop entity
+    // Build crop entity in PENDING_APPROVAL state
     const newCrop = addCrop({
       cropName: cropName.trim(),
       variety: variety.trim(),
@@ -226,6 +228,7 @@ export default function AddProduceScreen() {
       soldKg: 0,
       unit: unit,
       grade: grade,
+      status: 'PENDING_APPROVAL',
       harvestDate:
         harvestOption === 'Today'
           ? 'Today (04 Sep 2026)'
@@ -277,6 +280,27 @@ export default function AddProduceScreen() {
 
       watchTag: 'Newly Added Harvest',
       watchUrgency: 'positive',
+    });
+
+    // Asynchronously dispatch to backend API & Supabase database
+    const mappedGrade = grade === 'Grade B' ? 'B' : grade === 'Grade C' ? 'C' : 'A';
+    const quantityVal = parseFloat(quantityInput) || computedKg;
+
+    apiClient.createProduct({
+      cropName: cropName.trim(),
+      cropVariety: variety.trim() || undefined,
+      grade: mappedGrade,
+      category: category || 'Vegetables',
+      totalQuantity: computedKg || quantityVal,
+      quantityUnit: 'kg',
+      basePricePerUnit: expPriceNum,
+      minOrderQuantity: 10,
+      targetBuyer: 'BOTH',
+      images: photoUri ? [photoUri] : [selectedPreset.defaultImage],
+      shelfLifeDays: selectedPreset.maxDays || 7,
+      pickupAddress: 'Nashik Mandi Area',
+    }, useAuthStore.getState().token).catch((err) => {
+      console.warn('[AddProduce] Background backend sync notice:', err);
     });
 
     setCreatedCropId(newCrop.id);
@@ -648,10 +672,10 @@ export default function AddProduceScreen() {
               </View>
 
               <Text style={styles.celebrationTitle}>
-                Crop Added Successfully!
+                Produce Submitted (Pending Approval)
               </Text>
               <Text style={styles.celebrationSubtitle}>
-                Your {cropName} ({computedKg.toLocaleString()} kg) is now active in your Crop Intelligence Center.
+                Your {cropName} ({computedKg.toLocaleString()} kg) is currently in Pending State. Once Mandi Admin reviews and approves it, it will immediately turn Active for buyers.
               </Text>
 
               {/* Summary of what was saved */}
@@ -659,6 +683,10 @@ export default function AddProduceScreen() {
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Crop:</Text>
                   <Text style={styles.summaryVal}>{cropName} ({variety || 'Standard'})</Text>
+                </View>
+                <View style={styles.summaryRow}>
+                  <Text style={styles.summaryLabel}>Status:</Text>
+                  <Text style={[styles.summaryVal, { color: '#D97706', fontWeight: '800' }]}>🟡 Pending Admin Approval</Text>
                 </View>
                 <View style={styles.summaryRow}>
                   <Text style={styles.summaryLabel}>Quantity:</Text>

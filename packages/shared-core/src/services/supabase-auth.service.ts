@@ -37,6 +37,10 @@ export interface AuthSessionResponse {
     state?: string;
     district?: string;
     addresses?: any[];
+    village?: string;
+    farmSizeAcres?: number;
+    primaryCrops?: string[];
+    [key: string]: any;
   };
   isNewUser: boolean;
 }
@@ -228,6 +232,9 @@ export class SupabaseAuthService {
         state,
         district,
         addresses,
+        village: existingFarmerRecord?.village,
+        farmSizeAcres: existingFarmerRecord?.farm_size_acres ? Number(existingFarmerRecord.farm_size_acres) : undefined,
+        primaryCrops: existingFarmerRecord?.primary_crops,
       },
       isNewUser,
     };

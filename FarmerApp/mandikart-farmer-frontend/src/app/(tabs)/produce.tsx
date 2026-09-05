@@ -62,7 +62,7 @@ export default function ProduceScreen() {
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeFilter, setActiveFilter] = useState<'all' | 'available' | 'reserved' | 'attention' | 'high_demand'>('all');
+  const [activeFilter, setActiveFilter] = useState<'all' | 'pending' | 'available' | 'reserved' | 'attention' | 'high_demand'>('all');
   const [freshnessModalVisible, setFreshnessModalVisible] = useState(false);
   const [selectedCropForInfo, setSelectedCropForInfo] = useState<CropItem | null>(null);
 
@@ -73,6 +73,7 @@ export default function ProduceScreen() {
   const attentionCropsCount = crops.filter(
     (c) => c.condition !== 'Good' || c.shelfLifeDaysEstMax <= 5
   ).length;
+  const pendingCropsCount = crops.filter((c) => c.status === 'PENDING_APPROVAL').length;
 
   // Filtered crops based on active search and activeFilter
   const filteredCrops = useMemo(() => {
@@ -84,6 +85,9 @@ export default function ProduceScreen() {
 
       if (!matchesSearch) return false;
 
+      if (activeFilter === 'pending') {
+        return crop.status === 'PENDING_APPROVAL';
+      }
       if (activeFilter === 'attention') {
         return crop.condition !== 'Good' || crop.shelfLifeDaysEstMax <= 5;
       }
@@ -332,6 +336,31 @@ export default function ProduceScreen() {
               </Text>
             </Pressable>
 
+            {pendingCropsCount > 0 && (
+              <Pressable
+                style={[
+                  styles.filterChip,
+                  {
+                    borderColor: '#F59E0B',
+                    backgroundColor: activeFilter === 'pending' ? '#F59E0B' : '#FEF3C7',
+                  },
+                ]}
+                onPress={() => setActiveFilter(activeFilter === 'pending' ? 'all' : 'pending')}
+              >
+                <Text
+                  style={[
+                    styles.filterChipText,
+                    {
+                      color: activeFilter === 'pending' ? '#FFFFFF' : '#92400E',
+                      fontWeight: '800',
+                    },
+                  ]}
+                >
+                  🟡 Pending Approval ({pendingCropsCount})
+                </Text>
+              </Pressable>
+            )}
+
             <Pressable
               style={[
                 styles.filterChip,
@@ -475,12 +504,43 @@ export default function ProduceScreen() {
                       {crop.variety ? crop.variety : crop.category} • {crop.storageType}
                     </Text>
 
-                    {/* Condition Chip */}
-                    <View style={[styles.conditionChip, { backgroundColor: cond.bg }]}>
-                      <CondIcon size={12} color={cond.color} style={{ marginRight: 4 }} />
-                      <Text style={[styles.conditionChipText, { color: cond.color }]}>
-                        {cond.label}
-                      </Text>
+                    {/* Status & Condition Badges */}
+                    <View style={styles.cropBadgeRow}>
+                      <View
+                        style={[
+                          styles.statusBadge,
+                          crop.status === 'PENDING_APPROVAL'
+                            ? styles.statusBadgePending
+                            : crop.status === 'REJECTED'
+                            ? styles.statusBadgeRejected
+                            : styles.statusBadgeActive,
+                        ]}
+                      >
+                        <Text
+                          style={[
+                            styles.statusBadgeText,
+                            crop.status === 'PENDING_APPROVAL'
+                              ? styles.statusBadgeTextPending
+                              : crop.status === 'REJECTED'
+                              ? styles.statusBadgeTextRejected
+                              : styles.statusBadgeTextActive,
+                          ]}
+                        >
+                          {crop.status === 'PENDING_APPROVAL'
+                            ? '🟡 Pending Approval'
+                            : crop.status === 'REJECTED'
+                            ? '🔴 Rejected'
+                            : '🟢 Active Order'}
+                        </Text>
+                      </View>
+
+                      {/* Condition Chip */}
+                      <View style={[styles.conditionChip, { backgroundColor: cond.bg }]}>
+                        <CondIcon size={12} color={cond.color} style={{ marginRight: 4 }} />
+                        <Text style={[styles.conditionChipText, { color: cond.color }]}>
+                          {cond.label}
+                        </Text>
+                      </View>
                     </View>
                   </View>
                 </View>
@@ -1134,6 +1194,46 @@ const styles = StyleSheet.create({
     color: MKColors.textSecondary,
     marginVertical: 3,
   },
+  cropBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+    marginTop: 4,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+  },
+  statusBadgePending: {
+    backgroundColor: '#FEF3C7',
+    borderWidth: 1,
+    borderColor: '#F59E0B',
+  },
+  statusBadgeActive: {
+    backgroundColor: '#DCFCE7',
+    borderWidth: 1,
+    borderColor: '#22C55E',
+  },
+  statusBadgeRejected: {
+    backgroundColor: '#FEE2E2',
+    borderWidth: 1,
+    borderColor: '#EF4444',
+  },
+  statusBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+  },
+  statusBadgeTextPending: {
+    color: '#B45309',
+  },
+  statusBadgeTextActive: {
+    color: '#15803D',
+  },
+  statusBadgeTextRejected: {
+    color: '#B91C1C',
+  },
   conditionChip: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1141,7 +1241,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    marginTop: 2,
   },
   conditionChipText: {
     fontSize: 11,

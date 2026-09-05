@@ -56,7 +56,7 @@ export function resolveFarmerApiBaseUrl(): string {
   return (
     process.env.EXPO_PUBLIC_FARMER_API_URL ||
     process.env.EXPO_PUBLIC_API_URL ||
-    'http://10.134.195.101:4000/api/v1'
+    'http://10.179.209.101:4000/api/v1'
   );
 }
 

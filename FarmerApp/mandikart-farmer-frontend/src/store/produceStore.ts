@@ -71,6 +71,9 @@ export interface CropItem {
   attentionMessage?: string;
   attentionActionLabel?: string;
   attentionActionRoute?: string;
+
+  // Lifecycle Status: Pending Admin Verification -> Active Live Order
+  status?: 'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED';
 }
 
 interface ProduceStoreState {
@@ -78,6 +81,7 @@ interface ProduceStoreState {
 
   // Actions
   addCrop: (crop: Omit<CropItem, 'id'>) => CropItem;
+  updateCropStatus: (id: string, status: 'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED') => void;
   updateCropCondition: (id: string, condition: CropCondition, note?: string) => void;
   updateCropQuantity: (id: string, availableKg: number, reservedKg?: number) => void;
   updateCropDetails: (id: string, updates: Partial<CropItem>) => void;
@@ -338,13 +342,14 @@ const INITIAL_CROPS: CropItem[] = [
 ];
 
 export const useProduceStore = create<ProduceStoreState>((set, get) => ({
-  crops: INITIAL_CROPS,
+  crops: INITIAL_CROPS.map((c) => ({ ...c, status: c.status || 'ACTIVE' })),
 
   addCrop: (newCropData) => {
     const newId = `crop_${Date.now()}`;
     const newCrop: CropItem = {
       ...newCropData,
       id: newId,
+      status: newCropData.status || 'PENDING_APPROVAL',
     };
 
     set((state) => ({
@@ -352,6 +357,12 @@ export const useProduceStore = create<ProduceStoreState>((set, get) => ({
     }));
 
     return newCrop;
+  },
+
+  updateCropStatus: (id, status) => {
+    set((state) => ({
+      crops: state.crops.map((c) => (c.id === id ? { ...c, status } : c)),
+    }));
   },
 
   updateCropCondition: (id, condition, note) => {

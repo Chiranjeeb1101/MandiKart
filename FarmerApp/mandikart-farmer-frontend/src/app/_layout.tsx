@@ -12,14 +12,6 @@ import '../global.css';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-if (
-  Platform.OS === 'web' &&
-  typeof window !== 'undefined' &&
-  window.location?.hostname === '10.179.209.101'
-) {
-  const newUrl = window.location.href.replace('10.179.209.101', '10.134.195.101');
-  window.location.replace(newUrl);
-}
 
 export default function RootLayout() {
   useEffect(() => {

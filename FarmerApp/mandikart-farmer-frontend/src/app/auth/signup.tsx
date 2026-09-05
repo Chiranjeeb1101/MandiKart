@@ -120,7 +120,11 @@ export default function SignUpScreen() {
           return;
         }
 
-        router.replace('/onboarding/farmer-profile');
+        if (!result.isNewUser || result.farmer.village || result.farmer.farmSizeAcres) {
+          router.replace('/(tabs)/home');
+        } else {
+          router.replace('/onboarding/farmer-profile');
+        }
       } catch (err: any) {
         Alert.alert('Google Sign-Up Error', err?.message || 'Could not connect to authentication service.');
       } finally {
@@ -540,8 +544,8 @@ export default function SignUpScreen() {
         visible={googleModalVisible}
         onClose={() => setGoogleModalVisible(false)}
         pendingPhone={mobile ? `${countryCode}${mobile.replace(/\D/g, '').slice(-10)}` : undefined}
-        onSuccess={(farmer) => {
-          if (farmer.village || farmer.farmSizeAcres) {
+        onSuccess={(farmer, isNewUser) => {
+          if (!isNewUser || farmer?.village || farmer?.farmSizeAcres) {
             router.replace('/(tabs)/home');
           } else {
             router.replace('/onboarding/farmer-profile');

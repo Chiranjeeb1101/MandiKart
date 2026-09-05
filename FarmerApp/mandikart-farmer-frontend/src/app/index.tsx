@@ -22,9 +22,21 @@ export default function WelcomeScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { t } = useTranslation();
-  const { isAuthenticated } = useAuthStore();
+  const { isAuthenticated, farmer, hydrateAuth } = useAuthStore();
 
   const fadeAnim = useRef(new Animated.Value(0)).current;
+
+  useEffect(() => {
+    hydrateAuth();
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated && farmer) {
+      if (farmer.village || farmer.farmSizeAcres || farmer.state) {
+        router.replace('/(tabs)/home');
+      }
+    }
+  }, [isAuthenticated, farmer, router]);
 
   useEffect(() => {
     Animated.timing(fadeAnim, {

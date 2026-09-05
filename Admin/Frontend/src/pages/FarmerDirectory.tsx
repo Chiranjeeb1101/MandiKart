@@ -21,6 +21,44 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
   const [farmers, setFarmers] = useState<FarmerUser[]>(initialMockFarmers);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'VERIFIED' | 'PENDING_KYC' | 'SUSPENDED'>('ALL');
+
+  // Load live produce catalog from Admin backend (port 4003)
+  React.useEffect(() => {
+    fetch('http://localhost:4003/api/v1/admin/produce')
+      .then(res => res.json())
+      .then(result => {
+        if (result.data && result.data.length > 0) {
+          const liveListings: FarmerProduceListing[] = result.data.map((item: any) => ({
+            id: item.id,
+            cropName: item.cropName || item.crop_name,
+            category: item.category || 'Vegetables',
+            availableKg: item.availableKg || item.availableQuantity || item.available_quantity || 100,
+            pricePerKg: item.pricePerKg || item.basePricePerUnit || item.base_price_per_unit || 30,
+            qualityGrade: item.qualityGrade || (item.grade === 'B' ? 'GRADE_B' : 'GRADE_A'),
+            harvestDate: item.harvestDate || item.harvest_date || 'Recent',
+            submittedAt: item.submittedAt || (item.created_at ? new Date(item.created_at).toLocaleDateString() : 'Today'),
+            status: item.status || (item.is_active ? 'ACTIVE' : 'PENDING_APPROVAL'),
+            mandiName: item.mandiName || item.pickup_address || 'Nashik APMC',
+          }));
+
+          setFarmers(prev =>
+            prev.map((farmer, idx) => {
+              if (idx === 0) {
+                return {
+                  ...farmer,
+                  activeListings: [
+                    ...liveListings,
+                    ...farmer.activeListings.filter(l => !liveListings.some(ll => ll.id === l.id)),
+                  ],
+                };
+              }
+              return farmer;
+            })
+          );
+        }
+      })
+      .catch(() => {});
+  }, []);
   
   // Notification & Modal State
   const [approvalNotification, setApprovalNotification] = useState<string | null>(null);
@@ -51,8 +89,13 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
 
   // Approve Produce Listing Handler (Admin accepts produce -> published live to users)
   const handleApproveProduce = (farmerId: string, listingId: string, cropName: string) => {
+    // Call Admin backend API to update Supabase & shared registry
+    fetch(`http://localhost:4003/api/v1/admin/produce/${listingId}/approve`, {
+      method: 'POST',
+    }).catch(err => console.warn('Approve produce API notice:', err));
+
     setFarmers(prev => prev.map(f => {
-      if (f.id === farmerId) {
+      if (f.id === farmerId || f.activeListings.some(l => l.id === listingId)) {
         return {
           ...f,
           activeListings: f.activeListings.map(l => {
@@ -72,8 +115,12 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
 
   // Reject Produce Listing Handler
   const handleRejectProduce = (farmerId: string, listingId: string, cropName: string) => {
+    fetch(`http://localhost:4003/api/v1/admin/produce/${listingId}/reject`, {
+      method: 'POST',
+    }).catch(err => console.warn('Reject produce API notice:', err));
+
     setFarmers(prev => prev.map(f => {
-      if (f.id === farmerId) {
+      if (f.id === farmerId || f.activeListings.some(l => l.id === listingId)) {
         return {
           ...f,
           activeListings: f.activeListings.map(l => {

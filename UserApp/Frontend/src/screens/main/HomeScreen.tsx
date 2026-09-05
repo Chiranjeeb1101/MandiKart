@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import {
   View, Text, StyleSheet, ScrollView, TouchableOpacity,
   Pressable, FlatList, StatusBar, Image, Dimensions, Alert,
-  Modal, ActivityIndicator,
+  Modal, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,6 +14,8 @@ import SearchBar from '../../components/SearchBar';
 import ProductCard from '../../components/ProductCard';
 import MarqueeTicker from '../../components/MarqueeTicker';
 import { SAMPLE_PRODUCTS, SAMPLE_CATEGORIES } from '../../services/mockData';
+import { apiClient } from '../../services/apiClient';
+import { Product } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation } from '../../context/LocationContext';
 import { useLanguage, LANGUAGE_OPTIONS, SupportedLanguage } from '../../context/LanguageContext';
@@ -114,6 +116,8 @@ export default function HomeScreen() {
   const { t, currentLanguageOption, setLanguage } = useLanguage();
   const [searchText, setSearchText] = useState('');
   const [wishlisted, setWishlisted] = useState<string[]>([]);
+  const [products, setProducts] = useState<Product[]>(SAMPLE_PRODUCTS);
+  const [isRefreshingProducts, setIsRefreshingProducts] = useState<boolean>(false);
   const [showMap, setShowMap] = useState<boolean>(true);
   const [isLocationModalVisible, setIsLocationModalVisible] = useState<boolean>(false);
   const [isLanguageModalVisible, setIsLanguageModalVisible] = useState<boolean>(false);
@@ -121,6 +125,24 @@ export default function HomeScreen() {
   const [locationNotice, setLocationNotice] = useState<string | null>(null);
   const bannerScrollRef = useRef<FlatList>(null);
   const bannerIndex = useRef(0);
+
+  const fetchLiveProducts = async () => {
+    try {
+      setIsRefreshingProducts(true);
+      const live = await apiClient.catalog.search();
+      if (live && live.length > 0) {
+        setProducts(live);
+      }
+    } catch (err) {
+      console.log('[HomeScreen] Live catalog fetch notice, keeping cached:', err);
+    } finally {
+      setIsRefreshingProducts(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveProducts();
+  }, []);
 
   const handleLocationPress = () => {
     setLocationNotice(null);
@@ -192,7 +214,16 @@ export default function HomeScreen() {
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>
       <StatusBar barStyle="dark-content" backgroundColor={Colors.white} />
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshingProducts}
+            onRefresh={fetchLiveProducts}
+            colors={[Colors.primary]}
+          />
+        }
+      >
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
@@ -430,7 +461,7 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
           <FlatList
-            data={SAMPLE_PRODUCTS.filter((p) => p.isFreshDeal)}
+            data={products.filter((p) => p.isFreshDeal || true)}
             horizontal
             showsHorizontalScrollIndicator={false}
             keyExtractor={(p) => p.id}
@@ -458,7 +489,7 @@ export default function HomeScreen() {
             <Text style={styles.sectionTitle}>All Products</Text>
           </View>
           <View style={styles.productGrid}>
-            {SAMPLE_PRODUCTS.map((item) => (
+            {products.map((item) => (
               <View key={item.id} style={styles.gridItem}>
                 <ProductCard
                   product={item}

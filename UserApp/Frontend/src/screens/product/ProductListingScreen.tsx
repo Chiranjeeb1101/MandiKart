@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, StatusBar, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -6,6 +6,8 @@ import { Colors, Spacing, BorderRadius } from '../../theme';
 import ProductCard from '../../components/ProductCard';
 import SearchBar from '../../components/SearchBar';
 import { SAMPLE_PRODUCTS } from '../../services/mockData';
+import { apiClient } from '../../services/apiClient';
+import { Product } from '../../types';
 
 const SORT_OPTIONS = ['Relevance', 'Price: Low to High', 'Price: High to Low', 'Rating'];
 
@@ -14,8 +16,19 @@ export default function ProductListingScreen({ navigation, route }: any) {
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState(0);
   const [wishlisted, setWishlisted] = useState<string[]>([]);
+  const [products, setProducts] = useState<Product[]>(SAMPLE_PRODUCTS);
 
-  const filtered = SAMPLE_PRODUCTS
+  useEffect(() => {
+    let isMounted = true;
+    apiClient.catalog.search().then((live) => {
+      if (isMounted && live && live.length > 0) {
+        setProducts(live);
+      }
+    }).catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
+
+  const filtered = products
     .filter((p) => {
       const matchesSearch = !search || p.name.toLowerCase().includes(search.toLowerCase());
       const matchesCategory = !categoryId ||

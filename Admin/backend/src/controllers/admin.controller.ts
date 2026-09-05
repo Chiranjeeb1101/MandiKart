@@ -5,7 +5,7 @@
 
 import { Request, Response } from 'express';
 import { OrderStatus, UserRole } from '@mandikart/shared-types';
-import { canTransition, getSupabaseAdmin, auditLog } from '@mandikart/shared-core';
+import { canTransition, getSupabaseAdmin, auditLog, ProductRegistryService } from '@mandikart/shared-core';
 
 export class AdminController {
   static async getPlatformMetrics(_req: Request, res: Response): Promise<void> {
@@ -173,5 +173,147 @@ export class AdminController {
       meta: { total: 2 },
       error: null,
     });
+  }
+
+  static async getAllProduce(_req: Request, res: Response): Promise<void> {
+    try {
+      const supabase = getSupabaseAdmin();
+      const { data: dbProducts } = await supabase
+        .from('products')
+        .select('*, farmers(full_name, phone, state, district)')
+        .order('created_at', { ascending: false });
+
+      let list = (dbProducts || []).map((p: any) => ({
+        id: p.id,
+        farmerId: p.farmer_id,
+        farmerFullName: p.farmers?.full_name || 'Ramesh Patil',
+        farmerName: p.farmers?.full_name || 'Ramesh Patil',
+        farmerCode: p.farmers?.phone ? `FARM-${p.farmers.phone.slice(-4)}` : 'FARM-8201',
+        cropName: p.crop_name,
+        category: p.category,
+        variety: p.crop_variety || 'Hybrid',
+        availableKg: Number(p.available_quantity || 0),
+        quantityKg: Number(p.available_quantity || p.total_quantity || 0),
+        pricePerKg: Number(p.base_price_per_unit || 0),
+        qualityGrade: (p.grade === 'B' ? 'GRADE_B' : 'GRADE_A') as 'GRADE_A' | 'GRADE_B' | 'PREMIUM',
+        harvestDate: p.harvest_date || 'Recent',
+        status: (p.is_active ? 'ACTIVE' : 'PENDING_APPROVAL') as 'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED',
+        submittedAt: p.created_at ? new Date(p.created_at).toLocaleDateString() : 'Today',
+        mandiName: p.pickup_address || 'Nashik APMC',
+      }));
+
+      // Also merge from ProductRegistryService
+      try {
+        const registered = ProductRegistryService.getRegisteredProducts();
+        for (const reg of registered) {
+          if (!list.some((item: any) => item.id === reg.id)) {
+            list.unshift({
+              id: reg.id,
+              farmerId: reg.farmerId,
+              farmerFullName: reg.farmerName || 'Ramesh Patil',
+              farmerName: reg.farmerName || 'Ramesh Patil',
+              farmerCode: 'FARM-8201',
+              cropName: reg.cropName,
+              category: reg.category,
+              variety: reg.cropVariety || 'Hybrid',
+              availableKg: Number(reg.availableQuantity || reg.totalQuantity || 0),
+              quantityKg: Number(reg.availableQuantity || reg.totalQuantity || 0),
+              pricePerKg: Number(reg.basePricePerUnit || 0),
+              qualityGrade: (reg.grade === 'B' ? 'GRADE_B' : 'GRADE_A') as 'GRADE_A' | 'GRADE_B' | 'PREMIUM',
+              harvestDate: 'Recent',
+              status: (reg.isActive ? 'ACTIVE' : 'PENDING_APPROVAL') as 'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED',
+              submittedAt: reg.createdAt ? new Date(reg.createdAt).toLocaleDateString() : 'Today',
+              mandiName: reg.pickupAddress || 'Nashik APMC',
+            });
+          }
+        }
+      } catch {}
+
+      res.status(200).json({
+        data: list,
+        meta: { total: list.length },
+        error: null,
+      });
+    } catch (err) {
+      res.status(500).json({ data: null, error: { message: (err as Error).message } });
+    }
+  }
+
+  static async approveProduce(req: Request, res: Response): Promise<void> {
+    const productId = String(req.params.productId);
+    try {
+      const supabase = getSupabaseAdmin();
+      await supabase
+        .from('products')
+        .update({ is_active: true, updated_at: new Date().toISOString() })
+        .eq('id', productId);
+
+      try {
+        const p = ProductRegistryService.getProductById(productId);
+        if (p) {
+          p.isActive = true;
+          p.status = 'ACTIVE';
+          ProductRegistryService.registerProduct(p);
+        }
+      } catch {}
+
+      await auditLog({
+        actorId: req.user?.id || 'admin_super_01',
+        role: UserRole.ADMIN,
+        action: 'APPROVE_PRODUCE',
+        resourceType: 'PRODUCT',
+        resourceId: productId,
+      });
+
+      res.status(200).json({
+        data: {
+          productId,
+          status: 'ACTIVE',
+          message: 'Produce listing verified and published live for buyers on MandiKart marketplace.',
+        },
+        error: null,
+      });
+    } catch (err) {
+      res.status(500).json({ data: null, error: { message: (err as Error).message } });
+    }
+  }
+
+  static async rejectProduce(req: Request, res: Response): Promise<void> {
+    const productId = String(req.params.productId);
+    try {
+      const supabase = getSupabaseAdmin();
+      await supabase
+        .from('products')
+        .update({ is_active: false, updated_at: new Date().toISOString() })
+        .eq('id', productId);
+
+      try {
+        const p = ProductRegistryService.getProductById(productId);
+        if (p) {
+          p.isActive = false;
+          p.status = 'REJECTED';
+          ProductRegistryService.registerProduct(p);
+        }
+      } catch {}
+
+      await auditLog({
+        actorId: req.user?.id || 'admin_super_01',
+        role: UserRole.ADMIN,
+        action: 'REJECT_PRODUCE',
+        resourceType: 'PRODUCT',
+        resourceId: productId,
+      });
+
+      res.status(200).json({
+        data: {
+          productId,
+          status: 'REJECTED',
+          message: 'Produce listing rejected.',
+        },
+        error: null,
+      });
+    } catch (err) {
+      res.status(500).json({ data: null, error: { message: (err as Error).message } });
+    }
   }
 }

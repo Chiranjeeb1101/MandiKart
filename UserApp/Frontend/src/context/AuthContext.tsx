@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiClient, setApiAuthToken } from '../services/apiClient';
 
 export interface BuyerProfile {
@@ -39,6 +40,32 @@ interface AuthContextType {
   logout: () => void;
 }
 
+const persistBuyerAuth = async (token: string, user: BuyerProfile) => {
+  try {
+    await AsyncStorage.setItem('mandikart_buyer_token', token);
+    await AsyncStorage.setItem('mandikart_buyer_user', JSON.stringify(user));
+  } catch {}
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.setItem('mandikart_buyer_token', token);
+      localStorage.setItem('mandikart_buyer_user', JSON.stringify(user));
+    }
+  } catch {}
+};
+
+const clearPersistedBuyerAuth = async () => {
+  try {
+    await AsyncStorage.removeItem('mandikart_buyer_token');
+    await AsyncStorage.removeItem('mandikart_buyer_user');
+  } catch {}
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      localStorage.removeItem('mandikart_buyer_token');
+      localStorage.removeItem('mandikart_buyer_user');
+    }
+  } catch {}
+};
+
 const AuthContext = createContext<AuthContextType>({
   isAuthenticated: false,
   user: null,
@@ -66,11 +93,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
-    // Restore saved session only if an actual user logged in previously
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const savedToken = localStorage.getItem('mandikart_buyer_token');
-        const savedUser = localStorage.getItem('mandikart_buyer_user');
+    (async () => {
+      try {
+        let savedToken = await AsyncStorage.getItem('mandikart_buyer_token');
+        let savedUser = await AsyncStorage.getItem('mandikart_buyer_user');
+        if (!savedToken && typeof window !== 'undefined' && window.localStorage) {
+          savedToken = localStorage.getItem('mandikart_buyer_token');
+          savedUser = localStorage.getItem('mandikart_buyer_user');
+        }
         if (savedToken && savedUser) {
           const parsedUser = JSON.parse(savedUser);
           setToken(savedToken);
@@ -78,10 +108,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(parsedUser);
           setIsAuthenticated(true);
         }
-      }
-    } catch {
-      // Ignore
-    }
+      } catch {}
+    })();
   }, []);
 
   const toggleBuyerMode = () => {
@@ -97,12 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setApiAuthToken(res.token);
         setUser(res.buyer as BuyerProfile);
         setIsAuthenticated(true);
-        try {
-          if (typeof window !== 'undefined' && window.localStorage) {
-            localStorage.setItem('mandikart_buyer_token', res.token);
-            localStorage.setItem('mandikart_buyer_user', JSON.stringify(res.buyer));
-          }
-        } catch {}
+        persistBuyerAuth(res.token, res.buyer as BuyerProfile);
         return { success: true };
       }
       return { success: false, error: res?.error || 'Account not found. Please register first.' };
@@ -127,12 +150,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setApiAuthToken(res.token);
         setUser(res.buyer as BuyerProfile);
         setIsAuthenticated(true);
-        try {
-          if (typeof window !== 'undefined' && window.localStorage) {
-            localStorage.setItem('mandikart_buyer_token', res.token);
-            localStorage.setItem('mandikart_buyer_user', JSON.stringify(res.buyer));
-          }
-        } catch {}
+        persistBuyerAuth(res.token, res.buyer as BuyerProfile);
         return { success: true };
       }
       return { success: false, error: res?.error || 'Registration failed.' };
@@ -150,12 +168,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setApiAuthToken(res.token);
         setUser(buyerObj as BuyerProfile);
         setIsAuthenticated(true);
-        try {
-          if (typeof window !== 'undefined' && window.localStorage) {
-            localStorage.setItem('mandikart_buyer_token', res.token);
-            localStorage.setItem('mandikart_buyer_user', JSON.stringify(buyerObj));
-          }
-        } catch {}
+        persistBuyerAuth(res.token, buyerObj as BuyerProfile);
         return true;
       }
       return false;
@@ -174,12 +187,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setApiAuthToken(res.token);
         setUser(buyerObj as BuyerProfile);
         setIsAuthenticated(true);
-        try {
-          if (typeof window !== 'undefined' && window.localStorage) {
-            localStorage.setItem('mandikart_buyer_token', res.token);
-            localStorage.setItem('mandikart_buyer_user', JSON.stringify(buyerObj));
-          }
-        } catch {}
+        persistBuyerAuth(res.token, buyerObj as BuyerProfile);
         return { success: true };
       }
       return { success: false, error: res?.error || 'Invalid OTP code' };
@@ -193,12 +201,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setToken(null);
     setApiAuthToken(null);
     setIsAuthenticated(false);
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.removeItem('mandikart_buyer_token');
-        localStorage.removeItem('mandikart_buyer_user');
-      }
-    } catch {}
+    clearPersistedBuyerAuth();
   };
 
   return (

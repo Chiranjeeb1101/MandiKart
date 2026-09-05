@@ -4,7 +4,7 @@
  */
 
 import { Request, Response } from 'express';
-import { getSupabaseAdmin, FastLRUCache } from '@mandikart/shared-core';
+import { getSupabaseAdmin, FastLRUCache, ProductRegistryService } from '@mandikart/shared-core';
 
 const catalogCache = new FastLRUCache<any[]>(1000);
 
@@ -15,10 +15,13 @@ export class CatalogController {
     const grade = req.query.grade as string;
     const cacheKey = `cat_${crop || 'all'}_${category || 'all'}_${grade || 'all'}`;
 
-    const cached = catalogCache.get(cacheKey);
-    if (cached) {
-      res.status(200).json({ data: cached, meta: { total: cached.length, cached: true }, error: null });
-      return;
+    const isNoCache = req.query.fresh === 'true' || req.headers['cache-control'] === 'no-cache';
+    if (!isNoCache) {
+      const cached = catalogCache.get(cacheKey);
+      if (cached) {
+        res.status(200).json({ data: cached, meta: { total: cached.length, cached: true }, error: null });
+        return;
+      }
     }
 
     const isMock = !process.env.SUPABASE_URL || process.env.SUPABASE_URL.includes('placeholder');
@@ -132,9 +135,49 @@ export class CatalogController {
         return;
       }
 
+      const formatted = (data || []).map((row: any) => {
+        const farmerInfo = row.farmers || {};
+        const district = farmerInfo.district || 'Nashik';
+        const state = farmerInfo.state || 'Maharashtra';
+        return {
+          id: row.id,
+          farmerId: row.farmer_id,
+          farmerName: farmerInfo.full_name || 'Ramesh Patil',
+          location: row.pickup_address || `${district}, ${state}`,
+          cropName: row.crop_name,
+          cropVariety: row.crop_variety,
+          grade: row.grade,
+          category: row.category,
+          totalQuantity: row.total_quantity,
+          availableQuantity: row.available_quantity,
+          reservedQuantity: row.reserved_quantity,
+          quantityUnit: row.quantity_unit,
+          basePricePerUnit: row.base_price_per_unit,
+          minOrderQuantity: row.min_order_quantity,
+          targetBuyer: row.target_buyer,
+          images: row.images && row.images.length > 0 ? row.images : ['https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=600'],
+          pickupAddress: row.pickup_address,
+          shelfLifeDays: row.shelf_life_days,
+          createdAt: row.created_at,
+          ...row,
+        };
+      });
+
+      // Merge live registered products (only active/approved listings)
+      try {
+        const registered = ProductRegistryService.getRegisteredProducts();
+        for (const reg of registered) {
+          if (reg.isActive && !formatted.some((p: any) => p.id === reg.id)) {
+            formatted.unshift(reg);
+          }
+        }
+      } catch {}
+
+      catalogCache.set(cacheKey, formatted, 5);
+
       res.status(200).json({
-        data,
-        meta: { total: data.length },
+        data: formatted,
+        meta: { total: formatted.length },
         error: null,
       });
     } catch (err) {

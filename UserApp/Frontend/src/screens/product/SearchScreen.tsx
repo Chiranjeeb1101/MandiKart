@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, FlatList, StatusBar, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,14 +8,31 @@ import { Colors, Spacing } from '../../theme';
 import ProductCard from '../../components/ProductCard';
 import SearchBar from '../../components/SearchBar';
 import { SAMPLE_PRODUCTS } from '../../services/mockData';
+import { apiClient } from '../../services/apiClient';
+import { Product } from '../../types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProductStack'>;
 
 export default function SearchScreen({ navigation }: any) {
   const [query, setQuery] = useState('');
+  const [products, setProducts] = useState<Product[]>(SAMPLE_PRODUCTS);
+
+  useEffect(() => {
+    let isMounted = true;
+    apiClient.catalog.search().then((live) => {
+      if (isMounted && live && live.length > 0) {
+        setProducts(live);
+      }
+    }).catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
 
   const results = query.length > 1
-    ? SAMPLE_PRODUCTS.filter((p) => p.name.toLowerCase().includes(query.toLowerCase()) || p.category.toLowerCase().includes(query.toLowerCase()))
+    ? products.filter((p) =>
+        p.name.toLowerCase().includes(query.toLowerCase()) ||
+        p.category.toLowerCase().includes(query.toLowerCase()) ||
+        p.farmer?.name?.toLowerCase().includes(query.toLowerCase())
+      )
     : [];
 
   return (

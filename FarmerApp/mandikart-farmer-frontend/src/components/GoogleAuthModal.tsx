@@ -30,7 +30,7 @@ import { firebaseAuth } from '@/services/firebaseConfig';
 interface GoogleAuthModalProps {
   visible: boolean;
   onClose: () => void;
-  onSuccess: (farmer: any) => void;
+  onSuccess: (farmer: any, isNewUser?: boolean) => void;
   onError: (error: string) => void;
   pendingPhone?: string;
 }
@@ -171,7 +171,7 @@ export const GoogleAuthModal: React.FC<GoogleAuthModalProps> = ({
       });
 
       if (syncResult.success && syncResult.farmer) {
-        onSuccess(syncResult.farmer);
+        onSuccess(syncResult.farmer, syncResult.isNewUser);
         onClose();
       } else {
         onError(syncResult.error || 'Failed to complete registration with MandiKart.');

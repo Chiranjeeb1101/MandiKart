@@ -5,7 +5,7 @@
 
 import { Request, Response } from 'express';
 import { CreateProductSchema, UpdateProductStockSchema, UserRole } from '@mandikart/shared-types';
-import { getSupabaseAdmin, isSupabaseConfigured, auditLog } from '@mandikart/shared-core';
+import { getSupabaseAdmin, isSupabaseConfigured, auditLog, ProductRegistryService } from '@mandikart/shared-core';
 import { CONSTANTS } from '@mandikart/shared-config';
 import { DashboardService } from '../services/dashboard.service.js';
 
@@ -137,7 +137,10 @@ export class ProductsController {
   }
 
   static async createProduct(req: Request, res: Response): Promise<void> {
-    const farmerId = req.user?.id || 'farmer_ramesh_01';
+    const rawFarmerId = req.user?.id || 'farmer_ramesh_01';
+    const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+    const farmerId = UUID_REGEX.test(rawFarmerId) ? rawFarmerId : 'd1111111-1111-1111-1111-111111111111';
+
     const parse = CreateProductSchema.safeParse(req.body);
 
     if (!parse.success) {
@@ -188,12 +191,13 @@ export class ProductsController {
           pickup_longitude: payload.pickupLongitude || null,
           harvest_date: payload.harvestDate || null,
           shelf_life_days: payload.shelfLifeDays,
-          is_active: true,
+          is_active: false,
         })
         .select()
         .single();
 
       if (error) {
+        console.warn('[ProductsController] Supabase insert warning:', error.message);
         // Fallback response for prototype
         const mockProduct = {
           id: `prod_${Date.now()}`,
@@ -201,14 +205,63 @@ export class ProductsController {
           ...payload,
           availableQuantity: payload.totalQuantity,
           reservedQuantity: 0,
-          isActive: true,
+          isActive: false,
+          status: 'PENDING_APPROVAL',
           createdAt: new Date().toISOString(),
         };
+
+        ProductRegistryService.registerProduct({
+          id: mockProduct.id,
+          farmerId,
+          farmerName: 'Ramesh Patil',
+          location: payload.pickupAddress || 'Nashik, Maharashtra',
+          cropName: payload.cropName,
+          cropVariety: payload.cropVariety,
+          grade: payload.grade,
+          category: payload.category,
+          totalQuantity: payload.totalQuantity,
+          availableQuantity: payload.totalQuantity,
+          reservedQuantity: 0,
+          quantityUnit: payload.quantityUnit,
+          basePricePerUnit: payload.basePricePerUnit,
+          minOrderQuantity: payload.minOrderQuantity,
+          targetBuyer: payload.targetBuyer,
+          images: payload.images && payload.images.length > 0 ? payload.images : ['https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=600'],
+          pickupAddress: payload.pickupAddress,
+          shelfLifeDays: payload.shelfLifeDays,
+          isActive: false,
+          status: 'PENDING_APPROVAL',
+          createdAt: mockProduct.createdAt,
+        });
 
         DashboardService.invalidateCache(farmerId);
         res.status(201).json({ data: mockProduct, meta: null, error: null });
         return;
       }
+
+      ProductRegistryService.registerProduct({
+        id: data.id,
+        farmerId: data.farmer_id,
+        farmerName: 'Ramesh Patil',
+        location: data.pickup_address || 'Nashik, Maharashtra',
+        cropName: data.crop_name,
+        cropVariety: data.crop_variety,
+        grade: data.grade,
+        category: data.category,
+        totalQuantity: data.total_quantity,
+        availableQuantity: data.available_quantity,
+        reservedQuantity: data.reserved_quantity,
+        quantityUnit: data.quantity_unit,
+        basePricePerUnit: data.base_price_per_unit,
+        minOrderQuantity: data.min_order_quantity,
+        targetBuyer: data.target_buyer,
+        images: data.images,
+        pickupAddress: data.pickup_address,
+        shelfLifeDays: data.shelf_life_days,
+        isActive: false,
+        status: 'PENDING_APPROVAL',
+        createdAt: data.created_at,
+      });
 
       DashboardService.invalidateCache(farmerId);
 
