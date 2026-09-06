@@ -195,12 +195,15 @@ export class AdminController {
         const rawFirstImg = Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : (regItem?.images?.[0]);
         const validImg = sanitizeImg(rawFirstImg, p.crop_name, p.category);
         const images = [validImg];
-        const isApproved = p.is_active === true || regItem?.isActive === true || regItem?.status === 'ACTIVE';
-        const isRejected = regItem?.status === 'REJECTED';
+        const isRejected = p.status === 'REJECTED' || (regItem as any)?.status === 'REJECTED';
+        const isActive = (p.is_active === true && p.target_buyer === 'BOTH') || ((regItem as any)?.isActive === true && (regItem as any)?.targetBuyer === 'BOTH') || p.status === 'ACTIVE' || (regItem as any)?.status === 'ACTIVE';
+        const isAdminApproved = p.target_buyer === 'ADMIN_APPROVED' || p.status === 'APPROVED' || (regItem as any)?.status === 'ADMIN_APPROVED' || (regItem as any)?.targetBuyer === 'ADMIN_APPROVED';
         const resolvedStatus = isRejected
           ? 'REJECTED'
-          : isApproved
+          : isActive
           ? 'ACTIVE'
+          : isAdminApproved
+          ? 'APPROVED'
           : 'PENDING_APPROVAL';
 
         const farmerName = regItem?.farmerName || p.farmers?.full_name || 'Registered Farmer';
@@ -222,7 +225,7 @@ export class AdminController {
           pricePerKg: Number(p.base_price_per_unit || 0),
           qualityGrade: (p.grade === 'B' ? 'GRADE_B' : 'GRADE_A') as 'GRADE_A' | 'GRADE_B' | 'PREMIUM',
           harvestDate: p.harvest_date || 'Recent',
-          status: resolvedStatus as 'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED',
+          status: resolvedStatus as 'PENDING_APPROVAL' | 'APPROVED' | 'ACTIVE' | 'REJECTED',
           submittedAt: p.created_at ? new Date(p.created_at).toLocaleDateString() : 'Today',
           createdAt: p.created_at || new Date().toISOString(),
           mandiName: p.pickup_address || 'Nashik APMC',
@@ -238,10 +241,12 @@ export class AdminController {
           const validImg = sanitizeImg(rawFirstImg, reg.cropName, reg.category);
           const images = [validImg];
           const existingIdx = list.findIndex((item: any) => item.id === reg.id);
-          const computedStatus = reg.status === 'REJECTED'
+          const computedStatus = (reg as any).status === 'REJECTED'
             ? 'REJECTED'
-            : (reg.isActive || reg.status === 'ACTIVE')
+            : (reg.isActive && reg.targetBuyer === 'BOTH')
             ? 'ACTIVE'
+            : ((reg as any).status === 'ADMIN_APPROVED' || reg.targetBuyer === 'ADMIN_APPROVED')
+            ? 'APPROVED'
             : 'PENDING_APPROVAL';
 
           const formattedReg = {
@@ -298,28 +303,28 @@ export class AdminController {
       const supabase = getSupabaseAdmin();
 
       /**
-       * IMPORTANT: Admin approval does NOT auto-publish to the global buyer marketplace.
-       * Admin approval only unlocks the crop so the farmer can then explicitly choose
-       * "Sell to All Buyers" which sets is_active=true + target_buyer=BOTH.
+       * APPROVAL FLOW (Two-Step):
+       * ─────────────────────────────────────────────────────
+       * Step 1 — Admin Approval (this endpoint):
+       *   Sets target_buyer = 'ADMIN_APPROVED', is_active = false
+       *   → Product is unlocked for the farmer but NOT visible in User App catalog
+       *   → Farmer App shows a "Quality Approved ✓ — Ready to List Globally" badge
        *
-       * We mark the product as admin-verified by setting is_active=true BUT
-       * we keep target_buyer='FARMER_ONLY' (or whatever it was) so the catalog
-       * query (is_active=true AND available_quantity > 0) still returns it,
-       * BUT we add an extra filter in the catalog: target_buyer must be 'BOTH'.
+       * Step 2 — Farmer Confirmation (Farmer presses "Sell to All Buyers"):
+       *   Sets target_buyer = 'BOTH', is_active = true
+       *   → Product immediately appears in User App catalog
        *
-       * Actually simpler: we use is_active=false still, but set a new field
-       * admin_approved=true. Since we don't have that column yet, we use
-       * a convention: set target_buyer='ADMIN_APPROVED' to mark it unlocked
-       * but not yet globally listed.
-       *
-       * Cleanest approach without a schema change: keep is_active=false,
-       * but update a dedicated status text so Farmer App can show "Approved - Ready to List".
-       * The catalog endpoint only shows is_active=true AND target_buyer='BOTH' items.
+       * Catalog rule: only shows is_active = true AND target_buyer = 'BOTH'
+       * This ensures farmers cannot bypass admin review AND admin cannot
+       * force-publish without the farmer's explicit confirmation.
        */
       const { error: updateError } = await supabase
         .from('products')
         .update({
-          is_active: true,
+          // Mark as admin-verified but keep hidden from buyer catalog
+          // until the farmer explicitly presses "Sell to All Buyers"
+          is_active: false,
+          target_buyer: 'ADMIN_APPROVED',
           updated_at: new Date().toISOString(),
         })
         .eq('id', productId);
@@ -328,15 +333,14 @@ export class AdminController {
         console.warn('[AdminController] Supabase approve update note:', updateError.message);
       }
 
-      // Update in-memory and shared disk registry
+      // Update in-memory registry — mark as ADMIN_APPROVED (not yet ACTIVE/public)
       try {
         const p = ProductRegistryService.getProductById(productId);
         if (p) {
-          p.isActive = true;
-          p.status = 'ACTIVE';
+          p.isActive = false;
+          p.status = 'ADMIN_APPROVED' as any;
+          p.targetBuyer = 'ADMIN_APPROVED';
           ProductRegistryService.registerProduct(p);
-        } else {
-          ProductRegistryService.updateProductStatus(productId, 'ACTIVE');
         }
       } catch {}
 
@@ -346,13 +350,14 @@ export class AdminController {
         action: 'APPROVE_PRODUCE',
         resourceType: 'PRODUCT',
         resourceId: productId,
+        metadata: { note: 'Quality verified. Awaiting farmer global listing confirmation.' },
       });
 
       res.status(200).json({
         data: {
           productId,
-          status: 'APPROVED_PENDING_LIST',
-          message: 'Produce quality verified by admin. Farmer can now publish it to the global buyer marketplace by pressing "Sell to All Buyers".',
+          status: 'ADMIN_APPROVED',
+          message: 'Produce quality verified by admin. Farmer will now see an "Approved — List Globally" badge in their app and can publish it to all buyers with one tap.',
         },
         error: null,
       });
@@ -360,6 +365,7 @@ export class AdminController {
       res.status(500).json({ data: null, error: { message: (err as Error).message } });
     }
   }
+
 
   static async rejectProduce(req: Request, res: Response): Promise<void> {
     const productId = String(req.params.productId);

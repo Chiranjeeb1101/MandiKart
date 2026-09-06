@@ -322,10 +322,9 @@ export default function AddProduceScreen() {
     const realFarmerPhone = user?.phone || farmer?.phone || '';
     const realLocation = user?.district ? `${user.district}, ${user.state || 'Maharashtra'}` : (user?.city || 'Nashik Mandi Area');
 
-    // Strip local file:// and data: URIs — they can't be stored or served by the backend.
-    // Fall back to the crop preset's default Unsplash thumbnail.
+    // Accept http(s) and base64 data URIs
     const isRemoteUri = (uri: string) =>
-      uri.startsWith('http://') || uri.startsWith('https://');
+      uri.startsWith('http://') || uri.startsWith('https://') || uri.startsWith('data:image/');
     const remoteImages = photoUri && isRemoteUri(photoUri)
       ? [photoUri]
       : selectedPreset.defaultImage
@@ -341,7 +340,9 @@ export default function AddProduceScreen() {
       quantityUnit: 'kg',
       basePricePerUnit: expPriceNum,
       minOrderQuantity: 10,
-      targetBuyer: 'BOTH',
+      targetBuyer: 'PENDING_APPROVAL',
+      status: 'PENDING_APPROVAL',
+      isActive: false,
       images: remoteImages,
       shelfLifeDays: selectedPreset.maxDays || 7,
       pickupAddress: realLocation,

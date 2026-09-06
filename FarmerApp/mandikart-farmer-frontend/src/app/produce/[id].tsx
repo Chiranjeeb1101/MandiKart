@@ -351,19 +351,23 @@ export default function CropDetailsScreen() {
                       paddingHorizontal: 8,
                       paddingVertical: 3,
                       borderRadius: 6,
-                      backgroundColor: crop.status === 'PENDING_APPROVAL' ? '#FEF3C7' : '#DCFCE7',
+                      backgroundColor: crop.status === 'PENDING_APPROVAL' ? '#FEF3C7' : crop.status === 'APPROVED' ? '#E0F2FE' : '#DCFCE7',
                       borderWidth: 1,
-                      borderColor: crop.status === 'PENDING_APPROVAL' ? '#FCD34D' : '#86EFAC',
+                      borderColor: crop.status === 'PENDING_APPROVAL' ? '#FCD34D' : crop.status === 'APPROVED' ? '#38BDF8' : '#86EFAC',
                     }}
                   >
                     <Text
                       style={{
                         fontSize: 11,
                         fontWeight: '800',
-                        color: crop.status === 'PENDING_APPROVAL' ? '#92400E' : '#166534',
+                        color: crop.status === 'PENDING_APPROVAL' ? '#92400E' : crop.status === 'APPROVED' ? '#0369A1' : '#166534',
                       }}
                     >
-                      {crop.status === 'PENDING_APPROVAL' ? '🟡 Pending Admin Verification' : '🟢 Verified Active Produce'}
+                      {crop.status === 'PENDING_APPROVAL'
+                        ? '🟡 Pending Admin Verification'
+                        : crop.status === 'APPROVED'
+                        ? '🟢 Quality Approved — Ready to List'
+                        : '🟢 Verified Active Produce'}
                     </Text>
                   </View>
                 </View>

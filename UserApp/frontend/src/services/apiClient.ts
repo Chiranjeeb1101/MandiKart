@@ -425,7 +425,10 @@ export const apiClient = {
           let sbQuery = supabase
             .from('products')
             .select('*, farmers(*)')
+            // Same dual-gate as backend: only farmer-confirmed global listings
             .eq('is_active', true)
+            .eq('target_buyer', 'BOTH')
+            .gt('available_quantity', 0)
             .order('created_at', { ascending: false });
 
           if (params?.crop) sbQuery = sbQuery.ilike('crop_name', `%${params.crop}%`);
@@ -458,6 +461,43 @@ export const apiClient = {
         return SAMPLE_PRODUCTS;
       }
 
+      /**
+       * Image sanitization helper — rejects base64 blobs and local file:// paths,
+       * returns a stable crop-name based Unsplash URL instead.
+       * base64 data URIs crash mobile image renderers and waste network bandwidth.
+       * file:// paths are only valid on the device that took the photo.
+       */
+      const getCropFallbackUrl = (cropName: string, category: string): string => {
+        const n = (cropName || '').toLowerCase();
+        const c = (category || '').toLowerCase();
+        if (n.includes('tomato'))      return 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=500&auto=format&fit=crop&q=80';
+        if (n.includes('onion'))       return 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=500&auto=format&fit=crop&q=80';
+        if (n.includes('potato'))      return 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=500&auto=format&fit=crop&q=80';
+        if (n.includes('mango'))       return 'https://images.unsplash.com/photo-1553279768-865429fa0078?w=500&auto=format&fit=crop&q=80';
+        if (n.includes('apple'))       return 'https://images.unsplash.com/photo-1560806887-1e4cd0b6cbd6?w=500&auto=format&fit=crop&q=80';
+        if (n.includes('wheat'))       return 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=500&auto=format&fit=crop&q=80';
+        if (n.includes('rice') || n.includes('basmati')) return 'https://images.unsplash.com/photo-1586201375761-83865001e31c?w=500&auto=format&fit=crop&q=80';
+        if (n.includes('pomegranate')) return 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=500&auto=format&fit=crop&q=80';
+        if (n.includes('banana'))      return 'https://images.unsplash.com/photo-1571771894821-ce9b6c11b08e?w=500&auto=format&fit=crop&q=80';
+        if (n.includes('grapes') || n.includes('grape')) return 'https://images.unsplash.com/photo-1537640538966-79f369143f8f?w=500&auto=format&fit=crop&q=80';
+        if (n.includes('carrot'))      return 'https://images.unsplash.com/photo-1598170845058-32b9d6a5da37?w=500&auto=format&fit=crop&q=80';
+        if (n.includes('chilli') || n.includes('chili')) return 'https://images.unsplash.com/photo-1588252303782-cb80119abd6d?w=500&auto=format&fit=crop&q=80';
+        if (n.includes('garlic'))      return 'https://images.unsplash.com/photo-1615477550926-25ccbf3a9ec1?w=500&auto=format&fit=crop&q=80';
+        if (n.includes('ginger'))      return 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=500&auto=format&fit=crop&q=80';
+        if (c.includes('fruit'))       return 'https://images.unsplash.com/photo-1619566636858-adf3ef46400b?w=500&auto=format&fit=crop&q=80';
+        if (c.includes('grain') || c.includes('pulse')) return 'https://images.unsplash.com/photo-1574323347407-f5e1ad6d020b?w=500&auto=format&fit=crop&q=80';
+        return 'https://images.unsplash.com/photo-1610348725531-843dff563e2c?w=500&auto=format&fit=crop&q=80';
+      };
+
+      const sanitizeImg = (imgUrl: string | null | undefined, cropName: string, category: string): string => {
+        if (!imgUrl || typeof imgUrl !== 'string' || imgUrl.trim() === '') return getCropFallbackUrl(cropName, category);
+        if (imgUrl.startsWith('file://')) return getCropFallbackUrl(cropName, category); // local device path — useless remotely
+        if (imgUrl.startsWith('http://') || imgUrl.startsWith('https://') || imgUrl.startsWith('data:image/')) {
+          return imgUrl; // valid HTTP URL or base64 data URI — keep as-is
+        }
+        return getCropFallbackUrl(cropName, category);
+      };
+
       // Map backend or Supabase products to frontend Product interface
       return rawData.map((p) => {
         const category = p.category || 'Vegetables';
@@ -472,14 +512,20 @@ export const apiClient = {
         else if (catLower.includes('poultry')) categoryId = 'cat-9';
 
         const cropTitle = p.cropName || p.crop_name || 'Farm Produce';
-        const farmerName = p.farmerName || (p.farmers && p.farmers.full_name) || 'Registered Farmer';
+        const farmerName = p.farmerName || (p.farmers && p.farmers.full_name) || 'MandiKart Farmer';
         const farmerLoc = p.location || p.pickupAddress || p.pickup_address || (p.farmers ? `${p.farmers.district || ''}, ${p.farmers.state || ''}` : 'Nashik, Maharashtra');
+
+        // Sanitize all images in the array — reject base64/file:// paths
+        const rawImages: string[] = Array.isArray(p.images) ? p.images : (p.imageUrl ? [p.imageUrl] : []);
+        const safeImages = rawImages.map((img: string) => sanitizeImg(img, cropTitle, category));
+        if (safeImages.length === 0) safeImages.push(getCropFallbackUrl(cropTitle, category));
+        const safeImageUrl = safeImages[0];
 
         return {
           id: p.id,
           name: cropTitle,
-          imageUrl: (p.images && p.images[0]) || 'https://images.unsplash.com/photo-1607305387299-a3d9611cd469?w=400',
-          images: p.images && p.images.length > 0 ? p.images : ['https://images.unsplash.com/photo-1607305387299-a3d9611cd469?w=400'],
+          imageUrl: safeImageUrl,
+          images: safeImages,
           price: Number(p.basePricePerUnit || p.base_price_per_unit || 30),
           unit: p.quantityUnit || p.quantity_unit || 'kg',
           minOrder: Number(p.minOrderQuantity || p.min_order_quantity || 1),
@@ -508,6 +554,7 @@ export const apiClient = {
     getCategories(): Category[] {
       return SAMPLE_CATEGORIES;
     },
+
   },
 
   // 3. Orders Service

@@ -133,7 +133,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
   const handleDashboardApproveProduce = async (id: string, cropName: string) => {
     try {
       await fetch(`http://localhost:4003/api/v1/admin/produce/${id}/approve`, { method: 'POST' });
-      triggerToast(`PRODUCE APPROVED: "${cropName}" is now active and published to buyer marketplace!`);
+      triggerToast(`QUALITY VERIFIED: "${cropName}" quality approved by Admin! Awaiting farmer confirmation to list globally.`);
       fetchLiveProduce();
       fetchLiveMetrics();
     } catch {

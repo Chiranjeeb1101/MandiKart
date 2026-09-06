@@ -48,6 +48,7 @@ import {
   PackageCheck,
   Scale,
   Warehouse,
+  Globe,
   Bell,
   HelpCircle,
   Layers,
@@ -543,6 +544,8 @@ export default function ProduceScreen() {
                           styles.statusBadge,
                           crop.status === 'PENDING_APPROVAL'
                             ? styles.statusBadgePending
+                            : crop.status === 'APPROVED'
+                            ? { backgroundColor: '#E0F2FE', borderColor: '#38BDF8' }
                             : crop.status === 'REJECTED'
                             ? styles.statusBadgeRejected
                             : styles.statusBadgeActive,
@@ -553,6 +556,8 @@ export default function ProduceScreen() {
                             styles.statusBadgeText,
                             crop.status === 'PENDING_APPROVAL'
                               ? styles.statusBadgeTextPending
+                              : crop.status === 'APPROVED'
+                              ? { color: '#0369A1' }
                               : crop.status === 'REJECTED'
                               ? styles.statusBadgeTextRejected
                               : styles.statusBadgeTextActive,
@@ -561,9 +566,11 @@ export default function ProduceScreen() {
                         >
                           {crop.status === 'PENDING_APPROVAL'
                             ? '🟡 Pending Approval'
+                            : crop.status === 'APPROVED'
+                            ? '🟢 Approved — Ready to List'
                             : crop.status === 'REJECTED'
                             ? '🔴 Rejected'
-                            : '🟢 Active Order'}
+                            : '🟢 Live Marketplace'}
                         </Text>
                       </View>
 
@@ -717,6 +724,18 @@ export default function ProduceScreen() {
                     >
                       <AlertCircle size={13} color="#DC2626" style={{ marginRight: 4 }} />
                       <Text style={styles.sellCropButtonTextRejected} numberOfLines={1}>Rejected</Text>
+                    </Pressable>
+                  ) : crop.status === 'APPROVED' ? (
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.sellCropButton,
+                        { backgroundColor: '#166534' },
+                        pressed && styles.pressedButton,
+                      ]}
+                      onPress={() => router.push('/(tabs)/sell')}
+                    >
+                      <Globe size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
+                      <Text style={[styles.sellCropButtonText, { color: '#FFFFFF' }]} numberOfLines={1}>List Globally</Text>
                     </Pressable>
                   ) : crop.status === 'PENDING_APPROVAL' ? (
                     <Pressable

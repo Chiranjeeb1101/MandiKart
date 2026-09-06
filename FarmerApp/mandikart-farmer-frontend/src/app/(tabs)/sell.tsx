@@ -64,6 +64,7 @@ import {
 import { MKColors } from '@/constants/colors';
 import { useProduceStore, CropItem } from '@/store/produceStore';
 import { useSellStore, BuyerRequest, CompletedSale } from '@/store/sellStore';
+import { useOrderStore } from '@/store/orderStore';
 import { useAuthStore } from '@/store/authStore';
 import { apiClient } from '@/services/apiClient';
 
@@ -90,7 +91,10 @@ export default function SellHomeScreen() {
   const handleRefresh = async () => {
     setIsRefreshing(true);
     try {
-      await useProduceStore.getState().syncWithBackend();
+      await Promise.all([
+        useProduceStore.getState().syncWithBackend(),
+        useOrderStore.getState().syncWithBackend(),
+      ]);
     } catch {}
     finally {
       setIsRefreshing(false);
@@ -99,8 +103,13 @@ export default function SellHomeScreen() {
 
   // Continuous 4-second real-time auto-refresh across Farmer Sell screen
   useEffect(() => {
+    // Initial fetch on mount
+    useProduceStore.getState().syncWithBackend().catch(() => {});
+    useOrderStore.getState().syncWithBackend().catch(() => {});
+
     const timer = setInterval(() => {
       useProduceStore.getState().syncWithBackend().catch(() => {});
+      useOrderStore.getState().syncWithBackend().catch(() => {});
     }, 4000);
     return () => clearInterval(timer);
   }, []);
@@ -259,9 +268,9 @@ export default function SellHomeScreen() {
     if (!listingCrop) return;
     const targetPrice = parseFloat(listingTargetPrice) || listingCrop.referencePricePerKg;
 
-    // Remote image URLs — filter out local file:// or data: URIs, with fallback
+    // Image URLs — filter out local file:// paths, accept http(s) and base64 data URIs
     const validRemote = [listingCrop.imageUri].filter(
-      (uri) => uri && (uri.startsWith('http://') || uri.startsWith('https://'))
+      (uri) => uri && (uri.startsWith('http://') || uri.startsWith('https://') || uri.startsWith('data:image/'))
     );
     const safeImages = validRemote.length > 0 
       ? validRemote 
@@ -586,6 +595,25 @@ export default function SellHomeScreen() {
                         </Text>
                       </View>
                     )}
+                    {crop.status === 'APPROVED' && (
+                      <View
+                        style={{
+                          alignSelf: 'flex-start',
+                          backgroundColor: '#E0F2FE',
+                          borderColor: '#38BDF8',
+                          borderWidth: 1,
+                          borderRadius: 6,
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          marginTop: 2,
+                          marginBottom: 4,
+                        }}
+                      >
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#0369A1' }}>
+                          🟢 Quality Approved — Ready to List Globally
+                        </Text>
+                      </View>
+                    )}
                     {crop.status === 'ACTIVE' && (
                       <View
                         style={{
@@ -661,7 +689,7 @@ export default function SellHomeScreen() {
 
                 {/* Action Row */}
                 <View style={styles.cardActionsRow}>
-                  {/* Sell to All Buyers — primary global market publish action */}
+                  {/* Sell to All Buyers / List Globally — primary global market publish action */}
                   {crop.status === 'ACTIVE' ? (
                     <Pressable 
                       style={[styles.listForSaleBtn, { backgroundColor: '#F0FDF4', borderColor: '#86EFAC', flex: 1 }]}
@@ -674,12 +702,25 @@ export default function SellHomeScreen() {
                     </Pressable>
                   ) : (
                     <Pressable
-                      style={[styles.listForSaleBtn, { flex: 1, backgroundColor: '#1B6D24', borderColor: '#1B6D24' }]}
-                      onPress={() => handleOpenListingModal(crop)}
+                      style={[
+                        styles.listForSaleBtn, 
+                        { flex: 1, backgroundColor: crop.status === 'APPROVED' ? '#166534' : '#1B6D24', borderColor: '#1B6D24' }
+                      ]}
+                      onPress={() => {
+                        if (crop.status === 'PENDING_APPROVAL') {
+                          Alert.alert(
+                            'Verification Required',
+                            'This produce is currently awaiting Admin quality verification. Once verified, you can confirm and list it globally for all buyers.',
+                            [{ text: 'OK', style: 'default' }]
+                          );
+                          return;
+                        }
+                        handleOpenListingModal(crop);
+                      }}
                     >
                       <PackageCheck size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
                       <Text style={[styles.listForSaleBtnText, { color: '#FFFFFF', fontWeight: '700' }]}>
-                        Sell to All Buyers
+                        {crop.status === 'APPROVED' ? 'List Globally 🌐' : 'Sell to All Buyers'}
                       </Text>
                     </Pressable>
                   )}

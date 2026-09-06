@@ -60,22 +60,22 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
 
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'VERIFIED' | 'PENDING_KYC' | 'SUSPENDED'>('ALL');
-  const [moderationTab, setModerationTab] = useState<'PENDING' | 'ACTIVE' | 'REJECTED' | 'ALL'>('PENDING');
+  const [moderationTab, setModerationTab] = useState<'PENDING' | 'APPROVED' | 'ACTIVE' | 'REJECTED' | 'ALL'>('PENDING');
 
-  // Safe localStorage helper that strips heavy base64 strings to prevent UI freezing / quota errors
+  // Safe localStorage helper
   const safeSaveFarmers = (farmersToSave: FarmerUser[]) => {
     try {
       const sanitized = farmersToSave.map(f => ({
         ...f,
         activeListings: f.activeListings.map(l => ({
           ...l,
-          imageUrl: l.imageUrl && l.imageUrl.startsWith('data:') ? undefined : l.imageUrl,
-          images: l.images ? l.images.filter(img => !img.startsWith('data:')) : [],
+          imageUrl: l.imageUrl && l.imageUrl.startsWith('file://') ? undefined : l.imageUrl,
+          images: l.images ? l.images.filter(img => !img.startsWith('file://')) : [],
         })),
       }));
       localStorage.setItem('mandikart_admin_farmers_data', JSON.stringify(sanitized));
     } catch (err) {
-      console.warn('LocalStorage save skipped to prevent UI freeze:', err);
+      console.warn('LocalStorage save notice:', err);
     }
   };
 
@@ -184,6 +184,7 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
 
   // Extract all produce listings across all farmers
   const pendingProduceListings: (FarmerProduceListing & { farmerFullName: string; farmerCode: string })[] = [];
+  const approvedProduceListings: (FarmerProduceListing & { farmerFullName: string; farmerCode: string })[] = [];
   const activeProduceListings: (FarmerProduceListing & { farmerFullName: string; farmerCode: string })[] = [];
   const rejectedProduceListings: (FarmerProduceListing & { farmerFullName: string; farmerCode: string })[] = [];
   const allProduceListings: (FarmerProduceListing & { farmerFullName: string; farmerCode: string })[] = [];
@@ -200,6 +201,8 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
       allProduceListings.push(item);
       if (l.status === 'PENDING_APPROVAL') {
         pendingProduceListings.push(item);
+      } else if (l.status === 'APPROVED' || l.status === 'ADMIN_APPROVED') {
+        approvedProduceListings.push(item);
       } else if (l.status === 'ACTIVE') {
         activeProduceListings.push(item);
       } else if (l.status === 'REJECTED') {
@@ -218,6 +221,8 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
   const displayedProduce = sortByTime(
     moderationTab === 'PENDING' 
       ? pendingProduceListings 
+      : moderationTab === 'APPROVED'
+      ? approvedProduceListings
       : moderationTab === 'ACTIVE' 
       ? activeProduceListings 
       : moderationTab === 'REJECTED'
@@ -248,7 +253,7 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
             ...f,
             activeListings: f.activeListings.map(l => {
               if (l.id === listingId) {
-                return { ...l, status: 'ACTIVE' as const };
+                return { ...l, status: 'APPROVED' as any };
               }
               return l;
             })
@@ -260,8 +265,7 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
       return updated;
     });
 
-    setApprovalNotification(`PRODUCE APPROVED: "${cropName}" is now ACCEPTED and PUBLISHED live on MandiKart User App Marketplace for buyers!`);
-    setModerationTab('ACTIVE'); // Switch to active tab so user sees it in the list immediately!
+    setApprovalNotification(`QUALITY VERIFIED: "${cropName}" quality approved by Admin! Produce is unlocked — awaiting farmer confirmation to list globally.`);
     setTimeout(() => setApprovalNotification(null), 7000);
   };
 
@@ -473,6 +477,18 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
                 </button>
                 <button
                   type="button"
+                  onClick={() => setModerationTab('APPROVED')}
+                  className={`px-3 py-1.5 rounded font-bold transition-colors flex items-center gap-1.5 ${
+                    moderationTab === 'APPROVED'
+                      ? 'bg-sky-950 text-sky-400 border border-sky-400'
+                      : 'text-zinc-400 hover:text-white'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-xs">verified</span>
+                  <span>Quality Approved ({approvedProduceListings.length})</span>
+                </button>
+                <button
+                  type="button"
                   onClick={() => setModerationTab('ACTIVE')}
                   className={`px-3 py-1.5 rounded font-bold transition-colors flex items-center gap-1.5 ${
                     moderationTab === 'ACTIVE'
@@ -481,7 +497,7 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
                   }`}
                 >
                   <span className="material-symbols-outlined text-xs">store</span>
-                  <span>Approved & Live ({activeProduceListings.length})</span>
+                  <span>Live Marketplace ({activeProduceListings.length})</span>
                 </button>
                 <button
                   type="button"

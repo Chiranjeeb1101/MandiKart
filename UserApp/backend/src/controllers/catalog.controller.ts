@@ -1,12 +1,22 @@
 /**
- * MandiKart — UserApp Catalog Controller
- * Allows buyers to browse, search, and filter farm-fresh produce batches.
+ * MandiKart — Catalog Controller (User App)
+ *
+ * Listing visibility rules:
+ *   is_active = true  → farmer has pressed "Sell to All Buyers" (confirmed global listing)
+ *   target_buyer = 'BOTH' → crop is published to the global buyer marketplace
+ *
+ * A product is shown in the User App catalog ONLY when BOTH conditions are met.
+ * Admin approval alone (is_active=false, target_buyer='ADMIN_APPROVED') does NOT
+ * make it visible until the farmer explicitly confirms the global listing.
  */
 
 import { Request, Response } from 'express';
-import { getSupabaseAdmin, FastLRUCache, ProductRegistryService } from '@mandikart/shared-core';
+import { getSupabaseAdmin, FastLRUCache, ProductRegistryService, getCropImageUrl } from '@mandikart/shared-core';
 
 const catalogCache = new FastLRUCache<any[]>(1000);
+
+// Alias for crop name → canonical HTTP image URL (no base64, no file://)
+const getCropFallbackUrl = (cropName: string, category: string) => getCropImageUrl(cropName, category);
 
 export class CatalogController {
   static async searchCatalog(req: Request, res: Response): Promise<void> {
@@ -83,7 +93,9 @@ export class CatalogController {
       let query = supabase
         .from('products')
         .select('*, farmers(full_name, state, district)')
+        // RULE: only show farmer-confirmed global listings (is_active AND target_buyer=BOTH)
         .eq('is_active', true)
+        .eq('target_buyer', 'BOTH')
         .gt('available_quantity', 0)
         .order('created_at', { ascending: false });
 
@@ -140,14 +152,36 @@ export class CatalogController {
         return;
       }
 
+      /**
+       * Sanitize image URLs:
+       *   - base64 (data:...) → too large for mobile, replace with crop-name fallback
+       *   - file:// local device path → only valid on the device that uploaded, replace
+       *   - empty / null → replace with crop-name fallback
+       *   - valid https:// URL → keep as-is
+       */
+      const sanitizeCatalogImg = (rawUrl: string | undefined, cropName: string, category: string): string => {
+        if (!rawUrl || typeof rawUrl !== 'string' || rawUrl.trim() === '') return getCropFallbackUrl(cropName, category);
+        if (rawUrl.startsWith('file://')) return getCropFallbackUrl(cropName, category); // local device path
+        if (rawUrl.startsWith('http://') || rawUrl.startsWith('https://') || rawUrl.startsWith('data:image/')) {
+          return rawUrl;
+        }
+        return getCropFallbackUrl(cropName, category);
+      };
+
       const formatted = (data || []).map((row: any) => {
         const farmerInfo = row.farmers || {};
         const district = farmerInfo.district || 'Nashik';
         const state = farmerInfo.state || 'Maharashtra';
+        const rawImages: string[] = Array.isArray(row.images) ? row.images : [];
+        const safeImages = rawImages
+          .map((img: string) => sanitizeCatalogImg(img, row.crop_name, row.category))
+          .filter(Boolean);
+        if (safeImages.length === 0) safeImages.push(getCropFallbackUrl(row.crop_name, row.category));
+
         return {
           id: row.id,
           farmerId: row.farmer_id,
-          farmerName: farmerInfo.full_name || 'Ramesh Patil',
+          farmerName: farmerInfo.full_name || 'MandiKart Farmer',
           location: row.pickup_address || `${district}, ${state}`,
           cropName: row.crop_name,
           cropVariety: row.crop_variety,
@@ -160,20 +194,25 @@ export class CatalogController {
           basePricePerUnit: row.base_price_per_unit,
           minOrderQuantity: row.min_order_quantity,
           targetBuyer: row.target_buyer,
-          images: row.images && row.images.length > 0 ? row.images : ['https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=600'],
+          images: safeImages,
+          imageUrl: safeImages[0],
           pickupAddress: row.pickup_address,
           shelfLifeDays: row.shelf_life_days,
           createdAt: row.created_at,
-          ...row,
         };
       });
 
-      // Merge live registered products (only active/approved listings)
+      // Merge live registered products — only fully published ones (isActive + targetBuyer='BOTH')
       try {
         const registered = ProductRegistryService.getRegisteredProducts();
         for (const reg of registered) {
-          if (reg.isActive && !formatted.some((p: any) => p.id === reg.id)) {
-            formatted.push(reg);
+          if (reg.isActive && reg.targetBuyer === 'BOTH' && !formatted.some((p: any) => p.id === reg.id)) {
+            // Sanitize registry images too
+            const regImages = (reg.images || []).map((img: string) =>
+              sanitizeCatalogImg(img, reg.cropName, reg.category)
+            ).filter(Boolean);
+            if (regImages.length === 0) regImages.push(getCropFallbackUrl(reg.cropName, reg.category));
+            formatted.push({ ...reg, cropVariety: reg.cropVariety || '', images: regImages, imageUrl: regImages[0] } as any);
           }
         }
       } catch {}

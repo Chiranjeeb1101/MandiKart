@@ -37,6 +37,8 @@ var BuyerTarget;
     BuyerTarget["RETAIL"] = "RETAIL";
     BuyerTarget["BULK"] = "BULK";
     BuyerTarget["BOTH"] = "BOTH";
+    BuyerTarget["PENDING_APPROVAL"] = "PENDING_APPROVAL";
+    BuyerTarget["ADMIN_APPROVED"] = "ADMIN_APPROVED";
 })(BuyerTarget || (exports.BuyerTarget = BuyerTarget = {}));
 var QuantityUnit;
 (function (QuantityUnit) {

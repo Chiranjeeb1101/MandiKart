@@ -65,6 +65,7 @@ interface OrderStoreState {
   orders: OrderItem[];
 
   // Actions
+  syncWithBackend: (token?: string | null) => Promise<void>;
   createOrderFromSale: (params: CreateOrderParams) => OrderItem;
   acceptOrderOffer: (orderId: string) => void;
   updateOrderStatus: (orderId: string, updates: Partial<OrderItem>) => void;
@@ -214,6 +215,124 @@ export const useOrderStore = create<OrderStoreState>()(
   persist(
     (set, get) => ({
       orders: INITIAL_ORDERS,
+
+      syncWithBackend: async (token?: string | null) => {
+        try {
+          const { apiClient } = require('@/services/apiClient');
+          const backendOrders = await apiClient.getOrders(token);
+          if (!Array.isArray(backendOrders) || backendOrders.length === 0) {
+            return;
+          }
+
+          set((state) => {
+            const orderMap = new Map<string, OrderItem>();
+            for (const order of (state.orders || [])) {
+              if (order && order.id) {
+                orderMap.set(order.id, order);
+              }
+            }
+
+            for (const bo of backendOrders) {
+              if (!bo || !bo.id) continue;
+              const statusStr = String(bo.status || '').toUpperCase();
+
+              let tab: 'Active' | 'Pending' | 'Completed' = 'Active';
+              let statusType: OrderStatusType = 'en_route';
+              let statusLabel = 'In Transit';
+              let stepIndex = 3;
+
+              if (['COMPLETED', 'DELIVERED'].includes(statusStr)) {
+                tab = 'Completed';
+                statusType = 'completed';
+                statusLabel = 'Delivered • Payment Credited';
+                stepIndex = 4;
+              } else if (['PLACED', 'PENDING'].includes(statusStr)) {
+                tab = 'Pending';
+                statusType = 'pending';
+                statusLabel = 'Buyer Offer Awaiting Farmer Action';
+                stepIndex = 1;
+              } else if (['CANCELLED', 'REJECTED'].includes(statusStr)) {
+                tab = 'Completed';
+                statusType = 'completed';
+                statusLabel = 'Cancelled / Rejected';
+                stepIndex = 4;
+              } else {
+                tab = 'Active';
+                statusType = statusStr === 'PICKUP_SCHEDULED' ? 'scheduled' : 'en_route';
+                statusLabel = statusStr === 'CONFIRMED'
+                  ? 'Order Confirmed • Pickup Scheduled'
+                  : statusStr === 'PICKUP_SCHEDULED'
+                  ? 'Pickup Slot Confirmed'
+                  : 'Vehicle En Route';
+                stepIndex = statusStr === 'CONFIRMED' ? 2 : 3;
+              }
+
+              const firstItem = bo.items?.[0] || {};
+              const cropName = bo.cropName || firstItem.cropName || 'Fresh Produce';
+              const qty = bo.quantity || (firstItem.quantity ? `${firstItem.quantity} KG` : '100 KG');
+              const totalValue = bo.totalAmount ? `₹${Number(bo.totalAmount).toLocaleString()}` : (bo.totalValue || '₹3,000');
+              const netPayout = bo.farmerPayoutAmount ? `₹${Number(bo.farmerPayoutAmount).toLocaleString()}` : (bo.netPayout || '₹2,925');
+
+              const existing = orderMap.get(bo.id);
+              if (existing) {
+                orderMap.set(bo.id, {
+                  ...existing,
+                  tab,
+                  statusLabel,
+                  statusType,
+                  stepIndex,
+                  totalValue,
+                  netPayout,
+                  driverName: bo.driverName || existing.driverName,
+                  driverPhone: bo.driverPhone || existing.driverPhone,
+                  vehicleNumber: bo.vehicleNumber || existing.vehicleNumber,
+                });
+              } else {
+                orderMap.set(bo.id, {
+                  id: bo.id,
+                  orderNumber: bo.orderNumber || `#MK-${bo.id.slice(0, 5)}`,
+                  tab,
+                  cropName,
+                  cropVariety: firstItem.variety || 'Harvest Batch',
+                  grade: firstItem.grade ? `Grade ${firstItem.grade}` : 'Grade A',
+                  quantity: String(qty),
+                  cropImage: ONION_CROP_URI,
+                  buyerName: bo.buyerName || 'MandiKart Buyer',
+                  buyerType: 'Verified Agro Buyer',
+                  totalValue,
+                  ratePerKg: firstItem.pricePerUnit ? `₹${firstItem.pricePerUnit}/kg` : '₹30.00/kg',
+                  netPayout,
+                  transportDeduction: '₹0',
+                  pickupDate: 'Today',
+                  pickupTime: '10:00 AM - 12:00 PM',
+                  location: 'Farmgate, Main Storage',
+                  statusLabel,
+                  statusType,
+                  stepIndex,
+                  driverName: bo.driverName || undefined,
+                  driverPhone: bo.driverPhone || undefined,
+                  vehicleNumber: bo.vehicleNumber || undefined,
+                  createdAt: bo.createdAt || new Date().toISOString(),
+                });
+              }
+            }
+
+            const newOrders = Array.from(orderMap.values());
+            const isChanged = newOrders.length !== state.orders.length ||
+              newOrders.some((no, idx) => {
+                const oo = state.orders[idx];
+                return !oo || oo.id !== no.id || oo.tab !== no.tab || oo.statusLabel !== no.statusLabel;
+              });
+
+            if (!isChanged) {
+              return state;
+            }
+            return { orders: newOrders };
+          });
+        } catch {
+          // Graceful offline fallback
+        }
+      },
 
       createOrderFromSale: (params) => {
         const randomSuffix = Math.floor(1000 + Math.random() * 9000);

@@ -92,6 +92,24 @@ export class ProductsController {
         query = query.eq('available_quantity', 0);
       }
 
+      const resolveStatus = (rowOrReg: any): 'ACTIVE' | 'APPROVED' | 'REJECTED' | 'PENDING_APPROVAL' => {
+        const isRejected = rowOrReg.status === 'REJECTED' || rowOrReg.target_buyer === 'REJECTED' || rowOrReg.targetBuyer === 'REJECTED';
+        if (isRejected) return 'REJECTED';
+
+        const isActive = (rowOrReg.is_active === true && (rowOrReg.target_buyer === 'BOTH' || rowOrReg.targetBuyer === 'BOTH')) ||
+                         (rowOrReg.isActive === true && (rowOrReg.targetBuyer === 'BOTH' || rowOrReg.target_buyer === 'BOTH')) ||
+                         rowOrReg.status === 'ACTIVE';
+        if (isActive) return 'ACTIVE';
+
+        const isApproved = rowOrReg.target_buyer === 'ADMIN_APPROVED' ||
+                           rowOrReg.targetBuyer === 'ADMIN_APPROVED' ||
+                           rowOrReg.status === 'APPROVED' ||
+                           rowOrReg.status === 'ADMIN_APPROVED';
+        if (isApproved) return 'APPROVED';
+
+        return 'PENDING_APPROVAL';
+      };
+
       const { data, count, error } = await query.range(offset, offset + limit - 1);
 
       let formatted = (data || []).map((row: any) => ({
@@ -111,7 +129,7 @@ export class ProductsController {
         images: row.images || [],
         pickupAddress: row.pickup_address,
         isActive: !!row.is_active,
-        status: (row.is_active ? 'ACTIVE' : 'PENDING_APPROVAL') as 'ACTIVE' | 'PENDING_APPROVAL' | 'REJECTED',
+        status: resolveStatus(row),
         harvestDate: row.harvest_date,
         shelfLifeDays: row.shelf_life_days,
         createdAt: row.created_at,
@@ -123,11 +141,7 @@ export class ProductsController {
         const registered = ProductRegistryService.getRegisteredProducts();
         for (const reg of registered) {
           const existing = formatted.find((f: any) => f.id === reg.id);
-          const computedStatus = reg.status === 'REJECTED'
-            ? 'REJECTED'
-            : (reg.isActive || reg.status === 'ACTIVE')
-            ? 'ACTIVE'
-            : 'PENDING_APPROVAL';
+          const computedStatus = resolveStatus(reg);
 
           if (existing) {
             existing.isActive = reg.isActive ?? existing.isActive;
@@ -213,6 +227,11 @@ export class ProductsController {
     try {
       const supabase = getSupabaseAdmin();
 
+      const dbTargetBuyer =
+        payload.targetBuyer === 'PENDING_APPROVAL' || payload.targetBuyer === 'ADMIN_APPROVED'
+          ? 'BOTH'
+          : (payload.targetBuyer || 'BOTH');
+
       const { data, error } = await supabase
         .from('products')
         .insert({
@@ -227,14 +246,14 @@ export class ProductsController {
           quantity_unit: payload.quantityUnit,
           base_price_per_unit: payload.basePricePerUnit,
           min_order_quantity: payload.minOrderQuantity,
-          target_buyer: payload.targetBuyer || 'BOTH',
+          target_buyer: dbTargetBuyer,
           images: payload.images,
           pickup_address: payload.pickupAddress || null,
           pickup_latitude: payload.pickupLatitude || null,
           pickup_longitude: payload.pickupLongitude || null,
           harvest_date: payload.harvestDate || null,
           shelf_life_days: payload.shelfLifeDays,
-          is_active: (payload as any).isActive !== undefined ? Boolean((payload as any).isActive) : true,
+          is_active: (payload as any).isActive !== undefined ? Boolean((payload as any).isActive) : false,
         })
         .select()
         .single();
@@ -248,8 +267,8 @@ export class ProductsController {
           ...payload,
           availableQuantity: payload.totalQuantity,
           reservedQuantity: 0,
-          isActive: (payload as any).isActive !== undefined ? Boolean((payload as any).isActive) : true,
-          status: 'ACTIVE',
+          isActive: (payload as any).isActive !== undefined ? Boolean((payload as any).isActive) : false,
+          status: (payload as any).status || 'PENDING_APPROVAL',
           createdAt: new Date().toISOString(),
         };
 

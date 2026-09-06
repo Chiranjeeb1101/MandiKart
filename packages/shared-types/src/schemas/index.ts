@@ -79,7 +79,7 @@ export const CreateProductSchema = z.object({
   quantityUnit: z.nativeEnum(QuantityUnit).default(QuantityUnit.KG),
   basePricePerUnit: z.number().positive('Price must be greater than 0'),
   minOrderQuantity: z.number().positive().default(1),
-  targetBuyer: z.nativeEnum(BuyerTarget).default(BuyerTarget.BOTH),
+  targetBuyer: z.enum(['RETAIL', 'BULK', 'BOTH', 'PENDING_APPROVAL', 'ADMIN_APPROVED']).default('BOTH'),
   images: z.array(z.string()).default([]),
   pickupAddress: z.string().optional(),
   pickupLatitude: z.number().min(-90).max(90).optional(),

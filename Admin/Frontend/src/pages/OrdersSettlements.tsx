@@ -125,7 +125,7 @@ export const OrdersSettlements: React.FC<OrdersSettlementsProps> = ({
     try {
       const sanitized = ordersToSave.map(o => ({
         ...o,
-        imageUrl: o.imageUrl && o.imageUrl.startsWith('data:') ? undefined : o.imageUrl,
+        imageUrl: o.imageUrl && o.imageUrl.startsWith('file://') ? undefined : o.imageUrl,
       }));
       localStorage.setItem('mandikart_admin_orders', JSON.stringify(sanitized));
     } catch (err) {

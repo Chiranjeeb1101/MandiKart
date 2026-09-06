@@ -71,7 +71,7 @@ exports.CreateProductSchema = zod_1.z.object({
     quantityUnit: zod_1.z.nativeEnum(orderStatus_js_1.QuantityUnit).default(orderStatus_js_1.QuantityUnit.KG),
     basePricePerUnit: zod_1.z.number().positive('Price must be greater than 0'),
     minOrderQuantity: zod_1.z.number().positive().default(1),
-    targetBuyer: zod_1.z.nativeEnum(orderStatus_js_1.BuyerTarget).default(orderStatus_js_1.BuyerTarget.BOTH),
+    targetBuyer: zod_1.z.enum(['RETAIL', 'BULK', 'BOTH', 'PENDING_APPROVAL', 'ADMIN_APPROVED']).default('BOTH'),
     images: zod_1.z.array(zod_1.z.string()).default([]),
     pickupAddress: zod_1.z.string().optional(),
     pickupLatitude: zod_1.z.number().min(-90).max(90).optional(),

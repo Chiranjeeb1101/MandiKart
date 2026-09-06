@@ -29,7 +29,7 @@ export interface RegisteredProduct {
   pickupAddress?: string;
   shelfLifeDays?: number;
   isActive: boolean;
-  status?: 'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED';
+  status?: 'PENDING_APPROVAL' | 'APPROVED' | 'ADMIN_APPROVED' | 'ACTIVE' | 'REJECTED';
   createdAt: string;
   [key: string]: any;
 }

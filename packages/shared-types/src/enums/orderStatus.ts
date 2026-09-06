@@ -34,6 +34,8 @@ export enum BuyerTarget {
   RETAIL = 'RETAIL',
   BULK = 'BULK',
   BOTH = 'BOTH',
+  PENDING_APPROVAL = 'PENDING_APPROVAL',
+  ADMIN_APPROVED = 'ADMIN_APPROVED',
 }
 
 export enum QuantityUnit {

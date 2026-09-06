@@ -75,8 +75,8 @@ export interface CropItem {
   attentionActionLabel?: string;
   attentionActionRoute?: string;
 
-  // Lifecycle Status: Pending Admin Verification -> Active Live Order
-  status?: 'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED' | 'DRAFT';
+  // Lifecycle Status: Pending Admin Verification -> Approved by Admin -> Active Live Order
+  status?: 'PENDING_APPROVAL' | 'APPROVED' | 'ACTIVE' | 'REJECTED' | 'DRAFT';
 }
 
 interface ProduceStoreState {
@@ -86,7 +86,7 @@ interface ProduceStoreState {
   syncWithBackend: (token?: string | null) => Promise<void>;
   replaceCropId: (oldId: string, newId: string) => void;
   addCrop: (crop: Omit<CropItem, 'id'>) => CropItem;
-  updateCropStatus: (id: string, status: 'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED' | 'DRAFT') => void;
+  updateCropStatus: (id: string, status: 'PENDING_APPROVAL' | 'APPROVED' | 'ACTIVE' | 'REJECTED' | 'DRAFT') => void;
   updateCropCondition: (id: string, condition: CropCondition, note?: string) => void;
   updateCropQuantity: (id: string, availableKg: number, reservedKg?: number) => void;
   updateCropDetails: (id: string, updates: Partial<CropItem>) => void;
@@ -368,11 +368,13 @@ export const useProduceStore = create<ProduceStoreState>()(
 
             for (const bp of backendProducts) {
               if (!bp || !bp.id) continue;
-              const bpStatus: 'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED' =
+              const bpStatus: 'PENDING_APPROVAL' | 'APPROVED' | 'ACTIVE' | 'REJECTED' =
                 bp.status === 'REJECTED'
                   ? 'REJECTED'
-                  : (bp.isActive || bp.status === 'ACTIVE' || bp.is_active)
+                  : (bp.is_active === true && bp.target_buyer === 'BOTH') || (bp.isActive === true && bp.targetBuyer === 'BOTH') || bp.status === 'ACTIVE'
                   ? 'ACTIVE'
+                  : (bp.target_buyer === 'ADMIN_APPROVED' || bp.targetBuyer === 'ADMIN_APPROVED' || bp.status === 'APPROVED' || bp.status === 'ADMIN_APPROVED')
+                  ? 'APPROVED'
                   : 'PENDING_APPROVAL';
 
               // Check if already in map by ID or by initial crop name
@@ -397,8 +399,8 @@ export const useProduceStore = create<ProduceStoreState>()(
                   status: bpStatus,
                   availableKg: Number(bp.availableQuantity ?? matchedExisting.availableKg),
                   totalKg: Number(bp.totalQuantity ?? matchedExisting.totalKg),
-                  watchTag: bpStatus === 'REJECTED' ? 'Rejected by Admin' : bpStatus === 'ACTIVE' ? 'Marketplace Active' : 'Under Admin Verification',
-                  watchUrgency: bpStatus === 'REJECTED' ? 'warning' : bpStatus === 'ACTIVE' ? 'positive' : 'neutral',
+                  watchTag: bpStatus === 'REJECTED' ? 'Rejected by Admin' : bpStatus === 'ACTIVE' ? 'Marketplace Active' : bpStatus === 'APPROVED' ? 'Quality Approved — Tap List Globally' : 'Under Admin Verification',
+                  watchUrgency: bpStatus === 'REJECTED' ? 'warning' : bpStatus === 'ACTIVE' ? 'positive' : bpStatus === 'APPROVED' ? 'positive' : 'neutral',
                 });
               } else {
                 cropMap.set(bp.id, {
@@ -440,7 +442,25 @@ export const useProduceStore = create<ProduceStoreState>()(
               }
             }
 
-            return { crops: Array.from(cropMap.values()) };
+            const newCrops = Array.from(cropMap.values());
+            const isChanged =
+              newCrops.length !== (state.crops || []).length ||
+              newCrops.some((nc, i) => {
+                const oc = state.crops[i];
+                return (
+                  !oc ||
+                  oc.id !== nc.id ||
+                  oc.status !== nc.status ||
+                  oc.availableKg !== nc.availableKg ||
+                  oc.totalKg !== nc.totalKg ||
+                  oc.watchTag !== nc.watchTag
+                );
+              });
+
+            if (!isChanged) {
+              return state;
+            }
+            return { crops: newCrops };
           });
         } catch {
           // Graceful offline fallback
