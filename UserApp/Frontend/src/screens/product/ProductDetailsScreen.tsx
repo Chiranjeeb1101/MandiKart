@@ -180,8 +180,16 @@ export default function ProductDetailsScreen({ navigation, route }: any) {
         product={product}
         initialQuantity={qty}
         onClose={() => setIsNegotiating(false)}
-        onOfferSubmitted={() => {
-          navigation.navigate('ChatStack', { screen: 'Chat', params: { farmerName: product.farmer?.name } });
+        onOfferSubmitted={(offer: any) => {
+          navigation.navigate('ChatStack', {
+            screen: 'Chat',
+            params: {
+              negotiationId: offer?.id,
+              farmerName: product.farmer?.name || 'Ramesh Patel',
+              cropName: product.name,
+              productImage: product.images?.[0],
+            },
+          });
         }}
       />
     </View>

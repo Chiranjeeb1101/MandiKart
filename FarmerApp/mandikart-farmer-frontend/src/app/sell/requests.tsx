@@ -604,6 +604,23 @@ export default function BuyerRequestsScreen() {
                   ) : (
                     <>
                       <TouchableOpacity
+                        style={styles.actionChatBtn}
+                        onPress={() =>
+                          router.push({
+                            pathname: '/sell/chat',
+                            params: {
+                              id: req.id,
+                              buyerName: req.buyerName,
+                              cropName: req.cropName,
+                            },
+                          })
+                        }
+                      >
+                        <MessageSquare size={14} color="#15803D" />
+                        <Text style={styles.actionChatText}>Chat</Text>
+                      </TouchableOpacity>
+
+                      <TouchableOpacity
                         style={styles.actionDeclineBtn}
                         onPress={() => handleOpenDecline(req)}
                       >
@@ -805,6 +822,24 @@ export default function BuyerRequestsScreen() {
               selectedRequest.status !== 'Rejected' && (
                 <View style={styles.modalFooterActions}>
                   <TouchableOpacity
+                    style={styles.modalChatBtn}
+                    onPress={() => {
+                      setDetailModalVisible(false);
+                      router.push({
+                        pathname: '/sell/chat',
+                        params: {
+                          id: selectedRequest.id,
+                          buyerName: selectedRequest.buyerName,
+                          cropName: selectedRequest.cropName,
+                        },
+                      });
+                    }}
+                  >
+                    <MessageSquare size={16} color="#15803D" />
+                    <Text style={styles.modalChatBtnText}>Open Chat</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
                     style={styles.modalCounterBtn}
                     onPress={() => {
                       setDetailModalVisible(false);
@@ -812,7 +847,7 @@ export default function BuyerRequestsScreen() {
                     }}
                   >
                     <Repeat size={16} color="#15803D" />
-                    <Text style={styles.modalCounterBtnText}>Make Counter Offer</Text>
+                    <Text style={styles.modalCounterBtnText}>Counter</Text>
                   </TouchableOpacity>
 
                   <TouchableOpacity
@@ -823,7 +858,7 @@ export default function BuyerRequestsScreen() {
                     }}
                   >
                     <CheckCircle2 size={16} color="#FFFFFF" />
-                    <Text style={styles.modalAcceptBtnText}>Accept Offer</Text>
+                    <Text style={styles.modalAcceptBtnText}>Accept</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -1671,6 +1706,23 @@ const styles = StyleSheet.create({
     gap: 8,
     marginTop: 12,
   },
+  actionChatBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 9,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#16A34A',
+    backgroundColor: '#F0FDF4',
+    gap: 4,
+  },
+  actionChatText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#15803D',
+  },
   actionDeclineBtn: {
     flex: 1,
     paddingVertical: 9,
@@ -1945,10 +1997,27 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     paddingHorizontal: 20,
     paddingTop: 12,
-    gap: 12,
+    gap: 10,
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
     backgroundColor: '#FFFFFF',
+  },
+  modalChatBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#16A34A',
+    backgroundColor: '#F0FDF4',
+    gap: 5,
+  },
+  modalChatBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#15803D',
   },
   modalCounterBtn: {
     flex: 1,

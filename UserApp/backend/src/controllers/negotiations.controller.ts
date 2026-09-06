@@ -1,12 +1,11 @@
 /**
  * MandiKart — UserApp Negotiations Controller
- * Handles buyer price offers, negotiation tracking, and responses to farmer counter-offers.
+ * Handles buyer price offers, negotiation tracking, real-time messaging, and responses to farmer counter-offers.
  */
 
 import { Request, Response } from 'express';
-import { UserRole, OrderStatus } from '@mandikart/shared-types';
-import { auditLog, getSupabaseAdmin, NegotiationRegistryService } from '@mandikart/shared-core';
-import { BuyerOrderService } from '../services/order.service.js';
+import { UserRole } from '@mandikart/shared-types';
+import { auditLog, NegotiationRegistryService, NegotiationMessageItem } from '@mandikart/shared-core';
 
 export class BuyerNegotiationsController {
   static async listNegotiations(req: Request, res: Response): Promise<void> {
@@ -20,9 +19,86 @@ export class BuyerNegotiationsController {
     });
   }
 
+  static async getNegotiation(req: Request, res: Response): Promise<void> {
+    const id = String(req.params.id);
+    const neg = NegotiationRegistryService.getNegotiationById(id);
+    if (!neg) {
+      res.status(404).json({
+        data: null,
+        meta: null,
+        error: { code: 'NOT_FOUND', message: 'Negotiation not found' },
+      });
+      return;
+    }
+    res.status(200).json({
+      data: neg,
+      meta: null,
+      error: null,
+    });
+  }
+
+  static async sendMessage(req: Request, res: Response): Promise<void> {
+    const buyerId = req.user?.id || 'buyer_default_01';
+    const id = String(req.params.id);
+    const { text, messageId } = req.body;
+
+    if (!text || !text.trim()) {
+      res.status(400).json({
+        data: null,
+        meta: null,
+        error: { code: 'VALIDATION_ERROR', message: 'Text message is required' },
+      });
+      return;
+    }
+
+    const target = NegotiationRegistryService.getNegotiationById(id);
+    if (!target) {
+      res.status(404).json({
+        data: null,
+        meta: null,
+        error: { code: 'NOT_FOUND', message: 'Negotiation not found' },
+      });
+      return;
+    }
+
+    const newMsg: NegotiationMessageItem = {
+      id: messageId || `msg_b_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      negotiationId: id,
+      senderId: buyerId,
+      senderRole: 'BUYER',
+      senderName: target.buyerName || 'Buyer (You)',
+      messageType: 'TEXT',
+      text: text.trim(),
+      timestamp: new Date().toISOString(),
+      isRead: false,
+    };
+
+    const updated = NegotiationRegistryService.addMessage(id, newMsg);
+
+    res.status(201).json({
+      data: newMsg,
+      meta: { negotiation: updated },
+      error: null,
+    });
+  }
+
   static async submitOffer(req: Request, res: Response): Promise<void> {
     const buyerId = req.user?.id || 'buyer_default_01';
-    const { productId, cropName, farmerId, farmerName, buyerName, originalPrice, offeredPrice, quantity, unit, remarks } = req.body;
+    const {
+      productId,
+      cropName,
+      cropImage,
+      grade,
+      farmerId,
+      farmerName,
+      buyerName,
+      buyerPhone,
+      originalPrice,
+      offeredPrice,
+      quantity,
+      unit,
+      remarks,
+    } = req.body;
 
     if (!productId || !offeredPrice || !quantity) {
       res.status(400).json({
@@ -34,36 +110,75 @@ export class BuyerNegotiationsController {
     }
 
     const negotiationId = `neg_${Date.now()}`;
+    const now = new Date().toISOString();
+    const qtyNum = Number(quantity);
+    const priceNum = Number(offeredPrice);
+
+    const initialMessages: NegotiationMessageItem[] = [
+      {
+        id: `msg_init_${Date.now()}`,
+        negotiationId,
+        senderId: buyerId,
+        senderRole: 'BUYER',
+        senderName: buyerName || 'MandiKart Buyer',
+        messageType: 'OFFER',
+        text: `Initial Offer: ₹${priceNum}/${unit || 'kg'} for ${qtyNum} ${unit || 'kg'}`,
+        price: priceNum,
+        quantity: qtyNum,
+        unit: unit || 'kg',
+        totalAmount: Math.round(priceNum * qtyNum),
+        offerStatus: 'PENDING',
+        timestamp: now,
+      },
+    ];
+
+    if (remarks && remarks.trim()) {
+      initialMessages.push({
+        id: `msg_init_txt_${Date.now() + 1}`,
+        negotiationId,
+        senderId: buyerId,
+        senderRole: 'BUYER',
+        senderName: buyerName || 'MandiKart Buyer',
+        messageType: 'TEXT',
+        text: remarks.trim(),
+        timestamp: new Date(Date.now() + 50).toISOString(),
+      });
+    }
+
     const newNeg = {
       id: negotiationId,
       productId,
       cropName: cropName || 'Produce',
+      cropImage: cropImage || '',
+      grade: grade || 'A',
       farmerId: farmerId || 'd1111111-1111-1111-1111-111111111111',
       farmerName: farmerName || 'Ramesh Patel',
       buyerId,
       buyerName: buyerName || 'MandiKart Buyer',
-      originalPrice: Number(originalPrice) || Number(offeredPrice) * 1.1,
-      offeredPrice: Number(offeredPrice),
+      buyerPhone: buyerPhone || '+91 98765 43210',
+      originalPrice: Number(originalPrice) || priceNum * 1.1,
+      offeredPrice: priceNum,
       counterPrice: null,
-      quantity: Number(quantity),
+      quantity: qtyNum,
       unit: unit || 'kg',
       status: 'PENDING_FARMER' as const,
       remarks: remarks || null,
+      messages: initialMessages,
       history: [
         {
-          id: `msg_${Date.now()}`,
+          id: `msg_hist_${Date.now()}`,
           sender: 'BUYER' as const,
           senderName: buyerName || 'MandiKart Buyer',
-          price: Number(offeredPrice),
-          pricePerKg: Number(offeredPrice),
-          quantityKg: Number(quantity),
-          text: remarks || `Offer of ₹${offeredPrice}/${unit || 'kg'} submitted for ${quantity} ${unit || 'kg'}.`,
-          message: remarks || `Offer of ₹${offeredPrice}/${unit || 'kg'} submitted for ${quantity} ${unit || 'kg'}.`,
-          timestamp: new Date().toISOString(),
+          price: priceNum,
+          pricePerKg: priceNum,
+          quantityKg: qtyNum,
+          text: remarks || `Offer of ₹${priceNum}/${unit || 'kg'} submitted for ${qtyNum} ${unit || 'kg'}.`,
+          message: remarks || `Offer of ₹${priceNum}/${unit || 'kg'} submitted for ${qtyNum} ${unit || 'kg'}.`,
+          timestamp: now,
         },
       ],
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      createdAt: now,
+      updatedAt: now,
     };
 
     NegotiationRegistryService.registerNegotiation(newNeg as any);
@@ -87,7 +202,7 @@ export class BuyerNegotiationsController {
   static async respondToCounterOffer(req: Request, res: Response): Promise<void> {
     const buyerId = req.user?.id || 'buyer_default_01';
     const negotiationId = String(req.params.id);
-    const { action, counterPrice, remarks } = req.body; // action: 'ACCEPT' | 'REJECT' | 'COUNTER'
+    const { action, counterPrice, remarks, deliveryAddress } = req.body;
 
     if (!action || !['ACCEPT', 'REJECT', 'COUNTER'].includes(action)) {
       res.status(400).json({
@@ -108,32 +223,34 @@ export class BuyerNegotiationsController {
       return;
     }
 
-    const history = target.history || [];
-    let newStatus = target.status;
-    let newOfferedPrice = target.offeredPrice;
+    let resultData: any = target;
 
     if (action === 'ACCEPT') {
-      newStatus = 'ACCEPTED';
-      history.push({
-        id: `msg_${Date.now()}`,
-        sender: 'BUYER',
-        senderName: 'MandiKart Buyer',
-        price: target.counterPrice || target.offeredPrice,
-        pricePerKg: target.counterPrice || target.offeredPrice,
-        text: remarks || 'Buyer accepted the negotiation offer.',
-        message: remarks || 'Buyer accepted the negotiation offer.',
-        timestamp: new Date().toISOString(),
-      });
+      const resAcc = NegotiationRegistryService.acceptNegotiation(
+        negotiationId,
+        'BUYER',
+        buyerId,
+        target.buyerName || 'Buyer (You)',
+        deliveryAddress
+      );
+      if (!resAcc) {
+        res.status(400).json({
+          data: null,
+          meta: null,
+          error: { code: 'ACCEPT_FAILED', message: 'Failed to accept negotiation' },
+        });
+        return;
+      }
+      resultData = resAcc.negotiation;
     } else if (action === 'REJECT') {
-      newStatus = 'REJECTED';
-      history.push({
-        id: `msg_${Date.now()}`,
-        sender: 'BUYER',
-        senderName: 'MandiKart Buyer',
-        text: remarks || 'Buyer declined the counter-offer.',
-        message: remarks || 'Buyer declined the counter-offer.',
-        timestamp: new Date().toISOString(),
-      });
+      const updated = NegotiationRegistryService.rejectNegotiation(
+        negotiationId,
+        'BUYER',
+        buyerId,
+        target.buyerName || 'Buyer (You)',
+        remarks
+      );
+      resultData = updated || target;
     } else if (action === 'COUNTER') {
       if (!counterPrice) {
         res.status(400).json({
@@ -143,26 +260,17 @@ export class BuyerNegotiationsController {
         });
         return;
       }
-      newOfferedPrice = Number(counterPrice);
-      newStatus = 'PENDING_FARMER';
-      history.push({
-        id: `msg_${Date.now()}`,
-        sender: 'BUYER',
-        senderName: 'MandiKart Buyer',
-        price: Number(counterPrice),
-        pricePerKg: Number(counterPrice),
-        text: remarks || `Counter offer of ₹${counterPrice}/kg proposed by buyer.`,
-        message: remarks || `Counter offer of ₹${counterPrice}/kg proposed by buyer.`,
-        timestamp: new Date().toISOString(),
-      });
+      const updated = NegotiationRegistryService.counterNegotiation(
+        negotiationId,
+        'BUYER',
+        buyerId,
+        target.buyerName || 'Buyer (You)',
+        Number(counterPrice),
+        target.quantity,
+        remarks
+      );
+      resultData = updated || target;
     }
-
-    const updated = NegotiationRegistryService.updateNegotiation(negotiationId, {
-      status: newStatus as any,
-      offeredPrice: newOfferedPrice,
-      history,
-      updatedAt: new Date().toISOString(),
-    });
 
     await auditLog({
       actorId: buyerId,
@@ -174,7 +282,7 @@ export class BuyerNegotiationsController {
     });
 
     res.status(200).json({
-      data: updated || target,
+      data: resultData,
       meta: null,
       error: null,
     });
@@ -195,41 +303,27 @@ export class BuyerNegotiationsController {
       return;
     }
 
-    const agreedPrice = target.counterPrice || target.offeredPrice;
-    const orderResult = await BuyerOrderService.placeOrder({
-      buyerId: target.buyerId || buyerId,
-      items: [
-        {
-          productId: target.productId,
-          cropName: target.cropName,
-          grade: 'A',
-          quantity: target.quantity,
-          unit: target.unit,
-          pricePerUnit: agreedPrice,
-        }
-      ],
-      deliveryAddress: deliveryAddress || '123 Market Road, Pune',
-      targetBuyerType: target.quantity >= 100 ? 'BULK' : 'RETAIL',
-    });
+    const resAcc = NegotiationRegistryService.acceptNegotiation(
+      negotiationId,
+      'BUYER',
+      buyerId,
+      target.buyerName || 'Buyer',
+      deliveryAddress
+    );
 
-    if (!orderResult.success) {
+    if (!resAcc) {
       res.status(400).json({
         data: null,
         meta: null,
-        error: { code: 'ORDER_CREATION_FAILED', message: orderResult.error || 'Failed to place order' },
+        error: { code: 'ORDER_CREATION_FAILED', message: 'Failed to accept offer and create order' },
       });
       return;
     }
 
-    const updated = NegotiationRegistryService.updateNegotiation(negotiationId, {
-      status: 'ACCEPTED',
-      updatedAt: new Date().toISOString(),
-    });
-
     res.status(201).json({
       data: {
-        negotiation: updated || target,
-        order: orderResult.order,
+        negotiation: resAcc.negotiation,
+        order: resAcc.order,
       },
       meta: null,
       error: null,

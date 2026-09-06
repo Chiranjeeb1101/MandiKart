@@ -1,108 +1,241 @@
-import React, { useState, useRef } from 'react';
+/**
+ * MandiKart User App — WhatsApp-Style Negotiation Chat Screen
+ * 
+ * Enables real-time, interactive price & volume negotiations between Buyer and Farmer.
+ * Connected to live backend & shared negotiation registry.
+ */
+
+import React, { useState, useEffect, useRef } from 'react';
 import {
-  View, Text, StyleSheet, FlatList, TextInput,
-  TouchableOpacity, KeyboardAvoidingView, Platform,
-  StatusBar, Image,
+  View,
+  Text,
+  StyleSheet,
+  FlatList,
+  TextInput,
+  TouchableOpacity,
+  KeyboardAvoidingView,
+  Platform,
+  StatusBar,
+  Image,
+  Alert,
+  Modal,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
-import { Colors, Spacing, BorderRadius } from '../../theme';
+import { Colors, Spacing, BorderRadius, Shadows } from '../../theme';
 import { apiClient } from '../../services/apiClient';
-import { ChatMessage, NegotiationOffer } from '../../types';
 
-const CURRENT_USER_ID = 'user-1';
+interface ChatItem {
+  id: string;
+  negotiationId: string;
+  senderId: string;
+  senderRole: 'BUYER' | 'FARMER' | 'SYSTEM';
+  senderName: string;
+  messageType: 'TEXT' | 'OFFER' | 'SYSTEM' | 'ORDER_EVENT';
+  text: string;
+  price?: number;
+  quantity?: number;
+  unit?: string;
+  totalAmount?: number;
+  offerStatus?: 'PENDING' | 'ACCEPTED' | 'REJECTED' | 'EXPIRED' | 'COUNTERED';
+  orderId?: string;
+  orderNumber?: string;
+  timestamp: string;
+  isRead?: boolean;
+}
 
-const INITIAL_MESSAGES_WITH_NEGOTIATION: ChatMessage[] = [
-  {
-    id: 'cm-1',
-    senderId: 'farmer-1',
-    text: 'Namaste! Welcome to Nashik Fresh Farms. All our produce is harvest-fresh.',
-    timestamp: new Date(Date.now() - 3600000).toISOString(),
-    isRead: true,
-    type: 'text',
-  },
-  {
-    id: 'cm-2',
-    senderId: CURRENT_USER_ID,
-    text: 'Hello, looking for Grade A produce with verified APMC purity.',
-    timestamp: new Date(Date.now() - 1800000).toISOString(),
-    isRead: true,
-    type: 'text',
-  },
-  {
-    id: 'cm-neg-1',
-    senderId: 'farmer-1',
-    text: 'Counter-Offer: I can supply Grade A Red Onion lot at ₹24.50/kg for your 200kg requirement.',
-    timestamp: new Date().toISOString(),
-    isRead: true,
-    type: 'negotiation',
-    negotiationRef: {
-      id: 'neg_101',
-      productId: 'prod_1',
-      cropName: 'Red Onion (Grade A)',
-      farmerId: 'farmer-1',
-      farmerName: 'Rajan Kumar',
-      buyerId: 'buyer_default_01',
-      originalPrice: 26.5,
-      offeredPrice: 24.0,
-      counterPrice: 24.5,
-      quantity: 200,
-      unit: 'kg',
-      status: 'COUNTER_OFFERED',
-      remarks: 'Direct farm lot reservation.',
-    },
-  },
-];
+const CURRENT_USER_ID = 'buyer_default_01';
 
 export default function ChatScreen({ navigation, route }: any) {
-  const { farmerName } = route?.params ?? { farmerName: 'Rajan Kumar' };
+  const params = route?.params ?? {};
+  const [activeNegId, setActiveNegId] = useState<string>(params.negotiationId || '');
+  const [farmerName, setFarmerName] = useState<string>(params.farmerName || 'Ramesh Patel');
+  const [cropName, setCropName] = useState<string>(params.cropName || 'Produce');
+  const [productImage, setProductImage] = useState<string>(params.productImage || '');
 
-  const [messages, setMessages] = useState<ChatMessage[]>(INITIAL_MESSAGES_WITH_NEGOTIATION);
+  const [negotiation, setNegotiation] = useState<any>(null);
+  const [messages, setMessages] = useState<ChatItem[]>([]);
   const [text, setText] = useState('');
-  const flatRef = useRef<FlatList>(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
 
-  const sendMessage = () => {
+  // Counter offer modal state
+  const [counterModalVisible, setCounterModalVisible] = useState(false);
+  const [counterPrice, setCounterPrice] = useState('');
+  const [counterNote, setCounterNote] = useState('');
+
+  const flatRef = useRef<FlatList>(null);
+  const isFetchingRef = useRef(false);
+
+  // Load negotiation data
+  const loadNegotiation = async (silent = false) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
+    try {
+      let targetId = activeNegId;
+      if (!targetId) {
+        const list = await apiClient.negotiations.listNegotiations();
+        if (list && list.length > 0) {
+          targetId = list[0].id;
+          setActiveNegId(targetId);
+        }
+      }
+
+      if (targetId) {
+        const data = await apiClient.negotiations.getById(targetId);
+        if (data) {
+          setNegotiation(data);
+          if (data.farmerName) setFarmerName(data.farmerName);
+          if (data.cropName) setCropName(data.cropName);
+          if (data.cropImage) setProductImage(data.cropImage);
+          if (Array.isArray(data.messages) && data.messages.length > 0) {
+            setMessages(data.messages);
+          }
+        }
+      }
+    } catch (err) {
+      if (!silent) console.warn('Failed to load negotiation:', err);
+    } finally {
+      isFetchingRef.current = false;
+      if (!silent) setLoading(false);
+    }
+  };
+
+  // Mount and real-time polling (every 2s)
+  useEffect(() => {
+    loadNegotiation(false);
+    const interval = setInterval(() => {
+      loadNegotiation(true);
+    }, 2000);
+    return () => clearInterval(interval);
+  }, [activeNegId]);
+
+  // Send Text Message
+  const sendMessage = async () => {
     const trimmed = text.trim();
-    if (!trimmed) return;
-    const newMsg: ChatMessage = {
-      id: `cm-${Date.now()}`,
+    if (!trimmed || submitting) return;
+
+    const tempId = `msg_b_${Date.now()}`;
+    const optimisticMsg: ChatItem = {
+      id: tempId,
+      negotiationId: activeNegId,
       senderId: CURRENT_USER_ID,
+      senderRole: 'BUYER',
+      senderName: 'You',
+      messageType: 'TEXT',
       text: trimmed,
       timestamp: new Date().toISOString(),
       isRead: false,
-      type: 'text',
     };
-    setMessages((prev) => [...prev, newMsg]);
+
+    setMessages((prev) => [...prev, optimisticMsg]);
     setText('');
-    setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 100);
+    setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 80);
+
+    if (activeNegId) {
+      try {
+        setSubmitting(true);
+        await apiClient.negotiations.sendMessage(activeNegId, trimmed);
+        loadNegotiation(true);
+      } catch (err) {
+        console.warn('Failed to send message:', err);
+      } finally {
+        setSubmitting(false);
+      }
+    }
   };
 
-  const handleAcceptNegotiation = async (neg: NegotiationOffer) => {
-    try {
-      await apiClient.negotiations.respond(neg.id, 'ACCEPT');
-
-      setMessages((prev) =>
-        prev.map((m) =>
-          m.negotiationRef?.id === neg.id
-            ? {
-                ...m,
-                negotiationRef: { ...m.negotiationRef, status: 'ACCEPTED' },
-              }
-            : m
-        )
-      );
-
-      // Navigate to intermediate CheckoutReview screen (Order Summary & Address verification)
-      navigation.navigate('CheckoutStack', {
-        screen: 'CheckoutReview',
-        params: {
-          isNegotiated: true,
-          negotiation: neg,
-        },
-      });
-    } catch (err: any) {
-      console.warn('Accept negotiation error:', err);
+  // Send Counter Offer
+  const handleSendCounter = async () => {
+    const priceNum = parseFloat(counterPrice);
+    if (isNaN(priceNum) || priceNum <= 0) {
+      Alert.alert('Invalid Price', 'Please enter a valid offer price.');
+      return;
     }
+
+    try {
+      setSubmitting(true);
+      const updated = await apiClient.negotiations.respond(
+        activeNegId,
+        'COUNTER',
+        priceNum,
+        counterNote
+      );
+      if (updated) {
+        setNegotiation(updated);
+        loadNegotiation(true);
+      }
+      setCounterModalVisible(false);
+      setCounterNote('');
+      setTimeout(() => flatRef.current?.scrollToEnd({ animated: true }), 120);
+    } catch (err: any) {
+      Alert.alert('Error', err.message || 'Failed to submit counter offer.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // Accept Deal & Order
+  const handleAcceptNegotiation = async () => {
+    if (!activeNegId || !negotiation) return;
+    const currentPrice = negotiation.counterPrice || negotiation.offeredPrice;
+    const total = Math.round(currentPrice * negotiation.quantity);
+
+    Alert.alert(
+      'Accept & Place Order?',
+      `Confirm acceptance of ₹${currentPrice}/${negotiation.unit} for ${negotiation.quantity} ${negotiation.unit}?\n\nTotal: ₹${total.toLocaleString('en-IN')}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Confirm & Order',
+          onPress: async () => {
+            try {
+              setSubmitting(true);
+              const res = await apiClient.negotiations.accept(
+                activeNegId,
+                'Selected Delivery Address'
+              );
+
+              // Update local state
+              loadNegotiation(false);
+
+              Alert.alert(
+                'Deal Accepted! 🎉',
+                `Your order #${res?.order?.orderNumber || res?.orderNumber || 'CONFIRMED'} has been placed.`,
+                [
+                  {
+                    text: 'View Checkout Review',
+                    onPress: () => {
+                      navigation.navigate('CheckoutStack', {
+                        screen: 'CheckoutReview',
+                        params: {
+                          isNegotiated: true,
+                          negotiation: res?.negotiation || negotiation,
+                          order: res?.order,
+                        },
+                      });
+                    },
+                  },
+                  { text: 'Stay Here' },
+                ]
+              );
+            } catch (err: any) {
+              Alert.alert('Acceptance Error', err.message || 'Failed to accept offer.');
+            } finally {
+              setSubmitting(false);
+            }
+          },
+        },
+      ]
+    );
+  };
+
+  const openCounterModal = () => {
+    if (!negotiation) return;
+    setCounterPrice(String(negotiation.counterPrice || negotiation.offeredPrice));
+    setCounterNote('');
+    setCounterModalVisible(true);
   };
 
   const formatTime = (iso?: string) => {
@@ -111,67 +244,86 @@ export default function ChatScreen({ navigation, route }: any) {
     return d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
   };
 
-  const renderMessage = ({ item }: { item: ChatMessage }) => {
-    const isMine = item.senderId === CURRENT_USER_ID;
+  const isAccepted = negotiation?.status === 'ACCEPTED';
+  const currentPrice = negotiation ? negotiation.counterPrice || negotiation.offeredPrice : 0;
+  const currentTotal = negotiation ? Math.round(currentPrice * negotiation.quantity) : 0;
 
-    // Render Negotiation Card
-    if (item.type === 'negotiation' && item.negotiationRef) {
-      const neg = item.negotiationRef;
-      const isAccepted = neg.status === 'ACCEPTED' || neg.status === 'ORDERED';
-      const isCounter = neg.status === 'COUNTER_OFFERED';
-      const lotTotal = (neg.counterPrice || neg.offeredPrice) * neg.quantity;
+  const renderMessage = ({ item }: { item: ChatItem }) => {
+    const isMine = item.senderRole === 'BUYER';
+    const isSystem = item.messageType === 'SYSTEM' || item.messageType === 'ORDER_EVENT';
+
+    // 1. System / Order Event Message
+    if (isSystem) {
+      const isOrderEvent = item.messageType === 'ORDER_EVENT';
+      return (
+        <View style={styles.systemWrap}>
+          <View style={[styles.systemPill, isOrderEvent && styles.orderEventPill]}>
+            <Ionicons
+              name={isOrderEvent ? 'shield-checkmark' : 'information-circle-outline'}
+              size={14}
+              color={isOrderEvent ? '#15803D' : Colors.textSecondary}
+              style={{ marginRight: 4 }}
+            />
+            <Text style={[styles.systemText, isOrderEvent && styles.orderEventText]}>
+              {item.text}
+            </Text>
+          </View>
+        </View>
+      );
+    }
+
+    // 2. Structured Offer Card
+    if (item.messageType === 'OFFER') {
+      const isFromFarmer = item.senderRole === 'FARMER';
+      const offerAccepted = item.offerStatus === 'ACCEPTED' || isAccepted;
+      const offerCountered = item.offerStatus === 'COUNTERED';
+      const offerPending = item.offerStatus === 'PENDING' && !isAccepted;
 
       return (
-        <View style={styles.negCardWrap}>
-          <View style={styles.negCard}>
+        <View style={[styles.msgRow, isMine ? styles.msgRowRight : styles.msgRowLeft]}>
+          <View style={[styles.negCardWrap, isMine ? styles.negCardMine : styles.negCardTheirs]}>
             <View style={styles.negHeader}>
-              <Ionicons name="pricetags" size={18} color={Colors.primary} />
-              <Text style={styles.negTitle}>FARM DIRECT PRICE COUNTER-OFFER</Text>
+              <Ionicons name="pricetags" size={16} color={Colors.primary} />
+              <Text style={styles.negTitle}>
+                {isFromFarmer ? 'FARMER COUNTER OFFER' : 'YOUR PROPOSED OFFER'}
+              </Text>
             </View>
-            <Text style={styles.negCropName}>{neg.cropName}</Text>
-            <Text style={styles.negLotInfo}>
-              Volume: {neg.quantity} {neg.unit} • Listed: ₹{neg.originalPrice}/{neg.unit}
-            </Text>
 
-            <View style={styles.priceCompareBox}>
-              <View style={styles.priceCol}>
-                <Text style={styles.priceSubLabel}>Your Offer</Text>
-                <Text style={styles.buyerPrice}>₹{neg.offeredPrice}/{neg.unit}</Text>
+            <View style={styles.priceRow}>
+              <View>
+                <Text style={styles.offerPriceText}>₹{item.price}/{item.unit || 'kg'}</Text>
+                <Text style={styles.volumeText}>Volume: {item.quantity} {item.unit || 'kg'}</Text>
               </View>
-              <Ionicons name="arrow-forward" size={16} color={Colors.textDisabled} />
-              <View style={styles.priceCol}>
-                <Text style={styles.priceSubLabel}>Farmer Counter</Text>
-                <Text style={styles.counterPrice}>₹{neg.counterPrice || neg.offeredPrice}/{neg.unit}</Text>
+              <View style={styles.totalCol}>
+                <Text style={styles.totalLabel}>Total Value</Text>
+                <Text style={styles.totalValue}>₹{(item.totalAmount || 0).toLocaleString('en-IN')}</Text>
               </View>
             </View>
 
-            <View style={styles.lotTotalRow}>
-              <Text style={styles.lotTotalLabel}>Total Agreed Deal Value:</Text>
-              <Text style={styles.lotTotalValue}>₹{lotTotal.toLocaleString('en-IN')}</Text>
-            </View>
-
-            {isCounter && (
+            {/* Action buttons if pending counter from farmer */}
+            {offerPending && isFromFarmer && (
               <View style={styles.negActions}>
-                <TouchableOpacity
-                  style={styles.declineBtn}
-                  onPress={() => apiClient.negotiations.respond(neg.id, 'REJECT')}
-                >
-                  <Text style={styles.declineBtnText}>Decline</Text>
+                <TouchableOpacity style={styles.declineBtn} onPress={openCounterModal}>
+                  <Text style={styles.declineBtnText}>Counter</Text>
                 </TouchableOpacity>
-                <TouchableOpacity
-                  style={styles.acceptBtn}
-                  onPress={() => handleAcceptNegotiation(neg)}
-                >
+                <TouchableOpacity style={styles.acceptBtn} onPress={handleAcceptNegotiation}>
                   <Ionicons name="checkmark-circle" size={16} color={Colors.white} />
-                  <Text style={styles.acceptBtnText}>Accept & Order</Text>
+                  <Text style={styles.acceptBtnText}>Accept Deal</Text>
                 </TouchableOpacity>
               </View>
             )}
 
-            {isAccepted && (
+            {offerAccepted && (
               <View style={styles.acceptedBadge}>
-                <Ionicons name="shield-checkmark" size={16} color="#15803D" />
+                <Ionicons name="shield-checkmark" size={14} color="#15803D" />
                 <Text style={styles.acceptedBadgeText}>Deal Accepted • Order Created</Text>
+              </View>
+            )}
+
+            {offerCountered && (
+              <View style={styles.counteredBadge}>
+                <Ionicons name="time-outline" size={13} color={Colors.textDisabled} />
+                <Text style={styles.counteredBadgeText}>Countered by newer offer</Text>
               </View>
             )}
           </View>
@@ -179,6 +331,7 @@ export default function ChatScreen({ navigation, route }: any) {
       );
     }
 
+    // 3. Standard Text Message Bubble
     return (
       <View style={[styles.msgRow, isMine ? styles.msgRowRight : styles.msgRowLeft]}>
         {!isMine && (
@@ -190,16 +343,19 @@ export default function ChatScreen({ navigation, route }: any) {
           <Text style={[styles.bubbleText, isMine ? styles.bubbleTextMine : styles.bubbleTextTheirs]}>
             {item.text}
           </Text>
-          <Text style={[styles.bubbleTime, isMine ? styles.bubbleTimeMine : styles.bubbleTimeTheirs]}>
-            {formatTime(item.timestamp)}
+          <View style={styles.bubbleMeta}>
+            <Text style={[styles.bubbleTime, isMine ? styles.bubbleTimeMine : styles.bubbleTimeTheirs]}>
+              {formatTime(item.timestamp)}
+            </Text>
             {isMine && (
               <Ionicons
                 name={item.isRead ? 'checkmark-done' : 'checkmark'}
                 size={12}
-                color={item.isRead ? Colors.primary : 'rgba(255,255,255,0.7)'}
+                color={item.isRead ? Colors.primary : 'rgba(255,255,255,0.75)'}
+                style={{ marginLeft: 3 }}
               />
             )}
-          </Text>
+          </View>
         </View>
       </View>
     );
@@ -220,64 +376,183 @@ export default function ChatScreen({ navigation, route }: any) {
           </View>
           <View>
             <Text style={styles.headerName}>{farmerName}</Text>
-            <Text style={styles.headerStatus}>🟢 Online</Text>
+            <Text style={styles.headerStatus}>🟢 Verified Farmer • Live Chat</Text>
           </View>
         </View>
-        <TouchableOpacity style={styles.callBtn}>
-          <Ionicons name="call-outline" size={20} color={Colors.primary} />
+        <TouchableOpacity
+          style={styles.callBtn}
+          onPress={() => Alert.alert('Farmer Contact', `Direct farmgate connect available via MandiKart Escrow.`)}
+        >
+          <Ionicons name="call-outline" size={18} color={Colors.primary} />
         </TouchableOpacity>
       </View>
+
+      {/* Product Context Mini Card */}
+      {negotiation && (
+        <View style={styles.productMiniCard}>
+          {productImage ? (
+            <Image source={{ uri: productImage }} style={styles.productThumb} />
+          ) : (
+            <View style={styles.placeholderThumb}>
+              <Ionicons name="leaf-outline" size={20} color={Colors.primary} />
+            </View>
+          )}
+          <View style={styles.productInfo}>
+            <Text style={styles.productTitle} numberOfLines={1}>
+              {cropName} {negotiation.grade ? `(Grade ${negotiation.grade})` : ''}
+            </Text>
+            <Text style={styles.productSubInfo}>
+              Qty: <Text style={{ fontWeight: '700', color: Colors.textPrimary }}>{negotiation.quantity} {negotiation.unit}</Text> • Listed: ₹{negotiation.originalPrice}/{negotiation.unit}
+            </Text>
+          </View>
+          <View style={styles.dealPill}>
+            <Text style={styles.dealPillLabel}>CURRENT</Text>
+            <Text style={styles.dealPillValue}>₹{currentPrice}/{negotiation.unit}</Text>
+          </View>
+        </View>
+      )}
 
       {/* Messages */}
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        keyboardVerticalOffset={80}
+        keyboardVerticalOffset={Platform.OS === 'ios' ? 80 : 0}
       >
-        <FlatList
-          ref={flatRef}
-          data={messages}
-          keyExtractor={(m) => m.id}
-          renderItem={renderMessage}
-          contentContainerStyle={styles.msgList}
-          onContentSizeChange={() => flatRef.current?.scrollToEnd({ animated: false })}
-          showsVerticalScrollIndicator={false}
-          ListHeaderComponent={
-            <View style={styles.dateChip}>
-              <Text style={styles.dateChipText}>June 15, 2024</Text>
-            </View>
-          }
-        />
+        {loading ? (
+          <View style={styles.loadingBox}>
+            <ActivityIndicator size="large" color={Colors.primary} />
+            <Text style={styles.loadingText}>Connecting to negotiation thread...</Text>
+          </View>
+        ) : (
+          <FlatList
+            ref={flatRef}
+            data={messages}
+            keyExtractor={(m) => m.id}
+            renderItem={renderMessage}
+            contentContainerStyle={styles.msgList}
+            onContentSizeChange={() => flatRef.current?.scrollToEnd({ animated: false })}
+            showsVerticalScrollIndicator={false}
+          />
+        )}
 
         {/* Input Bar */}
         <View style={styles.inputBar}>
-          <TouchableOpacity style={styles.attachBtn}>
-            <Ionicons name="add-circle-outline" size={26} color={Colors.textSecondary} />
+          <TouchableOpacity
+            style={styles.offerButton}
+            onPress={openCounterModal}
+            disabled={isAccepted}
+          >
+            <Ionicons
+              name="repeat"
+              size={18}
+              color={isAccepted ? Colors.textDisabled : Colors.primary}
+            />
+            <Text style={[styles.offerButtonText, isAccepted && { color: Colors.textDisabled }]}>
+              Counter
+            </Text>
           </TouchableOpacity>
+
           <TextInput
             style={styles.input}
             value={text}
             onChangeText={setText}
-            placeholder="Type a message..."
+            placeholder={isAccepted ? 'Deal accepted • Order created' : 'Type a message...'}
             placeholderTextColor={Colors.textDisabled}
             multiline
-            returnKeyType="default"
+            editable={!isAccepted}
           />
+
           <TouchableOpacity
-            style={[styles.sendBtn, !text.trim() && styles.sendBtnDisabled]}
+            style={[styles.sendBtn, (!text.trim() || isAccepted) && styles.sendBtnDisabled]}
             onPress={sendMessage}
-            disabled={!text.trim()}
+            disabled={!text.trim() || isAccepted || submitting}
           >
-            <Ionicons name="send" size={18} color={Colors.white} />
+            <Ionicons name="send" size={17} color={Colors.white} />
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
+
+      {/* ========================================================================= */}
+      {/* BUYER COUNTER OFFER MODAL                                                 */}
+      {/* ========================================================================= */}
+      <Modal
+        visible={counterModalVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setCounterModalVisible(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalSheet}>
+            <View style={styles.modalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Counter Offer to Farmer</Text>
+                <Text style={styles.modalSub}>
+                  Propose your revised target price to {farmerName}
+                </Text>
+              </View>
+              <TouchableOpacity
+                onPress={() => setCounterModalVisible(false)}
+                style={styles.modalCloseBtn}
+              >
+                <Ionicons name="close" size={20} color={Colors.textPrimary} />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalInputLabel}>Target Price (₹ / {negotiation?.unit || 'kg'})</Text>
+            <TextInput
+              style={styles.modalTextInput}
+              keyboardType="numeric"
+              value={counterPrice}
+              onChangeText={setCounterPrice}
+              placeholder="e.g. 23.5"
+            />
+
+            <Text style={[styles.modalInputLabel, { marginTop: 12 }]}>Note for Farmer (Optional)</Text>
+            <TextInput
+              style={styles.modalTextArea}
+              multiline
+              numberOfLines={2}
+              value={counterNote}
+              onChangeText={setCounterNote}
+              placeholder="e.g. Can do immediate farmgate pickup if price is agreed."
+            />
+
+            {(() => {
+              const p = parseFloat(counterPrice) || 0;
+              const q = negotiation?.quantity || 1;
+              const tot = Math.round(p * q);
+              return (
+                <View style={styles.projectedBox}>
+                  <Text style={styles.projectedLabel}>Projected Deal Total:</Text>
+                  <Text style={styles.projectedVal}>₹{tot.toLocaleString('en-IN')}</Text>
+                </View>
+              );
+            })()}
+
+            <View style={styles.modalActionsRow}>
+              <TouchableOpacity
+                style={styles.modalCancelBtn}
+                onPress={() => setCounterModalVisible(false)}
+              >
+                <Text style={styles.modalCancelBtnText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.modalSubmitBtn}
+                onPress={handleSendCounter}
+                disabled={submitting}
+              >
+                <Text style={styles.modalSubmitBtnText}>Send Counter Offer</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: 'transparent' },
+  safe: { flex: 1, backgroundColor: Colors.background },
   flex: { flex: 1 },
   header: {
     flexDirection: 'row',
@@ -286,7 +561,7 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.sm,
     borderBottomWidth: 1,
     borderBottomColor: Colors.borderLight,
-    backgroundColor: 'rgba(255,255,255,0.9)',
+    backgroundColor: '#FFFFFF',
   },
   backBtn: { marginRight: Spacing.sm },
   headerCenter: { flex: 1, flexDirection: 'row', alignItems: 'center', gap: Spacing.sm },
@@ -297,91 +572,155 @@ const styles = StyleSheet.create({
   },
   headerAvatarText: { fontSize: 16, fontWeight: '700', color: Colors.primary },
   headerName: { fontSize: 15, fontWeight: '700', color: Colors.textPrimary },
-  headerStatus: { fontSize: 11, color: Colors.textSecondary, marginTop: 1 },
+  headerStatus: { fontSize: 11, color: '#15803D', marginTop: 1 },
   callBtn: {
     width: 36, height: 36, borderRadius: 18,
     backgroundColor: Colors.primaryLight,
     alignItems: 'center', justifyContent: 'center',
   },
-  msgList: { padding: Spacing.md, gap: Spacing.md },
-  dateChip: {
-    alignSelf: 'center',
-    backgroundColor: Colors.gray100,
-    paddingHorizontal: 12, paddingVertical: 4,
-    borderRadius: BorderRadius.full,
-    marginBottom: Spacing.sm,
+  productMiniCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 12,
+    marginTop: 8,
+    padding: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: Colors.borderLight,
+    ...Shadows.sm,
   },
-  dateChipText: { fontSize: 11, color: Colors.textSecondary },
-  msgRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 8 },
-  msgRowLeft: { justifyContent: 'flex-start' },
-  msgRowRight: { justifyContent: 'flex-end' },
-  avatar: {
-    width: 30, height: 30, borderRadius: 15,
+  productThumb: {
+    width: 44, height: 44, borderRadius: 8,
+    backgroundColor: Colors.gray100,
+  },
+  placeholderThumb: {
+    width: 44, height: 44, borderRadius: 8,
     backgroundColor: Colors.primaryLight,
     alignItems: 'center', justifyContent: 'center',
   },
-  avatarText: { fontSize: 12, fontWeight: '700', color: Colors.primary },
+  productInfo: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  productTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  productSubInfo: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  dealPill: {
+    alignItems: 'flex-end',
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  dealPillLabel: {
+    fontSize: 8,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  dealPillValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: Colors.primary,
+  },
+  loadingBox: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  loadingText: {
+    marginTop: 8,
+    fontSize: 12,
+    color: Colors.textSecondary,
+  },
+  msgList: { padding: Spacing.md, gap: Spacing.sm },
+  msgRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
+  msgRowLeft: { justifyContent: 'flex-start' },
+  msgRowRight: { justifyContent: 'flex-end' },
+  avatar: {
+    width: 28, height: 28, borderRadius: 14,
+    backgroundColor: Colors.primaryLight,
+    alignItems: 'center', justifyContent: 'center',
+    marginBottom: 2,
+  },
+  avatarText: { fontSize: 11, fontWeight: '700', color: Colors.primary },
   bubble: {
-    maxWidth: '75%',
+    maxWidth: '78%',
     paddingHorizontal: 12, paddingVertical: 8,
-    borderRadius: 18, gap: 4,
+    borderRadius: 16,
   },
   bubbleMine: {
     backgroundColor: Colors.primary,
-    borderBottomRightRadius: 4,
+    borderBottomRightRadius: 3,
   },
   bubbleTheirs: {
     backgroundColor: Colors.white,
-    borderBottomLeftRadius: 4,
+    borderBottomLeftRadius: 3,
     borderWidth: 1, borderColor: Colors.borderLight,
   },
   bubbleText: { fontSize: 14, lineHeight: 20 },
   bubbleTextMine: { color: Colors.white },
   bubbleTextTheirs: { color: Colors.textPrimary },
-  bubbleTime: { fontSize: 10, flexDirection: 'row', alignItems: 'center' },
-  bubbleTimeMine: { color: 'rgba(255,255,255,0.75)', textAlign: 'right' },
-  bubbleTimeTheirs: { color: Colors.textDisabled },
-  inputBar: {
+  bubbleMeta: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
-    padding: Spacing.sm,
-    paddingHorizontal: Spacing.md,
-    borderTopWidth: 1,
-    borderTopColor: Colors.borderLight,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    gap: Spacing.sm,
+    alignItems: 'center',
+    justifyContent: 'flex-end',
+    marginTop: 2,
   },
-  attachBtn: { paddingBottom: 4 },
-  input: {
-    flex: 1,
-    minHeight: 40, maxHeight: 120,
-    backgroundColor: Colors.gray50,
-    borderRadius: 20,
-    paddingHorizontal: 14,
-    paddingTop: Platform.OS === 'ios' ? 10 : 8,
-    paddingBottom: 8,
-    fontSize: 14,
-    color: Colors.textPrimary,
+  bubbleTime: { fontSize: 10 },
+  bubbleTimeMine: { color: 'rgba(255,255,255,0.75)' },
+  bubbleTimeTheirs: { color: Colors.textDisabled },
+  systemWrap: {
+    alignItems: 'center',
+    marginVertical: 4,
+  },
+  systemPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.gray100,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 12,
+    maxWidth: '90%',
+  },
+  orderEventPill: {
+    backgroundColor: '#DCFCE7',
     borderWidth: 1,
-    borderColor: Colors.border,
+    borderColor: '#86EFAC',
   },
-  sendBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: Colors.primary,
-    alignItems: 'center', justifyContent: 'center',
+  systemText: {
+    fontSize: 11,
+    color: Colors.textSecondary,
   },
-  sendBtnDisabled: { backgroundColor: Colors.gray200 },
+  orderEventText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#15803D',
+  },
   negCardWrap: {
-    marginVertical: Spacing.sm,
-    paddingHorizontal: Spacing.xs,
-  },
-  negCard: {
+    width: '85%',
     backgroundColor: '#F8FAFC',
     borderRadius: BorderRadius.lg,
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
     padding: Spacing.md,
-    gap: 6,
+    gap: 8,
+    ...Shadows.sm,
+  },
+  negCardMine: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#BBF7D0',
+  },
+  negCardTheirs: {
+    backgroundColor: '#FFFFFF',
+    borderColor: '#E2E8F0',
   },
   negHeader: {
     flexDirection: 'row',
@@ -389,64 +728,43 @@ const styles = StyleSheet.create({
     gap: 6,
   },
   negTitle: {
-    fontSize: 11,
+    fontSize: 10,
     fontWeight: '700',
     color: Colors.primary,
     letterSpacing: 0.5,
   },
-  negCropName: {
-    fontSize: 16,
-    fontWeight: '700',
-    color: Colors.textPrimary,
-  },
-  negLotInfo: {
-    fontSize: 12,
-    color: Colors.textSecondary,
-  },
-  priceCompareBox: {
+  priceRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-around',
+    justifyContent: 'space-between',
     backgroundColor: Colors.white,
+    padding: 10,
     borderRadius: BorderRadius.md,
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    paddingVertical: 8,
-    marginVertical: 4,
+    borderColor: '#E2E8F0',
   },
-  priceCol: {
-    alignItems: 'center',
-  },
-  priceSubLabel: {
-    fontSize: 10,
-    color: Colors.textSecondary,
-    fontWeight: '500',
-  },
-  buyerPrice: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: Colors.textPrimary,
-  },
-  counterPrice: {
-    fontSize: 15,
-    fontWeight: '700',
+  offerPriceText: {
+    fontSize: 17,
+    fontWeight: '800',
     color: Colors.primary,
   },
-  lotTotalRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 4,
+  volumeText: {
+    fontSize: 11,
+    color: Colors.textSecondary,
+    marginTop: 2,
   },
-  lotTotalLabel: {
-    fontSize: 12,
-    fontWeight: '500',
+  totalCol: {
+    alignItems: 'flex-end',
+  },
+  totalLabel: {
+    fontSize: 10,
     color: Colors.textSecondary,
   },
-  lotTotalValue: {
+  totalValue: {
     fontSize: 15,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#15803D',
+    marginTop: 1,
   },
   negActions: {
     flexDirection: 'row',
@@ -469,7 +787,7 @@ const styles = StyleSheet.create({
     color: Colors.textSecondary,
   },
   acceptBtn: {
-    flex: 2,
+    flex: 1.6,
     height: 38,
     borderRadius: BorderRadius.md,
     backgroundColor: '#15803D',
@@ -494,8 +812,183 @@ const styles = StyleSheet.create({
     marginTop: 4,
   },
   acceptedBadgeText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '700',
     color: '#15803D',
+  },
+  counteredBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    backgroundColor: Colors.gray100,
+    paddingVertical: 4,
+    borderRadius: BorderRadius.md,
+  },
+  counteredBadgeText: {
+    fontSize: 10,
+    color: Colors.textSecondary,
+  },
+  inputBar: {
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    padding: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderTopWidth: 1,
+    borderTopColor: Colors.borderLight,
+    backgroundColor: '#FFFFFF',
+    gap: Spacing.sm,
+  },
+  offerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.primaryLight,
+    paddingHorizontal: 10,
+    height: 42,
+    borderRadius: 21,
+    gap: 4,
+    marginBottom: 2,
+  },
+  offerButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  input: {
+    flex: 1,
+    minHeight: 42,
+    maxHeight: 120,
+    backgroundColor: Colors.gray50,
+    borderRadius: 21,
+    paddingHorizontal: 14,
+    paddingTop: Platform.OS === 'ios' ? 10 : 8,
+    paddingBottom: 8,
+    fontSize: 14,
+    color: Colors.textPrimary,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  sendBtn: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 2,
+  },
+  sendBtnDisabled: { backgroundColor: Colors.gray200 },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: Colors.white,
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: Spacing.lg,
+    ...Shadows.lg,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: Spacing.md,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: Colors.textPrimary,
+  },
+  modalSub: {
+    fontSize: 12,
+    color: Colors.textSecondary,
+    marginTop: 2,
+  },
+  modalCloseBtn: {
+    padding: 4,
+    backgroundColor: Colors.gray100,
+    borderRadius: 16,
+  },
+  modalInputLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+    marginBottom: 6,
+  },
+  modalTextInput: {
+    height: 44,
+    backgroundColor: Colors.gray50,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    paddingHorizontal: 12,
+    fontSize: 16,
+    fontWeight: '700',
+    color: Colors.primary,
+  },
+  modalTextArea: {
+    backgroundColor: Colors.gray50,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    padding: 10,
+    fontSize: 13,
+    color: Colors.textPrimary,
+    minHeight: 50,
+  },
+  projectedBox: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    padding: 10,
+    borderRadius: BorderRadius.md,
+    marginVertical: 10,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  projectedLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#166534',
+  },
+  projectedVal: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#15803D',
+  },
+  modalActionsRow: {
+    flexDirection: 'row',
+    gap: Spacing.md,
+    marginTop: Spacing.sm,
+  },
+  modalCancelBtn: {
+    flex: 1,
+    height: 44,
+    borderRadius: BorderRadius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalCancelBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: Colors.textSecondary,
+  },
+  modalSubmitBtn: {
+    flex: 2,
+    height: 44,
+    borderRadius: BorderRadius.md,
+    backgroundColor: Colors.primary,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  modalSubmitBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: Colors.white,
   },
 });

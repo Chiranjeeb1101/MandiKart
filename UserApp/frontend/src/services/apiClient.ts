@@ -760,11 +760,32 @@ export const apiClient = {
       return res.data;
     },
 
+    async getById(negotiationId: string): Promise<any> {
+      const res = await safeFetch<any>(`/negotiations/${negotiationId}`, { method: 'GET' }, null);
+      return res.data;
+    },
+
+    async sendMessage(negotiationId: string, text: string): Promise<any> {
+      const res = await safeFetch<any>(
+        `/negotiations/${negotiationId}/messages`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ text }),
+        },
+        null
+      );
+      return res.data;
+    },
+
     async submitOffer(data: {
       productId: string;
       cropName: string;
+      cropImage?: string;
+      grade?: string;
       farmerId: string;
       farmerName: string;
+      buyerName?: string;
+      buyerPhone?: string;
       originalPrice: number;
       offeredPrice: number;
       quantity: number;
@@ -791,7 +812,7 @@ export const apiClient = {
       return res.data;
     },
 
-    async respond(negotiationId: string, action: 'ACCEPT' | 'REJECT' | 'COUNTER', counterPrice?: number): Promise<NegotiationOffer> {
+    async respond(negotiationId: string, action: 'ACCEPT' | 'REJECT' | 'COUNTER', counterPrice?: number, remarks?: string): Promise<NegotiationOffer> {
       const fallback: NegotiationOffer = {
         id: negotiationId,
         productId: 'prod_1',
@@ -810,9 +831,21 @@ export const apiClient = {
         `/negotiations/${negotiationId}/respond`,
         {
           method: 'POST',
-          body: JSON.stringify({ action, counterPrice }),
+          body: JSON.stringify({ action, counterPrice, remarks }),
         },
         fallback
+      );
+      return res.data;
+    },
+
+    async accept(negotiationId: string, deliveryAddress?: string): Promise<any> {
+      const res = await safeFetch<any>(
+        `/negotiations/${negotiationId}/accept`,
+        {
+          method: 'POST',
+          body: JSON.stringify({ deliveryAddress: deliveryAddress || '123 Market Road, Pune' }),
+        },
+        null
       );
       return res.data;
     },

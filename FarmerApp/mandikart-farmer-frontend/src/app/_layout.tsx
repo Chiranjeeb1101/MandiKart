@@ -51,6 +51,7 @@ export default function RootLayout() {
         <Stack.Screen name="sell/best-options" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="sell/market" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="sell/requests" options={{ animation: 'slide_from_right' }} />
+        <Stack.Screen name="sell/chat" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="sell/history" options={{ animation: 'slide_from_right' }} />
         <Stack.Screen name="produce/add" options={{ animation: 'slide_from_bottom' }} />
         <Stack.Screen name="produce/[id]" options={{ animation: 'slide_from_right' }} />
