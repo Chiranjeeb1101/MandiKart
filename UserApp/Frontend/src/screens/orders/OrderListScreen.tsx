@@ -37,12 +37,20 @@ export default function OrderListScreen({ navigation }: any) {
         // Normalize items — backend returns {cropName, quantity, pricePerUnit}, frontend returns {product: {...}, quantity}
         const rawItems: any[] = o.items || [];
         const itemsPreview = rawItems.map((it: any) => {
-          if (it.product) return it.product;
-          // Backend format — create a minimal product-like object
+          const realImg = it.imageUrl || it.image || (it.images && it.images[0]) || (it.product && (it.product.imageUrl || (it.product.images && it.product.images[0]))) || '';
+          if (it.product) {
+            return {
+              ...it.product,
+              name: it.product.name || it.cropName || 'Fresh Produce',
+              imageUrl: realImg || 'https://images.unsplash.com/photo-1607305387299-a3d9611cd469?w=400',
+              price: it.product.price || it.pricePerUnit || 30,
+              unit: it.product.unit || it.unit || 'kg',
+            };
+          }
           return {
             id: it.productId || `item_${Math.random()}`,
             name: it.cropName || it.produceName || 'Fresh Produce',
-            imageUrl: 'https://images.unsplash.com/photo-1607305387299-a3d9611cd469?w=400',
+            imageUrl: realImg || 'https://images.unsplash.com/photo-1607305387299-a3d9611cd469?w=400',
             price: it.pricePerUnit || 30,
             unit: it.unit || 'kg',
           };

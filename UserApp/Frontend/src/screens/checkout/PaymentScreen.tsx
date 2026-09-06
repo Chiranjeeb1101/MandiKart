@@ -8,7 +8,7 @@ import { apiClient } from '../../services/apiClient';
 import { useCart } from '../../context/CartContext';
 
 export default function PaymentScreen({ navigation, route }: any) {
-  const { clearCart } = useCart();
+  const { items: cartItems, clearCart } = useCart();
   const [selected, setSelected] = useState('upi');
   const [upiId, setUpiId] = useState('');
   const [loading, setLoading] = useState(false);
@@ -28,7 +28,31 @@ export default function PaymentScreen({ navigation, route }: any) {
   const handlePayment = async () => {
     setLoading(true);
     try {
-      const items = isNegotiated && negotiation
+      const items = route.params?.items && route.params.items.length > 0
+        ? route.params.items.map((it: any) => ({
+            productId: it.product?.id || it.id || it.productId || 'prod-1',
+            cropName: it.product?.name || it.cropName || 'Fresh Produce',
+            grade: (it.product?.grade || it.grade || 'A') as 'A' | 'B' | 'C',
+            quantity: it.quantity || 1,
+            unit: it.product?.unit || it.unit || 'kg',
+            pricePerUnit: it.product?.price || it.pricePerUnit || 35,
+            imageUrl: it.product?.imageUrl || (it.product?.images && it.product.images[0]) || it.imageUrl || '',
+            farmerId: it.product?.farmer?.id || it.farmerId || 'farmer_ramesh_01',
+            farmerName: it.product?.farmer?.name || it.farmerName || 'Ramesh Patel',
+          }))
+        : cartItems.length > 0
+        ? cartItems.map((it: any) => ({
+            productId: it.product?.id || 'prod-1',
+            cropName: it.product?.name || 'Fresh Produce',
+            grade: (it.product?.grade || 'A') as 'A' | 'B' | 'C',
+            quantity: it.quantity || 1,
+            unit: it.product?.unit || 'kg',
+            pricePerUnit: it.product?.price || 35,
+            imageUrl: it.product?.imageUrl || (it.product?.images && it.product.images[0]) || '',
+            farmerId: it.product?.farmer?.id || 'farmer_ramesh_01',
+            farmerName: it.product?.farmer?.name || 'Ramesh Patel',
+          }))
+        : isNegotiated && negotiation
         ? [
             {
               productId: negotiation.id || 'prod-neg',
@@ -37,6 +61,7 @@ export default function PaymentScreen({ navigation, route }: any) {
               quantity: negotiation.quantity || 1,
               unit: negotiation.unit || 'kg',
               pricePerUnit: negotiation.counterPrice || negotiation.offeredPrice || 50,
+              imageUrl: negotiation.imageUrl || '',
             },
           ]
         : isBulk && bulkSupplier
@@ -48,24 +73,17 @@ export default function PaymentScreen({ navigation, route }: any) {
               quantity: bulkSupplier.availableCapacity,
               unit: bulkSupplier.capacityUnit,
               pricePerUnit: bulkSupplier.askingPricePerUnit,
+              imageUrl: bulkSupplier.imageUrl || '',
             },
           ]
         : [
             {
               productId: 'prod-1',
-              cropName: 'Fresh Tomatoes',
-              grade: 'A' as const,
-              quantity: 2,
-              unit: 'kg',
-              pricePerUnit: 35,
-            },
-            {
-              productId: 'prod-2',
-              cropName: 'Organic Potatoes',
+              cropName: 'Fresh Produce',
               grade: 'A' as const,
               quantity: 1,
               unit: 'kg',
-              pricePerUnit: 45,
+              pricePerUnit: amount || 35,
             },
           ];
 

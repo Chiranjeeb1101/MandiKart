@@ -175,9 +175,9 @@ export default function OrderDetailsScreen({ navigation, route }: any) {
                 <Image source={{ uri: item.imageUrl }} style={styles.itemThumb} />
                 <View style={styles.itemDetails}>
                   <Text style={styles.itemName}>{item.name}</Text>
-                  <Text style={styles.itemUnit}>Qty: 1 {item.unit} • ₹{item.price}/{item.unit}</Text>
+                  <Text style={styles.itemUnit}>Qty: {item.quantity || 1} {item.unit || 'kg'} • ₹{item.price}/{item.unit || 'kg'}</Text>
                 </View>
-                <Text style={styles.itemPrice}>₹{item.price}</Text>
+                <Text style={styles.itemPrice}>₹{(item.price || 0) * (item.quantity || 1)}</Text>
               </View>
             ))}
           </View>

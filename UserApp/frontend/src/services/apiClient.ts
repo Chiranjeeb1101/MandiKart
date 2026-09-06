@@ -578,17 +578,42 @@ export const apiClient = {
         id: o.orderNumber || o.id || `ord_${Date.now()}`,
         orderNumber: o.orderNumber || o.order_number || 'MK-ORD-2026-1001',
         status: (o.status as OrderStatus) || 'PLACED',
-        items: (o.items || []).map((it: any) => ({
-          product: {
-            ...SAMPLE_PRODUCTS[0],
-            id: it.productId || 'prod-1',
-            name: it.cropName || it.produceName || 'Fresh Produce',
-            price: it.pricePerUnit || 35,
-            unit: it.unit || 'kg',
-          },
-          quantity: it.quantity || 1,
-          priceAtOrder: it.pricePerUnit || 35,
-        })),
+        items: (o.items || []).map((it: any) => {
+          const itemImg = it.imageUrl || it.image || (it.images && it.images[0]) || it.product?.imageUrl || (it.product?.images && it.product.images[0]) || '';
+          const realName = it.cropName || it.produceName || it.product?.name || 'Fresh Produce';
+          const realPrice = it.pricePerUnit || it.product?.price || 35;
+          const realUnit = it.unit || it.product?.unit || 'kg';
+          const realQty = it.quantity || 1;
+          return {
+            id: it.id || it.productId || `item_${Math.random()}`,
+            cropName: realName,
+            produceName: realName,
+            quantity: realQty,
+            unit: realUnit,
+            pricePerUnit: realPrice,
+            subtotal: realQty * realPrice,
+            imageUrl: itemImg,
+            image: itemImg,
+            images: itemImg ? [itemImg] : [],
+            product: {
+              id: it.productId || it.product?.id || 'prod-1',
+              name: realName,
+              price: realPrice,
+              unit: realUnit,
+              imageUrl: itemImg || 'https://images.unsplash.com/photo-1607305387299-a3d9611cd469?w=400',
+              images: itemImg ? [itemImg] : ['https://images.unsplash.com/photo-1607305387299-a3d9611cd469?w=400'],
+              grade: it.grade || 'A',
+              farmer: {
+                id: o.farmerId || it.farmerId || 'farmer-1',
+                name: o.farmerName || it.farmerName || 'Ramesh Patel',
+                phone: '+91 98220 11111',
+                location: 'Nashik',
+                verified: true
+              }
+            },
+            priceAtOrder: realPrice,
+          };
+        }),
         deliveryAddress: {
           id: 'addr_1',
           label: 'Delivery',
@@ -606,14 +631,25 @@ export const apiClient = {
         total: (o.totalAmount || o.total || 350) + 25,
         placedAt: o.createdAt || o.placedAt || new Date().toISOString(),
         estimatedDelivery: 'Today by 5:30 PM',
-        farmer: SAMPLE_FARMER,
+        farmer: {
+          id: o.farmerId || 'farmer-1',
+          name: o.farmerName || 'Ramesh Patel',
+          phone: o.farmerPhone || '+91 98220 11111',
+          location: 'Nashik, Maharashtra',
+          state: 'Maharashtra',
+          rating: 4.9,
+          reviewCount: 120,
+          isVerified: true,
+          totalProducts: 10,
+          memberSince: '2023',
+        },
         deliveryOtp: o.deliveryOtp || '719284',
         pickupOtp: o.pickupOtp || '482910',
       }));
     },
 
     async placeOrder(params: {
-      items: Array<{ productId: string; cropName: string; grade: 'A' | 'B' | 'C'; quantity: number; unit: string; pricePerUnit: number }>;
+      items: Array<{ productId: string; cropName: string; grade: 'A' | 'B' | 'C'; quantity: number; unit: string; pricePerUnit: number; imageUrl?: string; farmerId?: string; farmerName?: string }>;
       deliveryAddress: string;
       targetBuyerType?: 'RETAIL' | 'BULK';
     }): Promise<{ success: boolean; order?: any; error?: string }> {

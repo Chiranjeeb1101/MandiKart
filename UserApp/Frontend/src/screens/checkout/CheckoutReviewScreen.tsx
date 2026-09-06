@@ -132,7 +132,7 @@ export default function CheckoutReviewScreen({ navigation, route }: any) {
         </View>
         <PrimaryButton
           title="Proceed to Pay"
-          onPress={() => navigation.navigate('Payment', { total, amount: total, isNegotiated, negotiation })}
+          onPress={() => navigation.navigate('Payment', { total, amount: total, isNegotiated, negotiation, items: displayItems })}
           style={{ flex: 1, marginLeft: Spacing.md }}
         />
       </View>
