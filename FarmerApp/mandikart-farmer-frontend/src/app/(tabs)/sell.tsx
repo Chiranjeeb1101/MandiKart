@@ -17,12 +17,13 @@
  * Simple, professional English throughout.
  */
 
-import React, { useState, useMemo, useCallback, useRef } from 'react';
+import React, { useState, useMemo, useCallback, useRef, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   ScrollView,
+  RefreshControl,
   Image,
   Pressable,
   Alert,
@@ -84,16 +85,25 @@ export default function SellHomeScreen() {
   // Stable sync guard — call getState() directly to avoid reactive loop crash
   // (subscribing to syncWithBackend reference causes it to change on every store
   //  update, which re-fires useFocusEffect and creates an infinite re-render loop)
-  const isSyncing = useRef(false);
-  useFocusEffect(
-    useCallback(() => {
-      if (isSyncing.current) return;
-      isSyncing.current = true;
-      useProduceStore.getState().syncWithBackend().finally(() => {
-        isSyncing.current = false;
-      });
-    }, []) // empty deps — intentional, getState() is always stable
-  );
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await useProduceStore.getState().syncWithBackend();
+    } catch {}
+    finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Continuous 4-second real-time auto-refresh across Farmer Sell screen
+  useEffect(() => {
+    const timer = setInterval(() => {
+      useProduceStore.getState().syncWithBackend().catch(() => {});
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Active new / pending requests
   const newRequests = useMemo(() => {
@@ -449,6 +459,14 @@ export default function SellHomeScreen() {
         style={styles.scrollArea}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefreshing}
+            onRefresh={handleRefresh}
+            tintColor={MKColors.primaryGreen}
+            colors={[MKColors.primaryGreen]}
+          />
+        }
       >
         {/* ── Quick Action Bar (4 Key Actions) ──────────────────────── */}
         <View style={styles.quickActionsBar}>

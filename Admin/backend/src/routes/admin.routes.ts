@@ -9,6 +9,7 @@ adminRouter.get('/metrics', AdminController.getPlatformMetrics);
 adminRouter.get('/audit-logs', AdminController.getAuditLogs);
 adminRouter.post('/farmers/:farmerId/verify', AdminController.verifyFarmerKyc);
 adminRouter.get('/farmers', AdminController.getAllFarmers);
+adminRouter.get('/users', AdminController.getAllUsers);
 
 // Produce moderation routes
 adminRouter.get('/produce', AdminController.getAllProduce);

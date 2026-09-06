@@ -42,7 +42,9 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
 }) => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
-  // Initialize farmers with localStorage persistence so accepted produce is never lost on reload
+  const [isLoadingProduce, setIsLoadingProduce] = useState(false);
+
+  // Initialize farmers with localStorage persistence or empty array for live backend hydration
   const [farmers, setFarmers] = useState<FarmerUser[]>(() => {
     try {
       const saved = localStorage.getItem('mandikart_admin_farmers_data');
@@ -53,7 +55,7 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
         }
       }
     } catch {}
-    return initialMockFarmers;
+    return [];
   });
 
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,108 +79,93 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
     }
   };
 
-  // Load live produce catalog from Admin backend (port 4003) with continuous polling
-  React.useEffect(() => {
-    const fetchProduce = () => {
-      fetch('http://localhost:4003/api/v1/admin/produce')
-        .then(res => res.json())
-        .then(result => {
-          if (result.data && result.data.length > 0) {
-            const approvedIds: string[] = [];
-            try {
-              const savedApproved = localStorage.getItem('mandikart_approved_listing_ids');
-              if (savedApproved) approvedIds.push(...JSON.parse(savedApproved));
-            } catch {}
+  const fetchFarmersAndProduce = async (showSpinner = false) => {
+    if (showSpinner) setIsLoadingProduce(true);
+    try {
+      const [farmersRes, produceRes] = await Promise.all([
+        fetch('http://localhost:4003/api/v1/admin/farmers').then(r => r.json()).catch(() => ({ data: [] })),
+        fetch('http://localhost:4003/api/v1/admin/produce').then(r => r.json()).catch(() => ({ data: [] })),
+      ]);
 
-            const liveListings: FarmerProduceListing[] = result.data.map((item: any) => {
-              const crop = item.cropName || item.crop_name || 'Produce';
-              const cat = item.category || 'Vegetables';
+      const liveProduceList = Array.isArray(produceRes?.data) ? produceRes.data : [];
+      // Sort produce time-wise descending
+      liveProduceList.sort((a: any, b: any) => {
+        const timeA = new Date(a.createdAt || a.submittedAt || 0).getTime();
+        const timeB = new Date(b.createdAt || b.submittedAt || 0).getTime();
+        return timeB - timeA;
+      });
+
+      if (Array.isArray(farmersRes?.data) && farmersRes.data.length > 0) {
+        const produceByFarmer = new Map<string, any[]>();
+        for (const prod of liveProduceList) {
+          const fId = prod.farmerId;
+          const cur = produceByFarmer.get(fId) || [];
+          cur.push(prod);
+          produceByFarmer.set(fId, cur);
+        }
+
+        const mergedFarmers: FarmerUser[] = farmersRes.data.map((f: any) => {
+          const associatedProduce = produceByFarmer.get(f.id) || f.activeListings || [];
+          return {
+            id: f.id,
+            farmerCode: f.farmerCode || `FMR-${String(f.id).slice(-4).toUpperCase()}`,
+            fullName: f.fullName || 'Farmer',
+            phone: f.phone || '+91 98000 00000',
+            mandiName: f.mandiName || `${f.district || 'Nashik'} APMC`,
+            district: f.district || 'Nashik',
+            state: f.state || 'Maharashtra',
+            landAreaAcres: Number(f.landAreaAcres || 5),
+            verificationStatus: f.verificationStatus || 'VERIFIED',
+            rating: f.rating || 4.8,
+            totalSalesAmount: Number(f.totalSalesAmount || 0),
+            joinedDate: f.joinedDate || 'Recent',
+            kycRecords: [],
+            activeListings: associatedProduce.map((p: any) => {
+              const crop = p.cropName || p.crop_name || 'Produce';
+              const cat = p.category || 'Vegetables';
               const fallbackImg = getCropFallbackImage(crop, cat);
-              const rawImg = item.imageUrl || (item.images && item.images[0]);
+              const rawImg = p.imageUrl || (p.images && p.images[0]);
               const validImg = rawImg && !rawImg.startsWith('file://') ? rawImg : fallbackImg;
-              const isMarkedActive = approvedIds.includes(item.id);
-
               return {
-                id: item.id,
-                farmerId: item.farmerId || 'frm-101',
-                farmerName: item.farmerName || item.farmerFullName || 'Registered Farmer',
-                farmerCode: item.farmerCode || 'FARM-8201',
+                id: p.id,
+                farmerId: f.id,
+                farmerName: f.fullName,
+                farmerCode: f.farmerCode,
                 cropName: crop,
                 category: cat,
-                availableKg: item.availableKg || item.availableQuantity || item.available_quantity || 100,
-                pricePerKg: item.pricePerKg || item.basePricePerUnit || item.base_price_per_unit || 30,
-                qualityGrade: item.qualityGrade || (item.grade === 'B' ? 'GRADE_B' : 'GRADE_A'),
-                harvestDate: item.harvestDate || item.harvest_date || 'Recent',
-                submittedAt: item.submittedAt || (item.created_at ? new Date(item.created_at).toLocaleDateString() : 'Today'),
-                status: isMarkedActive ? 'ACTIVE' : (item.status || (item.is_active ? 'ACTIVE' : 'PENDING_APPROVAL')),
-                mandiName: item.mandiName || item.pickup_address || 'Nashik APMC',
+                availableKg: Number(p.availableKg || p.available_quantity || p.quantityKg || 100),
+                pricePerKg: Number(p.pricePerKg || p.base_price_per_unit || 30),
+                qualityGrade: p.qualityGrade || (p.grade === 'B' ? 'GRADE_B' : 'GRADE_A'),
+                harvestDate: p.harvestDate || p.harvest_date || 'Recent',
+                submittedAt: p.submittedAt || (p.createdAt ? new Date(p.createdAt).toLocaleDateString() : 'Today'),
+                createdAt: p.createdAt || new Date().toISOString(),
+                status: p.status || (p.is_active ? 'ACTIVE' : 'PENDING_APPROVAL'),
+                mandiName: p.mandiName || `${f.district || 'Nashik'} APMC`,
                 imageUrl: validImg,
                 images: [validImg],
               };
-            });
+            }),
+          };
+        });
 
-            setFarmers(prev => {
-              const farmerMap = new Map<string, FarmerUser>();
-              prev.forEach(f => farmerMap.set(f.id, { ...f, activeListings: [...f.activeListings] }));
+        setFarmers(mergedFarmers);
+        safeSaveFarmers(mergedFarmers);
+      }
+    } catch (err) {
+      console.warn('Failed to fetch live farmers/produce:', err);
+    } finally {
+      if (showSpinner) {
+        setTimeout(() => setIsLoadingProduce(false), 400);
+      }
+    }
+  };
 
-              liveListings.forEach(nl => {
-                let targetFarmer: FarmerUser | undefined;
-
-                if (nl.farmerId && farmerMap.has(nl.farmerId)) {
-                  targetFarmer = farmerMap.get(nl.farmerId);
-                } else if (nl.farmerName) {
-                  for (const f of farmerMap.values()) {
-                    if (f.fullName.toLowerCase() === nl.farmerName.toLowerCase()) {
-                      targetFarmer = f;
-                      break;
-                    }
-                  }
-                }
-
-                if (!targetFarmer) {
-                  const fId = nl.farmerId || `farmer_${Math.random().toString(36).substring(2, 9)}`;
-                  targetFarmer = {
-                    id: fId,
-                    farmerCode: nl.farmerCode || `FMR-${fId.slice(-4).toUpperCase()}`,
-                    fullName: nl.farmerName || 'Registered Farmer',
-                    phone: (nl as any).farmerPhone || '+91 98000 00000',
-                    mandiName: nl.mandiName || 'Nashik APMC',
-                    district: 'Nashik',
-                    state: 'Maharashtra',
-                    landAreaAcres: 5.0,
-                    verificationStatus: 'VERIFIED',
-                    rating: 4.8,
-                    totalSalesAmount: 0,
-                    joinedDate: 'Recent',
-                    kycRecords: [],
-                    activeListings: [],
-                  };
-                  farmerMap.set(fId, targetFarmer);
-                }
-
-                const existingIdx = targetFarmer.activeListings.findIndex(l => l.id === nl.id);
-                if (existingIdx >= 0) {
-                  const existing = targetFarmer.activeListings[existingIdx];
-                  targetFarmer.activeListings[existingIdx] = {
-                    ...nl,
-                    status: existing.status === 'ACTIVE' ? 'ACTIVE' : nl.status,
-                  };
-                } else {
-                  targetFarmer.activeListings.unshift(nl);
-                }
-              });
-
-              const updated = Array.from(farmerMap.values());
-              safeSaveFarmers(updated);
-              return updated;
-            });
-          }
-        })
-        .catch(() => {});
-    };
-
-    fetchProduce();
-    const pollInterval = setInterval(fetchProduce, 3500);
+  // Continuous 4-second polling
+  React.useEffect(() => {
+    fetchFarmersAndProduce(true);
+    const pollInterval = setInterval(() => {
+      fetchFarmersAndProduce(false);
+    }, 4000);
     return () => clearInterval(pollInterval);
   }, []);
   
@@ -221,13 +208,22 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
     });
   });
 
-  const displayedProduce = moderationTab === 'PENDING' 
-    ? pendingProduceListings 
-    : moderationTab === 'ACTIVE' 
-    ? activeProduceListings 
-    : moderationTab === 'REJECTED'
-    ? rejectedProduceListings
-    : allProduceListings;
+  const sortByTime = (items: any[]) =>
+    [...items].sort((a, b) => {
+      const timeA = new Date(a.createdAt || a.submittedAt || 0).getTime();
+      const timeB = new Date(b.createdAt || b.submittedAt || 0).getTime();
+      return timeB - timeA;
+    });
+
+  const displayedProduce = sortByTime(
+    moderationTab === 'PENDING' 
+      ? pendingProduceListings 
+      : moderationTab === 'ACTIVE' 
+      ? activeProduceListings 
+      : moderationTab === 'REJECTED'
+      ? rejectedProduceListings
+      : allProduceListings
+  );
 
   // Approve Produce Listing Handler (Admin verifies produce -> unlocked for farmer to list globally)
   const handleApproveProduce = (farmerId: string, listingId: string, cropName: string) => {
@@ -385,24 +381,47 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
       />
 
       <div className="flex-1 flex flex-col min-w-0">
-        <Header user={user} onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)} />
+        <Header
+          user={user}
+          onOpenMobileSidebar={() => setIsMobileSidebarOpen(true)}
+          onLogout={onLogout}
+          onNavigateTab={onNavigateTab}
+          onRefresh={() => fetchFarmersAndProduce(true)}
+          isRefreshing={isLoadingProduce}
+        />
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 space-y-6 max-w-[1500px] w-full mx-auto">
           {/* Header Banner */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-white pb-4">
             <div>
-              <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
-                Farmer Directory & Produce Moderation
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl sm:text-2xl font-black text-white tracking-tight">
+                  Farmer Directory & Produce Moderation
+                </h1>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-emerald-950 text-emerald-400 border border-emerald-400">
+                  Live DB ({farmers.length} Farmers)
+                </span>
+              </div>
               <p className="text-xs text-slate-300 font-semibold mt-0.5">
                 Inspect producer profiles, verify KYC land records, and approve newly submitted produce listings before publishing to buyers.
               </p>
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
+              <button
+                type="button"
+                onClick={() => fetchFarmersAndProduce(true)}
+                disabled={isLoadingProduce}
+                className="px-3 py-1.5 bg-zinc-900 text-zinc-200 hover:text-white hover:bg-zinc-800 border border-zinc-700 hover:border-emerald-400 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                title="Refresh real-time farmers and produce"
+              >
+                <span className={`material-symbols-outlined text-sm ${isLoadingProduce ? 'animate-spin text-emerald-400' : 'text-emerald-400'}`}>sync</span>
+                <span>Refresh Live</span>
+              </button>
+
               <button 
                 onClick={() => setShowSimulateModal(true)}
-                className="px-3.5 py-1.5 bg-orange-950 text-orange-400 border border-orange-400 hover:bg-orange-400 hover:text-black rounded-lg text-xs font-black transition-colors shadow-sm flex items-center gap-1"
+                className="px-3.5 py-1.5 bg-orange-950 text-orange-400 border border-orange-400 hover:bg-orange-400 hover:text-black rounded-lg text-xs font-black transition-colors shadow-sm flex items-center gap-1 cursor-pointer"
               >
                 <span className="material-symbols-outlined text-sm">add_shopping_cart</span>
                 <span>Simulate Farmer Adding Product</span>
@@ -487,6 +506,18 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
                 >
                   All ({allProduceListings.length})
                 </button>
+
+                {/* Refresh Produce Moderation Button */}
+                <button
+                  type="button"
+                  onClick={() => fetchFarmersAndProduce(true)}
+                  disabled={isLoadingProduce}
+                  className="px-2.5 py-1.5 bg-zinc-900 text-zinc-200 hover:text-white hover:bg-zinc-800 border border-zinc-700 hover:border-emerald-400 rounded-lg text-xs font-mono font-bold flex items-center gap-1.5 transition-colors cursor-pointer"
+                  title="Refresh Produce Submissions"
+                >
+                  <span className={`material-symbols-outlined text-sm ${isLoadingProduce ? 'animate-spin text-emerald-400' : 'text-emerald-400'}`}>sync</span>
+                  <span>Refresh</span>
+                </button>
               </div>
             </div>
 
@@ -557,8 +588,19 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
                             <span>•</span>
                             <span className="text-zinc-400">Mandi: {listing.mandiName}</span>
                           </div>
-                          <div className="text-[10px] text-zinc-500 mt-1">
-                            Submitted: {listing.submittedAt || 'Today'}
+                          <div className="text-[10px] text-zinc-400 mt-1 font-mono">
+                            Submitted: <strong className="text-emerald-400 font-semibold">{
+                              (listing as any).createdAt
+                                ? new Date((listing as any).createdAt).toLocaleString('en-IN', {
+                                    day: '2-digit',
+                                    month: 'short',
+                                    year: 'numeric',
+                                    hour: '2-digit',
+                                    minute: '2-digit',
+                                    hour12: true,
+                                  })
+                                : listing.submittedAt || 'Today'
+                            }</strong>
                           </div>
                         </div>
                       </div>

@@ -10,7 +10,7 @@
  */
 
 import React from 'react';
-import { ScrollView, StyleSheet, StyleProp, ViewStyle, View } from 'react-native';
+import { ScrollView, StyleSheet, StyleProp, ViewStyle, View, RefreshControlProps } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MKBackground } from './MKBackground';
 import { MKLayout } from '@/constants/layout';
@@ -23,6 +23,7 @@ interface MKScreenProps {
   header?: React.ReactNode;
   bottomClearanceExtra?: number;
   showsVerticalScrollIndicator?: boolean;
+  refreshControl?: React.ReactElement<RefreshControlProps>;
 }
 
 export const MKScreen: React.FC<MKScreenProps> = ({
@@ -33,6 +34,7 @@ export const MKScreen: React.FC<MKScreenProps> = ({
   header,
   bottomClearanceExtra = 0,
   showsVerticalScrollIndicator = false,
+  refreshControl,
 }) => {
   const insets = useSafeAreaInsets();
 
@@ -53,6 +55,7 @@ export const MKScreen: React.FC<MKScreenProps> = ({
             ]}
             showsVerticalScrollIndicator={showsVerticalScrollIndicator}
             keyboardShouldPersistTaps="handled"
+            refreshControl={refreshControl}
           >
             {children}
           </ScrollView>

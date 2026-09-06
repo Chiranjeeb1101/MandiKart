@@ -11,7 +11,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { apiClient } from '../services/apiClient';
 import { Product } from '../types';
-import { SAMPLE_PRODUCTS } from '../services/mockData';
 import { supabase } from '../services/supabaseClient';
 
 interface CatalogContextType {
@@ -22,14 +21,14 @@ interface CatalogContextType {
 }
 
 const CatalogContext = createContext<CatalogContextType>({
-  products: SAMPLE_PRODUCTS,
+  products: [],
   isLoading: false,
-  getProductById: (id) => SAMPLE_PRODUCTS.find((p) => p.id === id),
+  getProductById: () => undefined,
   refresh: async () => {},
 });
 
 export function CatalogProvider({ children }: { children: React.ReactNode }) {
-  const [products, setProducts] = useState<Product[]>(SAMPLE_PRODUCTS);
+  const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const isMountedRef = useRef(true);
 
@@ -39,7 +38,7 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
         setIsLoading(true);
       }
       const live = await apiClient.catalog.search({ fresh: true });
-      if (isMountedRef.current && live && live.length > 0) {
+      if (isMountedRef.current && Array.isArray(live)) {
         setProducts(live);
       }
     } catch (err) {
@@ -84,11 +83,7 @@ export function CatalogProvider({ children }: { children: React.ReactNode }) {
 
   const getProductById = useCallback(
     (id: string): Product | undefined => {
-      // First try live catalog
-      const found = products.find((p) => p.id === id);
-      if (found) return found;
-      // Fallback to sample products
-      return SAMPLE_PRODUCTS.find((p) => p.id === id);
+      return products.find((p) => p.id === id);
     },
     [products]
   );

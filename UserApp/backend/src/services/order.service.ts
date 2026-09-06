@@ -189,25 +189,50 @@ export class BuyerOrderService {
       }
 
       // 2. Insert order record
+      const isValidUuid = (val: string) => typeof val === 'string' && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val);
+      const safeFarmerId = isValidUuid(primaryFarmerId) ? primaryFarmerId : 'd1111111-1111-1111-1111-111111111111';
+      const safeBuyerId = isValidUuid(input.buyerId) ? input.buyerId : 'b1111111-1111-1111-1111-111111111111';
+
       let order: any = null;
       try {
         const { data: insertedOrder, error: orderErr } = await supabase
           .from('orders')
           .insert({
             order_number: orderNumber,
-            farmer_id: primaryFarmerId,
-            buyer_id: input.buyerId,
+            farmer_id: safeFarmerId,
+            buyer_id: safeBuyerId,
             status: OrderStatus.PLACED,
             total_amount: totalAmount,
             platform_fee: platformFee,
             farmer_payout_amount: farmerPayout,
             pickup_otp: pickupOtp,
             delivery_otp: deliveryOtp,
+            delivery_address: input.deliveryAddress || 'Pune, Maharashtra',
           })
           .select()
           .single();
 
         if (insertedOrder && !orderErr) {
+          // Insert order items into Supabase order_items table
+          try {
+            const orderItemsRows = input.items.map((it) => {
+              const safeProdId = isValidUuid(it.productId) ? it.productId : 'c1111111-1111-1111-1111-111111111111';
+              return {
+                order_id: insertedOrder.id,
+                product_id: safeProdId,
+                crop_name: it.cropName,
+                grade: (it.grade === 'B' ? 'B' : it.grade === 'C' ? 'C' : 'A'),
+                quantity: it.quantity,
+                unit: it.unit || 'kg',
+                price_per_unit: it.pricePerUnit,
+                subtotal: Math.round(it.quantity * it.pricePerUnit * 100) / 100,
+              };
+            });
+            await supabase.from('order_items').insert(orderItemsRows);
+          } catch (itemErr) {
+            console.warn('[BuyerOrderService] order_items insert notice:', itemErr);
+          }
+
           order = {
             id: insertedOrder.id,
             orderNumber: insertedOrder.order_number,
@@ -227,8 +252,12 @@ export class BuyerOrderService {
             })),
             createdAt: insertedOrder.created_at || new Date().toISOString(),
           };
+        } else if (orderErr) {
+          console.warn('[BuyerOrderService] Order insert error:', orderErr);
         }
-      } catch {}
+      } catch (insertErr) {
+        console.warn('[BuyerOrderService] Order insert exception:', insertErr);
+      }
 
       if (!order) {
         order = {

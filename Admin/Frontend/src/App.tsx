@@ -10,6 +10,7 @@ import { LogisticsOverview } from './pages/LogisticsOverview';
 import { AiIntelligence } from './pages/AiIntelligence';
 import { SystemSettings } from './pages/SystemSettings';
 import { PushNotifications } from './pages/PushNotifications';
+import { UsersDirectory } from './pages/UsersDirectory';
 
 export const App: React.FC = () => {
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(() => {
@@ -83,6 +84,16 @@ export const App: React.FC = () => {
         onLogout={handleLogout}
         onNavigateTab={handleTabChange}
         onSelectFarmer={handleSelectFarmer}
+      />
+    );
+  }
+
+  if (currentTab === 'users') {
+    return (
+      <UsersDirectory
+        user={currentUser}
+        onLogout={handleLogout}
+        onNavigateTab={handleTabChange}
       />
     );
   }

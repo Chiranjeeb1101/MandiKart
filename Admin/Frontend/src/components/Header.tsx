@@ -7,9 +7,11 @@ interface HeaderProps {
   onOpenMobileSidebar?: () => void;
   onLogout?: () => void;
   onNavigateTab?: (tabId: string) => void;
+  onRefresh?: () => void;
+  isRefreshing?: boolean;
 }
 
-export const Header: React.FC<HeaderProps> = ({ user, onOpenMobileSidebar, onLogout, onNavigateTab }) => {
+export const Header: React.FC<HeaderProps> = ({ user, onOpenMobileSidebar, onLogout, onNavigateTab, onRefresh, isRefreshing }) => {
   const { theme, toggleTheme } = useTheme();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
@@ -136,6 +138,16 @@ export const Header: React.FC<HeaderProps> = ({ user, onOpenMobileSidebar, onLog
           <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
           <span>System Active</span>
         </div>
+
+        {/* Global Refresh Button */}
+        <button
+          onClick={onRefresh ? onRefresh : () => window.location.reload()}
+          className="p-1.5 text-white hover:bg-slate-900 border border-white hover:border-emerald-400 rounded-lg transition-colors flex items-center gap-1.5 font-mono text-xs font-bold cursor-pointer"
+          title="Refresh All Real-time Data (Auto-refresh every 4s)"
+        >
+          <span className={`material-symbols-outlined text-sm ${isRefreshing ? 'animate-spin text-emerald-400' : 'text-emerald-400'}`}>sync</span>
+          <span className="hidden sm:inline text-[11px]">Refresh</span>
+        </button>
 
         {/* Push Broadcast Button */}
         <button

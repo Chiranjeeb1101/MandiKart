@@ -24,7 +24,7 @@ export default function ProductDetailsScreen({ navigation, route }: any) {
   const productParam = route.params?.product;
   const productId = route.params?.productId || productParam?.id;
   const { getProductById } = useCatalog();
-  const product = productParam || (productId ? getProductById(productId) : null) || SAMPLE_PRODUCTS.find((p) => p.id === productId) || null;
+  const product = productParam || (productId ? getProductById(productId) : null) || null;
   const { currentAddress } = useLocation();
   const { addToCart } = useCart();
   const { toggleWishlist, isWishlisted } = useWishlist();

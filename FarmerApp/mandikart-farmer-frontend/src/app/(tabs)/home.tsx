@@ -25,6 +25,7 @@ import {
   TextInput,
   Modal,
   ScrollView,
+  RefreshControl,
   Alert,
   Platform,
   StatusBar,
@@ -61,6 +62,7 @@ import {
 } from 'lucide-react-native';
 import { MKScreen } from '@/components/ui';
 import { useAuthStore } from '@/store/authStore';
+import { useProduceStore } from '@/store/produceStore';
 import { useVoiceSearch } from '@/hooks/useVoiceSearch';
 
 const FARMER_AVATAR_URI =
@@ -117,6 +119,27 @@ export default function HomeScreen() {
   const { isListening, transcript, startListening, stopListening, resetVoiceSearch } =
     useVoiceSearch();
   const [voiceModalVisible, setVoiceModalVisible] = useState(false);
+
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      await useProduceStore.getState().syncWithBackend();
+    } catch {}
+    finally {
+      setIsRefreshing(false);
+    }
+  };
+
+  // Continuous 4-second real-time auto-refresh across Farmer App
+  React.useEffect(() => {
+    useProduceStore.getState().syncWithBackend().catch(() => {});
+    const timer = setInterval(() => {
+      useProduceStore.getState().syncWithBackend().catch(() => {});
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
 
   const farmerName = user?.firstName || (user?.name ? user.name.split(' ')[0] : user?.phone ? user.phone : 'Ramesh');
   const farmerLocation = (user as any)?.village
@@ -177,6 +200,14 @@ export default function HomeScreen() {
         { paddingTop: safeTopPadding },
       ]}
       bottomClearanceExtra={24}
+      refreshControl={
+        <RefreshControl
+          refreshing={isRefreshing}
+          onRefresh={handleRefresh}
+          tintColor="#16A34A"
+          colors={['#16A34A']}
+        />
+      }
     >
       {/* ── 1. Farmer Profile Header (Shifted Left & Compact) ─ */}
       <View style={styles.headerRow}>

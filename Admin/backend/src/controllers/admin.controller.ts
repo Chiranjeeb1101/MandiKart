@@ -16,28 +16,13 @@ import {
 
 export class AdminController {
   static async getPlatformMetrics(_req: Request, res: Response): Promise<void> {
-    const isMock = !process.env.SUPABASE_URL || process.env.SUPABASE_URL.includes('placeholder');
-
-    if (isMock) {
-      res.status(200).json({
-        data: {
-          totalGrossMarketValue: 458200,
-          totalCommissionEarned: 11455,
-          activeFarmersCount: 142,
-          activeBuyersCount: 380,
-          activeOrdersCount: 24,
-          disputedOrdersCount: 1,
-          fulfillmentSuccessRate: '98.2%',
-        },
-        meta: null,
-        error: null,
-      });
-      return;
-    }
-
     try {
       const supabase = getSupabaseAdmin();
       const { data: orders } = await supabase.from('orders').select('total_amount, platform_fee, status');
+      const { count: verifiedFarmers } = await supabase.from('farmers').select('*', { count: 'exact', head: true }).eq('is_verified', true);
+      const { count: totalFarmers } = await supabase.from('farmers').select('*', { count: 'exact', head: true });
+      const { count: totalBuyers } = await supabase.from('buyers').select('*', { count: 'exact', head: true });
+      const { count: activeProduceCount } = await supabase.from('products').select('*', { count: 'exact', head: true }).eq('is_active', true);
 
       let gmv = 0;
       let fees = 0;
@@ -58,6 +43,11 @@ export class AdminController {
           totalGrossMarketValue: gmv,
           totalCommissionEarned: fees,
           activeOrdersCount: active,
+          verifiedFarmersCount: verifiedFarmers || 0,
+          totalFarmersCount: totalFarmers || 0,
+          totalBuyersCount: totalBuyers || 0,
+          totalUsersCount: (totalFarmers || 0) + (totalBuyers || 0),
+          activeProduceCount: activeProduceCount || 0,
         },
         meta: null,
         error: null,
@@ -635,39 +625,122 @@ export class AdminController {
         .select('*, products(*)')
         .order('created_at', { ascending: false });
 
+      // Fetch real order totals per farmer from Supabase
+      const { data: orders } = await supabase
+        .from('orders')
+        .select('farmer_id, total_amount, status');
+
+      const farmerSalesMap = new Map<string, { totalSales: number; orderCount: number }>();
+      if (orders) {
+        for (const o of orders) {
+          if (o.status !== 'CANCELLED' && o.status !== 'REJECTED') {
+            const fId = o.farmer_id;
+            const cur = farmerSalesMap.get(fId) || { totalSales: 0, orderCount: 0 };
+            cur.totalSales += Number(o.total_amount || 0);
+            cur.orderCount += 1;
+            farmerSalesMap.set(fId, cur);
+          }
+        }
+      }
+
       if (dbFarmers && dbFarmers.length > 0) {
-        const mapped = dbFarmers.map((f: any) => ({
-          id: f.id,
-          farmerCode: f.phone ? `#FMR-${f.phone.slice(-4)}` : '#FMR-8921',
-          fullName: f.full_name || 'Farmer',
-          phone: f.phone || '+91 98230 41122',
-          mandiName: f.district ? `${f.district} APMC` : 'Nashik Main Mandi',
-          district: f.district || 'Nashik',
-          state: f.state || 'Maharashtra',
-          landAreaAcres: Number(f.land_size || 5),
-          verificationStatus: f.is_verified ? 'VERIFIED' : 'PENDING_KYC',
-          rating: 4.9,
-          totalSalesAmount: 485000,
-          joinedDate: f.created_at ? new Date(f.created_at).toLocaleDateString() : 'Jan 2024',
-          activeListings: (f.products || []).map((p: any) => ({
-            id: p.id,
-            cropName: p.crop_name,
-            category: p.category,
-            availableKg: Number(p.available_quantity || 0),
-            pricePerKg: Number(p.base_price_per_unit || 0),
-            qualityGrade: p.grade === 'B' ? 'GRADE_B' : 'GRADE_A',
-            harvestDate: p.harvest_date || 'Recent',
-            status: p.is_active ? 'ACTIVE' : 'PENDING_APPROVAL',
-            imageUrl: p.images?.[0] || getCropImageUrl(p.crop_name, p.category),
-          })),
-        }));
-        res.status(200).json({ data: mapped, error: null });
+        const mapped = dbFarmers.map((f: any) => {
+          const salesStats = farmerSalesMap.get(f.id) || { totalSales: 0, orderCount: 0 };
+          return {
+            id: f.id,
+            farmerCode: f.phone ? `#FMR-${f.phone.slice(-4)}` : `#FMR-${String(f.id).slice(-4).toUpperCase()}`,
+            fullName: f.full_name || 'Farmer',
+            phone: f.phone || '+91 98000 00000',
+            mandiName: f.district ? `${f.district} APMC` : 'Nashik Main Mandi',
+            district: f.district || 'Nashik',
+            state: f.state || 'Maharashtra',
+            landAreaAcres: Number(f.land_size || 5),
+            verificationStatus: f.is_verified ? 'VERIFIED' : 'PENDING_KYC',
+            rating: 4.8,
+            totalSalesAmount: salesStats.totalSales,
+            totalOrdersCount: salesStats.orderCount,
+            joinedDate: f.created_at ? new Date(f.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : 'Recent',
+            createdAt: f.created_at || new Date().toISOString(),
+            activeListings: (f.products || []).map((p: any) => ({
+              id: p.id,
+              cropName: p.crop_name,
+              category: p.category,
+              availableKg: Number(p.available_quantity || 0),
+              pricePerKg: Number(p.base_price_per_unit || 0),
+              qualityGrade: p.grade === 'B' ? 'GRADE_B' : 'GRADE_A',
+              harvestDate: p.harvest_date || 'Recent',
+              status: p.is_active ? 'ACTIVE' : 'PENDING_APPROVAL',
+              imageUrl: p.images?.[0] || getCropImageUrl(p.crop_name, p.category),
+            })),
+          };
+        });
+        res.status(200).json({ data: mapped, meta: { total: mapped.length }, error: null });
         return;
       }
-      res.status(200).json({ data: [], error: null });
+      res.status(200).json({ data: [], meta: { total: 0 }, error: null });
+    } catch (err) {
+      res.status(500).json({ data: null, error: { message: (err as Error).message } });
+    }
+  }
+
+  static async getAllUsers(_req: Request, res: Response): Promise<void> {
+    try {
+      const supabase = getSupabaseAdmin();
+      const { data: dbBuyers, error } = await supabase
+        .from('buyers')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        res.status(500).json({ data: null, error: { message: error.message } });
+        return;
+      }
+
+      // Fetch order stats per buyer
+      const { data: orders } = await supabase.from('orders').select('id, buyer_id, total_amount, status');
+      const orderCountMap = new Map<string, { count: number; spend: number }>();
+      if (orders) {
+        for (const o of orders) {
+          const bId = o.buyer_id;
+          const current = orderCountMap.get(bId) || { count: 0, spend: 0 };
+          current.count += 1;
+          current.spend += Number(o.total_amount || 0);
+          orderCountMap.set(bId, current);
+        }
+      }
+
+      const mapped = (dbBuyers || []).map((b: any) => {
+        const stats = orderCountMap.get(b.id) || { count: 0, spend: 0 };
+        const primaryAddr = Array.isArray(b.addresses) && b.addresses.length > 0 ? b.addresses[0] : null;
+        const city = primaryAddr?.city || 'Pune';
+        const state = primaryAddr?.state || 'Maharashtra';
+
+        return {
+          id: b.id,
+          userCode: b.phone ? `#USR-${b.phone.slice(-4)}` : `#USR-${b.id.slice(-4).toUpperCase()}`,
+          fullName: b.full_name || 'Buyer',
+          phone: b.phone || '',
+          email: b.email || 'buyer@mandikart.in',
+          buyerType: b.buyer_type || 'RETAIL',
+          companyName: b.company_name || null,
+          gstin: b.gstin || null,
+          city,
+          state,
+          location: `${city}, ${state}`,
+          isVerified: Boolean(b.is_verified),
+          verificationStatus: b.is_verified ? 'VERIFIED' : 'PENDING',
+          totalOrders: stats.count,
+          totalSpend: stats.spend,
+          joinedDate: b.created_at ? new Date(b.created_at).toLocaleDateString() : 'Recent',
+          createdAt: b.created_at || new Date().toISOString(),
+        };
+      });
+
+      res.status(200).json({ data: mapped, meta: { total: mapped.length }, error: null });
     } catch (err) {
       res.status(500).json({ data: null, error: { message: (err as Error).message } });
     }
   }
 }
+
 

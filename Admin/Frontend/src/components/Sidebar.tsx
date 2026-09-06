@@ -17,7 +17,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const navItems = [
     { id: 'dashboard', label: 'Dashboard', icon: 'dashboard' },
-    { id: 'farmers', label: 'Farmer Directory', icon: 'agriculture', badge: '1', badgeType: 'info' },
+    { id: 'farmers', label: 'Farmer Directory', icon: 'agriculture', badge: 'Live', badgeType: 'info' },
+    { id: 'users', label: 'Users & Buyers', icon: 'group', badge: 'Live', badgeType: 'success' },
     { id: 'orders', label: 'Orders & Settlements', icon: 'receipt_long' },
     { id: 'disputes', label: 'Dispute Resolution', icon: 'gavel', badge: '1 Open', badgeType: 'warning' },
     { id: 'logistics', label: 'Logistics Overview', icon: 'local_shipping' },
