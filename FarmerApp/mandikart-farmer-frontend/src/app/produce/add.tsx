@@ -357,7 +357,11 @@ export default function AddProduceScreen() {
         useProduceStore.getState().syncWithBackend();
       })
       .catch((err) => {
-        console.warn('[AddProduce] Background backend sync notice:', err);
+        if (err?.message?.includes('canceled') || err?.message?.includes('aborted') || err?.name === 'AbortError') {
+          console.log('[AddProduce] Background sync saved locally, pending server sync:', err?.message);
+        } else {
+          console.warn('[AddProduce] Background backend sync notice:', err);
+        }
       });
 
     setCreatedCropId(newCrop.id);

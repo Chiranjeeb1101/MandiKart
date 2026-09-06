@@ -161,11 +161,12 @@ export const apiClient = {
         const errorText = await response.text().catch(() => '');
         throw new Error(`API POST ${endpoint} Error: ${response.status} ${errorText || response.statusText}`);
       }
-      return response.json();
+      const rawText = await response.text();
+      return rawText ? JSON.parse(rawText) : ({} as T);
     } catch (err: any) {
       clearTimeout(timer);
-      if (err?.name === 'AbortError' || err?.message?.includes('aborted')) {
-        throw new Error(`Server connection timed out at ${resolveFarmerApiBaseUrl()}.`);
+      if (err?.name === 'AbortError' || err?.message?.includes('aborted') || err?.message?.includes('canceled') || err?.message?.includes('cancelled')) {
+        throw new Error(`Server connection timed out or canceled at ${resolveFarmerApiBaseUrl()}.`);
       }
       throw err;
     }
@@ -200,11 +201,12 @@ export const apiClient = {
         const errorText = await response.text().catch(() => '');
         throw new Error(`API PUT ${endpoint} Error: ${response.status} ${errorText || response.statusText}`);
       }
-      return response.json();
+      const rawText = await response.text();
+      return rawText ? JSON.parse(rawText) : ({} as T);
     } catch (err: any) {
       clearTimeout(timer);
-      if (err?.name === 'AbortError' || err?.message?.includes('aborted')) {
-        throw new Error(`Server connection timed out at ${resolveFarmerApiBaseUrl()}.`);
+      if (err?.name === 'AbortError' || err?.message?.includes('aborted') || err?.message?.includes('canceled') || err?.message?.includes('cancelled')) {
+        throw new Error(`Server connection timed out or canceled at ${resolveFarmerApiBaseUrl()}.`);
       }
       throw err;
     }
