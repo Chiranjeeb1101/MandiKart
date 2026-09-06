@@ -542,6 +542,7 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
                 {displayedProduce.map(listing => {
                   const totalLotValue = listing.availableKg * listing.pricePerKg;
                   const isPending = listing.status === 'PENDING_APPROVAL';
+                  const isApproved = listing.status === 'APPROVED' || listing.status === 'ADMIN_APPROVED';
                   const isActive = listing.status === 'ACTIVE';
 
                   return (
@@ -550,6 +551,8 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
                       className={`bg-zinc-950 border ${
                         isPending 
                           ? 'border-orange-400/80 shadow-[0_0_15px_rgba(249,115,22,0.1)]' 
+                          : isApproved
+                          ? 'border-sky-500/80 shadow-[0_0_15px_rgba(56,189,248,0.1)]'
                           : isActive 
                           ? 'border-emerald-500/80 shadow-[0_0_15px_rgba(16,185,129,0.1)]' 
                           : 'border-zinc-800'
@@ -569,11 +572,13 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
                           <span className={`absolute bottom-1 right-1 text-[9px] font-bold px-1.5 py-0.5 rounded shadow-lg backdrop-blur-sm ${
                             isActive
                               ? 'bg-emerald-950/95 text-emerald-400 border border-emerald-400'
+                              : isApproved
+                              ? 'bg-sky-950/95 text-sky-400 border border-sky-400'
                               : isPending
                               ? 'bg-orange-950/95 text-orange-400 border border-orange-400 animate-pulse'
                               : 'bg-rose-950/95 text-rose-400 border border-rose-400'
                           }`}>
-                            {isActive ? 'LIVE' : isPending ? 'PENDING' : 'REJECTED'}
+                            {isActive ? 'LIVE' : isApproved ? 'APPROVED' : isPending ? 'PENDING' : 'REJECTED'}
                           </span>
                         </div>
 
@@ -588,11 +593,13 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
                             <span className={`px-2 py-0.5 text-[10px] font-bold shrink-0 rounded ${
                               isActive
                                 ? 'bg-emerald-950 text-emerald-400 border border-emerald-400'
+                                : isApproved
+                                ? 'bg-sky-950 text-sky-400 border border-sky-400'
                                 : isPending
                                 ? 'bg-orange-950 text-orange-400 border border-orange-400 animate-pulse'
                                 : 'bg-rose-950 text-rose-400 border border-rose-400'
                             }`}>
-                              {isActive ? 'APPROVED' : isPending ? 'PENDING APPROVAL' : 'REJECTED'}
+                              {isActive ? 'APPROVED & LIVE' : isApproved ? 'QUALITY VERIFIED' : isPending ? 'PENDING APPROVAL' : 'REJECTED'}
                             </span>
                           </div>
 
@@ -651,7 +658,7 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
                               className="py-2 bg-emerald-950 border border-emerald-400 text-emerald-400 hover:bg-emerald-400 hover:text-black text-xs font-bold uppercase transition-colors rounded flex items-center justify-center gap-1 shadow-sm"
                             >
                               <span className="material-symbols-outlined text-sm">check_circle</span>
-                              <span>Accept & Publish to Users</span>
+                              <span>Accept & Verify Quality</span>
                             </button>
                             <button
                               onClick={() => handleRejectProduce(listing.farmerId!, listing.id, listing.cropName)}
@@ -659,6 +666,21 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
                             >
                               <span className="material-symbols-outlined text-sm">cancel</span>
                               <span>Reject Listing</span>
+                            </button>
+                          </div>
+                        )}
+
+                        {isApproved && (
+                          <div className="flex items-center justify-between gap-2 bg-sky-950/40 border border-sky-500/40 p-2 rounded">
+                            <div className="flex items-center gap-1.5 text-xs text-sky-400">
+                              <span className="material-symbols-outlined text-sm">task_alt</span>
+                              <span className="font-bold">Quality Verified — Awaiting Farmer Global Broadcast</span>
+                            </div>
+                            <button
+                              onClick={() => handleRejectProduce(listing.farmerId!, listing.id, listing.cropName)}
+                              className="px-2.5 py-1 bg-zinc-900 border border-orange-400 text-orange-400 hover:bg-orange-400 hover:text-black text-[11px] font-bold uppercase transition-colors rounded"
+                            >
+                              Unpublish
                             </button>
                           </div>
                         )}

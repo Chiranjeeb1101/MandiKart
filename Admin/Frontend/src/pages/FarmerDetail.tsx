@@ -330,11 +330,13 @@ export const FarmerDetail: React.FC<FarmerDetailProps> = ({
                                 <span className={`px-2 py-0.5 rounded text-[10px] font-extrabold border backdrop-blur-md ${
                                   listing.status === 'ACTIVE'
                                     ? 'bg-emerald-950/90 text-emerald-400 border-emerald-400'
+                                    : listing.status === 'APPROVED' || listing.status === 'ADMIN_APPROVED'
+                                    ? 'bg-sky-950/90 text-sky-400 border-sky-400'
                                     : listing.status === 'PENDING_APPROVAL'
                                     ? 'bg-orange-950/90 text-orange-400 border-orange-400 animate-pulse'
                                     : 'bg-rose-950/90 text-rose-400 border-rose-400'
                                 }`}>
-                                  {listing.status === 'ACTIVE' ? 'LIVE ON MARKETPLACE' : listing.status.replace('_', ' ')}
+                                  {listing.status === 'ACTIVE' ? 'LIVE ON MARKETPLACE' : listing.status === 'APPROVED' || listing.status === 'ADMIN_APPROVED' ? 'QUALITY VERIFIED' : listing.status.replace('_', ' ')}
                                 </span>
                               </div>
                             </div>
@@ -362,7 +364,7 @@ export const FarmerDetail: React.FC<FarmerDetailProps> = ({
                                 onClick={() => handleApproveProduce(listing.id, listing.cropName)}
                                 className="py-2 bg-emerald-950 border border-emerald-400 text-emerald-400 hover:bg-emerald-400 hover:text-black text-xs font-bold uppercase transition-colors rounded text-center shadow"
                               >
-                                Accept & Publish
+                                Accept & Verify
                               </button>
                               <button
                                 onClick={() => handleRejectProduce(listing.id, listing.cropName)}

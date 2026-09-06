@@ -11,9 +11,11 @@ export const negotiationsRouter = Router();
  */
 function permissiveFarmerAuth(req: Request, res: Response, next: NextFunction): void {
   const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith('Bearer ')) {
-    requireAuth(req, res, next);
-    return;
+  if (authHeader && authHeader.startsWith('Bearer ') && !authHeader.includes('mock_jwt_token')) {
+    try {
+      requireAuth(req, res, next);
+      return;
+    } catch {}
   }
   (req as any).user = {
     id: 'd1111111-1111-1111-1111-111111111111',

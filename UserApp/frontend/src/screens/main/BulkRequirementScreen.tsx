@@ -17,6 +17,8 @@ import { Colors, Spacing, BorderRadius, Shadows } from '../../theme';
 import { apiClient } from '../../services/apiClient';
 import { useLocation } from '../../context/LocationContext';
 
+import { useAuth } from '../../context/AuthContext';
+
 const CROPS = [
   { name: 'Red Onion', imageUrl: 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=400' },
   { name: 'Tomato', imageUrl: 'https://images.unsplash.com/photo-1607305387299-a3d9611cd469?w=400' },
@@ -32,6 +34,7 @@ const UNITS: Array<'quintal' | 'tonne' | 'kg'> = ['quintal', 'tonne', 'kg'];
 
 export default function BulkRequirementScreen({ navigation }: any) {
   const { fetchCurrentLocation, currentAddress } = useLocation();
+  const { user } = useAuth();
   const [selectedCrop, setSelectedCrop] = useState('Red Onion');
   const [grade, setGrade] = useState<'A' | 'B' | 'C'>('A');
   const [quantity, setQuantity] = useState('25');
@@ -61,6 +64,8 @@ export default function BulkRequirementScreen({ navigation }: any) {
         maxTargetPricePerUnit: parsedPrice,
         deliveryLocation,
         requiredByDate: requiredDate,
+        buyerName: user?.fullName || 'Verified Bulk Buyer',
+        buyerPhone: user?.phone || '+91 98765 43210',
       });
 
       setLoading(false);

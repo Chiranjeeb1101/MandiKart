@@ -405,7 +405,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
                             : 'text-zinc-400 hover:text-white'
                         }`}
                       >
-                        <span>Approved ({liveProduce.filter(p => p.status === 'ACTIVE').length})</span>
+                        <span>Approved ({liveProduce.filter(p => p.status === 'ACTIVE' || p.status === 'APPROVED' || p.status === 'ADMIN_APPROVED').length})</span>
                       </button>
                       <button
                         type="button"
@@ -445,7 +445,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
                 {(() => {
                   const filtered = liveProduce.filter(p => {
                     if (produceFilterTab === 'PENDING') return p.status === 'PENDING_APPROVAL';
-                    if (produceFilterTab === 'ACTIVE') return p.status === 'ACTIVE';
+                    if (produceFilterTab === 'ACTIVE') return p.status === 'ACTIVE' || p.status === 'APPROVED' || p.status === 'ADMIN_APPROVED';
                     if (produceFilterTab === 'REJECTED') return p.status === 'REJECTED';
                     return true;
                   });
@@ -473,6 +473,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
                       <div className="divide-y divide-zinc-800/80">
                         {displayed.map((prod: any) => {
                           const isPending = prod.status === 'PENDING_APPROVAL';
+                          const isApproved = prod.status === 'APPROVED' || prod.status === 'ADMIN_APPROVED';
                           const isActive = prod.status === 'ACTIVE';
                           const isRejected = prod.status === 'REJECTED';
                           const cropImg = prod.imageUrl || (prod.images && prod.images[0]) || 'https://images.unsplash.com/photo-1610348725531-843dff563e2c?w=500';
@@ -505,9 +506,9 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
                                     }}
                                   />
                                   <span className={`absolute -bottom-1 -right-1 text-[8px] font-mono font-bold px-1 rounded ${
-                                    isPending ? 'bg-orange-500 text-black' : isActive ? 'bg-emerald-500 text-black' : 'bg-rose-500 text-white'
+                                    isPending ? 'bg-orange-500 text-black' : isApproved ? 'bg-sky-500 text-black' : isActive ? 'bg-emerald-500 text-black' : 'bg-rose-500 text-white'
                                   }`}>
-                                    {isPending ? 'PENDING' : isActive ? 'LIVE' : 'REJ'}
+                                    {isPending ? 'PENDING' : isApproved ? 'APPROVED' : isActive ? 'LIVE' : 'REJ'}
                                   </span>
                                 </div>
 
@@ -522,11 +523,13 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
                                     <span className={`text-[10px] font-mono font-bold px-2 py-0.5 rounded-full border ${
                                       isPending
                                         ? 'bg-orange-950 text-orange-400 border-orange-400 animate-pulse'
+                                        : isApproved
+                                        ? 'bg-sky-950 text-sky-400 border-sky-400'
                                         : isActive
                                         ? 'bg-emerald-950 text-emerald-400 border-emerald-400'
                                         : 'bg-rose-950 text-rose-400 border-rose-400'
                                     }`}>
-                                      {isPending ? 'Pending Approval' : isActive ? 'Approved & Live' : 'Rejected'}
+                                      {isPending ? 'Pending Approval' : isApproved ? 'Quality Approved (Awaiting Farmer Broadcast)' : isActive ? 'Approved & Live' : 'Rejected'}
                                     </span>
                                   </div>
                                   <p className="text-xs text-zinc-400 font-mono mt-0.5">
@@ -560,7 +563,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
                                     </button>
                                   </>
                                 )}
-                                {isActive && (
+                                {(isActive || isApproved) && (
                                   <button
                                     onClick={() => handleDashboardRejectProduce(prod.id, prod.cropName)}
                                     className="px-2.5 py-1 text-zinc-400 hover:text-rose-400 border border-zinc-800 hover:border-rose-500/60 rounded text-[11px] font-mono transition-colors cursor-pointer"

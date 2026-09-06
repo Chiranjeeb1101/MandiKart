@@ -68,6 +68,7 @@ export interface BuyerRequest {
   cropName: string;
   variety?: string;
   quantityKg: number;
+  unit?: string;
   qualityGrade: string;
   offerPricePerKg: number;
   marketReferencePricePerKg: number;
@@ -216,126 +217,8 @@ const INITIAL_BUYERS: BuyerProfile[] = [
   },
 ];
 
-// Initial Realistic Incoming Buyer Requests
-const INITIAL_REQUESTS: BuyerRequest[] = [
-  {
-    id: 'req_101',
-    buyerId: 'buyer_abc',
-    buyerName: 'ABC Foods & Agro Procurements',
-    buyerType: 'Food Processor',
-    verified: true,
-    avatar: 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=120&auto=format&fit=crop&q=80',
-    rating: 4.8,
-    cropName: 'Red Onion',
-    variety: 'Nashik Red Garwa',
-    quantityKg: 800,
-    qualityGrade: 'Grade A',
-    offerPricePerKg: 24.5,
-    marketReferencePricePerKg: 22.0,
-    distanceKm: 40,
-    estimatedTransportPerKg: 1.5,
-    estimatedNetReturnPerKg: 23.0,
-    pickupDate: 'Tomorrow, 10:00 AM',
-    receivedAt: 'Today, 11:20 AM',
-    expiresInHours: 8,
-    status: 'New',
-    history: [
-      {
-        id: 'msg_1',
-        sender: 'buyer',
-        senderName: 'ABC Foods',
-        pricePerKg: 24.5,
-        quantityKg: 800,
-        message: 'Looking for 800 kg Grade A Garwa Onion for institutional processing.',
-        timestamp: '11:20 AM',
-      },
-    ],
-  },
-  {
-    id: 'req_102',
-    buyerId: 'buyer_freshmart',
-    buyerName: 'FreshMart Supermarkets',
-    buyerType: 'Retail Chain Hub',
-    verified: true,
-    avatar: 'https://images.unsplash.com/photo-1578916171728-46686eac8d58?w=120&auto=format&fit=crop&q=80',
-    rating: 4.9,
-    cropName: 'Hybrid Tomato',
-    variety: 'Semi-Ripe Fresh Harvest',
-    quantityKg: 300,
-    qualityGrade: 'Grade B',
-    offerPricePerKg: 20.0,
-    marketReferencePricePerKg: 18.0,
-    distanceKm: 28,
-    estimatedTransportPerKg: 1.2,
-    estimatedNetReturnPerKg: 18.8,
-    pickupDate: 'Today, 4:00 PM',
-    receivedAt: 'Today, 09:45 AM',
-    expiresInHours: 4,
-    status: 'Pending',
-    history: [
-      {
-        id: 'msg_2',
-        sender: 'buyer',
-        senderName: 'FreshMart',
-        pricePerKg: 20.0,
-        quantityKg: 300,
-        message: 'Need 300 kg fresh semi-ripe tomato for evening supermarket shelves.',
-        timestamp: '09:45 AM',
-      },
-    ],
-  },
-  {
-    id: 'req_103',
-    buyerId: 'buyer_local',
-    buyerName: 'Kalyan Wholesale APMC Traders',
-    buyerType: 'Wholesale Buyer',
-    verified: true,
-    avatar: 'https://images.unsplash.com/photo-1534723452862-4c874018d66d?w=120&auto=format&fit=crop&q=80',
-    rating: 4.6,
-    cropName: 'Jyoti Potato',
-    variety: 'Clean Washed Table Quality',
-    quantityKg: 500,
-    qualityGrade: 'Grade A',
-    offerPricePerKg: 21.0,
-    marketReferencePricePerKg: 20.0,
-    distanceKm: 32,
-    estimatedTransportPerKg: 1.0,
-    estimatedNetReturnPerKg: 20.0,
-    pickupDate: '06 Sep, Morning',
-    receivedAt: 'Yesterday, 04:15 PM',
-    expiresInHours: 18,
-    status: 'Negotiating',
-    history: [
-      {
-        id: 'msg_3',
-        sender: 'buyer',
-        senderName: 'Kalyan Traders',
-        pricePerKg: 20.0,
-        quantityKg: 500,
-        message: 'Initial wholesale inquiry at ₹20/kg.',
-        timestamp: 'Yesterday 04:15 PM',
-      },
-      {
-        id: 'msg_4',
-        sender: 'farmer',
-        senderName: 'You',
-        pricePerKg: 21.5,
-        quantityKg: 500,
-        message: 'Cold storage premium Grade A stock. Can offer at ₹21.50/kg.',
-        timestamp: 'Yesterday 06:30 PM',
-      },
-      {
-        id: 'msg_5',
-        sender: 'buyer',
-        senderName: 'Kalyan Traders',
-        pricePerKg: 21.0,
-        quantityKg: 500,
-        message: 'Counter offer: ₹21.00/kg with prompt farm pickup.',
-        timestamp: 'Today 08:30 AM',
-      },
-    ],
-  },
-];
+// Initial Incoming Buyer Requests (Empty by default — populated live from real buyer submissions)
+const INITIAL_REQUESTS: BuyerRequest[] = [];
 
 // Initial Listings
 const INITIAL_LISTINGS: SellingListing[] = [
@@ -717,7 +600,17 @@ export const useSellStore = create<SellStoreState>((set, get) => ({
 
   mergeBackendNegotiations: (negList: any[]) => {
     set((state) => {
-      const currentReqs = [...state.requests];
+      // Filter out legacy mock items from existing state
+      const currentReqs = [...state.requests].filter(
+        (r) =>
+          r &&
+          r.id &&
+          !r.id.startsWith('req_10') &&
+          !r.id.startsWith('neg_101') &&
+          !r.buyerName.includes('ABC Foods') &&
+          !r.buyerName.includes('FreshMart') &&
+          !r.buyerName.includes('Kalyan Wholesale')
+      );
       const newMapped: BuyerRequest[] = [];
 
       for (const neg of negList) {
@@ -740,24 +633,28 @@ export const useSellStore = create<SellStoreState>((set, get) => ({
           timestamp: h.timestamp ? new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently',
         }));
 
+        const isBulkFpo = neg.id?.startsWith('breq_') || neg.buyerCompany?.includes('FPO') || neg.unit === 'quintal' || neg.unit === 'tonne';
+        const determinedBuyerType: BuyerType = (neg.buyerType as BuyerType) || (isBulkFpo ? 'Institutional Buyer' : (Number(neg.quantity || 0) >= 50 ? 'Wholesale Buyer' : 'Retail Chain Hub'));
+
         const mapped: BuyerRequest = {
           id: neg.id,
           buyerId: neg.buyerId || 'buyer_1',
           buyerName: neg.buyerName || 'MandiKart Buyer',
-          buyerType: (neg.buyerType as any) || (Number(neg.quantity || 0) >= 50 ? 'Wholesale Buyer' : 'Retail Chain Hub'),
+          buyerType: determinedBuyerType,
           verified: true,
           avatar: neg.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
           rating: 4.8,
           cropName: neg.cropName || 'Produce',
-          variety: neg.variety || neg.grade || 'Standard',
+          variety: neg.grade ? `Grade ${neg.grade}` : (neg.variety || 'Standard'),
           quantityKg: Number(neg.quantity || 100),
-          qualityGrade: neg.grade || 'Grade A',
+          unit: neg.unit || 'kg',
+          qualityGrade: neg.grade ? `Grade ${neg.grade}` : 'Grade A',
           offerPricePerKg: offerPrice,
           marketReferencePricePerKg: Math.round(offerPrice * 0.95),
           distanceKm: 15,
           estimatedTransportPerKg: 0.8,
           estimatedNetReturnPerKg: Math.round((offerPrice - 0.8) * 100) / 100,
-          pickupDate: 'Immediate Farmgate Pickup',
+          pickupDate: neg.remarks ? `${neg.remarks}` : 'Immediate Farmgate Pickup',
           receivedAt: neg.createdAt ? new Date(neg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
           expiresInHours: 24,
           status: statusMap[neg.status] || 'Negotiating',
@@ -770,7 +667,7 @@ export const useSellStore = create<SellStoreState>((set, get) => ({
               senderName: neg.buyerName || 'Buyer',
               pricePerKg: offerPrice,
               quantityKg: Number(neg.quantity || 100),
-              message: neg.remarks || `Inquiry for ${neg.quantity || 100}kg ${neg.cropName || 'produce'} at ₹${offerPrice}/kg`,
+              message: neg.remarks || `Inquiry for ${neg.quantity || 100} ${neg.unit || 'kg'} ${neg.cropName || 'produce'} at ₹${offerPrice}/${neg.unit || 'kg'}`,
               timestamp: 'Recently',
             }
           ],

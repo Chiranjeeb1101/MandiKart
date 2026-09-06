@@ -78,10 +78,10 @@ export class ProductsController {
         .from('products')
         .select('*', { count: 'exact' });
 
-      if (isFarmerUuid && farmerId !== 'd1111111-1111-1111-1111-111111111111') {
-        query = query.or(`farmer_id.eq.${farmerId},farmer_id.eq.d1111111-1111-1111-1111-111111111111`);
+      if (isFarmerUuid && farmerId !== 'd1111111-1111-1111-1111-111111111111' && farmerId !== '45f8c047-c3eb-42ff-aec3-5d2b1b942777') {
+        query = query.or(`farmer_id.eq.${farmerId},farmer_id.eq.d1111111-1111-1111-1111-111111111111,farmer_id.eq.45f8c047-c3eb-42ff-aec3-5d2b1b942777`);
       } else {
-        query = query.eq('farmer_id', 'd1111111-1111-1111-1111-111111111111');
+        query = query.or('farmer_id.eq.d1111111-1111-1111-1111-111111111111,farmer_id.eq.45f8c047-c3eb-42ff-aec3-5d2b1b942777');
       }
 
       query = query.order('created_at', { ascending: false });

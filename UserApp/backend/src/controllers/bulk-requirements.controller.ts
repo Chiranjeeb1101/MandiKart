@@ -6,11 +6,13 @@
 
 import { Request, Response } from 'express';
 import { UserRole } from '@mandikart/shared-types';
-import { auditLog } from '@mandikart/shared-core';
+import { auditLog, NegotiationRegistryService, NegotiationMessageItem } from '@mandikart/shared-core';
 
 interface BulkRequirement {
   id: string;
   buyerId: string;
+  buyerName?: string;
+  buyerPhone?: string;
   cropName: string;
   grade: 'A' | 'B' | 'C';
   requiredQuantity: number;
@@ -23,27 +25,7 @@ interface BulkRequirement {
   createdAt: string;
 }
 
-/*
-// DEMO MOCK BULK REQUIREMENTS (COMMENTED OUT FOR RETRIEVAL)
-const DEMO_MOCK_BULK_REQUIREMENTS: BulkRequirement[] = [
-  {
-    id: 'breq_101',
-    buyerId: 'buyer_default_01',
-    cropName: 'Red Onion',
-    grade: 'A',
-    requiredQuantity: 25,
-    quantityUnit: 'quintal',
-    maxTargetPricePerUnit: 2400,
-    deliveryLocation: 'Pune Central Warehouse, Shivajinagar',
-    requiredByDate: '2026-09-12',
-    status: 'MATCHED',
-    matchedSupplierCount: 3,
-    createdAt: new Date(Date.now() - 86400000).toISOString(),
-  }
-];
-*/
 const mockBulkRequirements: BulkRequirement[] = [];
-
 
 export class BulkRequirementsController {
   static async listRequirements(req: Request, res: Response): Promise<void> {
@@ -59,6 +41,8 @@ export class BulkRequirementsController {
 
   static async createRequirement(req: Request, res: Response): Promise<void> {
     const buyerId = req.user?.id || 'buyer_default_01';
+    const buyerName = req.body?.buyerName || (req.user as any)?.fullName || 'Verified Bulk Buyer';
+    const buyerPhone = req.body?.buyerPhone || (req.user as any)?.phone || '+91 98765 43210';
     const { cropName, grade, requiredQuantity, quantityUnit, maxTargetPricePerUnit, deliveryLocation, requiredByDate } = req.body;
 
     if (!cropName || !requiredQuantity || !maxTargetPricePerUnit || !requiredByDate) {
@@ -73,6 +57,8 @@ export class BulkRequirementsController {
     const newReq: BulkRequirement = {
       id: `breq_${Date.now()}`,
       buyerId,
+      buyerName,
+      buyerPhone,
       cropName,
       grade: grade || 'A',
       requiredQuantity: Number(requiredQuantity),
@@ -86,6 +72,79 @@ export class BulkRequirementsController {
     };
 
     mockBulkRequirements.unshift(newReq);
+
+    // Register Direct FPO Bulk Procurement request in shared NegotiationRegistryService
+    const negotiationId = newReq.id;
+    const now = new Date().toISOString();
+    const qtyNum = Number(requiredQuantity);
+    const priceNum = Number(maxTargetPricePerUnit);
+    const unitStr = quantityUnit || 'quintal';
+
+    const initialMessages: NegotiationMessageItem[] = [
+      {
+        id: `msg_breq_init_${Date.now()}`,
+        negotiationId,
+        senderId: buyerId,
+        senderRole: 'BUYER',
+        senderName: buyerName,
+        messageType: 'OFFER',
+        text: `Direct FPO Procurement Requirement: ₹${priceNum}/${unitStr} for ${qtyNum} ${unitStr}`,
+        price: priceNum,
+        quantity: qtyNum,
+        unit: unitStr,
+        totalAmount: Math.round(priceNum * qtyNum),
+        offerStatus: 'PENDING',
+        timestamp: now,
+      },
+      {
+        id: `msg_breq_txt_${Date.now() + 1}`,
+        negotiationId,
+        senderId: buyerId,
+        senderRole: 'BUYER',
+        senderName: buyerName,
+        messageType: 'TEXT',
+        text: `[Direct FPO Procurement Demand] Required Date: ${requiredByDate}. Delivery Depot: ${deliveryLocation}. Quality Grade: Grade ${grade || 'A'}.`,
+        timestamp: new Date(Date.now() + 50).toISOString(),
+      },
+    ];
+
+    const newNeg = {
+      id: negotiationId,
+      productId: `bulk_prod_${Date.now()}`,
+      cropName: cropName || 'Produce',
+      grade: grade || 'A',
+      farmerId: 'd1111111-1111-1111-1111-111111111111',
+      farmerName: 'Ramesh Patel',
+      buyerId,
+      buyerName,
+      buyerPhone,
+      buyerCompany: 'Direct FPO Procurement Buyer',
+      originalPrice: priceNum,
+      offeredPrice: priceNum,
+      counterPrice: null,
+      quantity: qtyNum,
+      unit: unitStr,
+      status: 'PENDING_FARMER' as const,
+      remarks: `Delivery Depot: ${deliveryLocation} • Required By: ${requiredByDate}`,
+      messages: initialMessages,
+      history: [
+        {
+          id: `hist_breq_${Date.now()}`,
+          sender: 'BUYER' as const,
+          senderName: buyerName,
+          price: priceNum,
+          pricePerKg: priceNum,
+          quantityKg: qtyNum,
+          text: `[Direct FPO Procurement] Target Price: ₹${priceNum}/${unitStr} for ${qtyNum} ${unitStr}. Delivery: ${deliveryLocation} by ${requiredByDate}.`,
+          message: `[Direct FPO Procurement] Target Price: ₹${priceNum}/${unitStr} for ${qtyNum} ${unitStr}. Delivery: ${deliveryLocation} by ${requiredByDate}.`,
+          timestamp: now,
+        },
+      ],
+      createdAt: now,
+      updatedAt: now,
+    };
+
+    NegotiationRegistryService.registerNegotiation(newNeg as any);
 
     await auditLog({
       actorId: buyerId,

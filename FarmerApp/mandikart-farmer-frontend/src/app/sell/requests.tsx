@@ -159,7 +159,7 @@ export default function BuyerRequestsScreen() {
           headers: { Authorization: 'Bearer mock_jwt_token_farmer_1' },
         });
         const json = await res.json();
-        if (isMounted && json.data && Array.isArray(json.data) && json.data.length > 0) {
+        if (isMounted && json && json.data && Array.isArray(json.data)) {
           useSellStore.getState().mergeBackendNegotiations(json.data);
         }
       } catch (e) {}
@@ -515,14 +515,14 @@ export default function BuyerRequestsScreen() {
                         <Text style={styles.gradeBadgeText}>{req.qualityGrade}</Text>
                       </View>
                       <Text style={styles.qtyText}>
-                        <Text style={styles.qtyNumber}>{req.quantityKg} kg</Text> requested
+                        <Text style={styles.qtyNumber}>{req.quantityKg} {req.unit || 'kg'}</Text> requested
                       </Text>
                     </View>
                   </View>
 
                   <View style={styles.priceRight}>
                     <Text style={styles.pricePerKg}>₹{req.offerPricePerKg}</Text>
-                    <Text style={styles.priceUnit}>per kg offer</Text>
+                    <Text style={styles.priceUnit}>per {req.unit || 'kg'} offer</Text>
                     <View
                       style={[
                         styles.refDiffBadge,

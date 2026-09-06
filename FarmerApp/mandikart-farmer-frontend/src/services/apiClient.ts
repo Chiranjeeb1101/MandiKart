@@ -121,7 +121,8 @@ export const apiClient = {
       if (!response.ok) {
         throw new Error(`API GET ${endpoint} Error: ${response.status} ${response.statusText}`);
       }
-      return response.json();
+      const rawText = await response.text();
+      return rawText ? JSON.parse(rawText) : ({} as T);
     } catch (err: any) {
       clearTimeout(timer);
       if (err?.name === 'AbortError' || err?.message?.includes('aborted')) {
@@ -246,9 +247,8 @@ export const apiClient = {
   getOrders: async (token?: string | null) => {
     try {
       const res: any = await apiClient.get('/orders', token);
-      return res.data || [];
-    } catch (err) {
-      console.warn('[apiClient] getOrders failed:', err);
+      return res?.data || [];
+    } catch {
       return [];
     }
   },

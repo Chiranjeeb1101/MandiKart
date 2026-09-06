@@ -72,7 +72,7 @@ export function resolveApiBaseUrl(): string {
   return 'http://10.179.209.101:4001/api/v1';
 }
 
-const REQUEST_TIMEOUT_MS = 4000;
+const REQUEST_TIMEOUT_MS = 15000;
 
 // Internal token memory
 let activeAuthToken: string | null = null;
@@ -934,6 +934,8 @@ export const apiClient = {
       maxTargetPricePerUnit: number;
       deliveryLocation: string;
       requiredByDate: string;
+      buyerName?: string;
+      buyerPhone?: string;
     }): Promise<BulkRequirement> {
       const fallback: BulkRequirement = {
         id: `breq_${Date.now()}`,

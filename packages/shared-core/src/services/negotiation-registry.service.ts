@@ -73,110 +73,17 @@ export interface RegisteredNegotiation {
 
 const CACHE_FILE = path.join(os.tmpdir(), 'mandikart_shared_negotiations.json');
 
-const DEFAULT_NEGOTIATIONS: RegisteredNegotiation[] = [
-  {
-    id: 'neg_101',
-    productId: 'prod_garwa_onion_101',
-    cropName: 'Red Onion (Nashik Export Grade)',
-    cropImage: 'https://images.unsplash.com/photo-1508747703725-719777637510?w=600&auto=format&fit=crop&q=80',
-    grade: 'A',
-    farmerId: 'd1111111-1111-1111-1111-111111111111',
-    farmerName: 'Ramesh Patel',
-    farmerLocation: 'Nashik, Maharashtra',
-    buyerId: 'buyer_mumbai_retail_04',
-    buyerName: 'Vikram Mehta (BigBasket Hub)',
-    buyerPhone: '+91 98200 11223',
-    buyerCompany: 'BigBasket Wholesale',
-    originalPrice: 28.0,
-    offeredPrice: 25.0,
-    counterPrice: 26.5,
-    quantity: 500,
-    unit: 'kg',
-    status: 'COUNTER_OFFERED',
-    remarks: 'Inquiring for bulk weekly supply to Mumbai hub.',
-    messages: [
-      {
-        id: 'msg_1',
-        negotiationId: 'neg_101',
-        senderId: 'buyer_mumbai_retail_04',
-        senderRole: 'BUYER',
-        senderName: 'Vikram Mehta',
-        messageType: 'OFFER',
-        text: 'Initial Offer: ₹25.00/kg for 500 kg',
-        price: 25.0,
-        quantity: 500,
-        unit: 'kg',
-        totalAmount: 12500,
-        offerStatus: 'COUNTERED',
-        timestamp: new Date(Date.now() - 7200000).toISOString(),
-      },
-      {
-        id: 'msg_1_text',
-        negotiationId: 'neg_101',
-        senderId: 'buyer_mumbai_retail_04',
-        senderRole: 'BUYER',
-        senderName: 'Vikram Mehta',
-        messageType: 'TEXT',
-        text: 'Hello Ramesh ji, can you supply 500kg at ₹25/kg with farmgate pickup?',
-        timestamp: new Date(Date.now() - 7190000).toISOString(),
-      },
-      {
-        id: 'msg_2',
-        negotiationId: 'neg_101',
-        senderId: 'd1111111-1111-1111-1111-111111111111',
-        senderRole: 'FARMER',
-        senderName: 'Ramesh Patel',
-        messageType: 'OFFER',
-        text: 'Counter-Offer: ₹26.50/kg for 500 kg',
-        price: 26.5,
-        quantity: 500,
-        unit: 'kg',
-        totalAmount: 13250,
-        offerStatus: 'PENDING',
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-      },
-      {
-        id: 'msg_2_text',
-        negotiationId: 'neg_101',
-        senderId: 'd1111111-1111-1111-1111-111111111111',
-        senderRole: 'FARMER',
-        senderName: 'Ramesh Patel',
-        messageType: 'TEXT',
-        text: 'This is premium Grade A cured onion. Best counter offer is ₹26.50/kg.',
-        timestamp: new Date(Date.now() - 3590000).toISOString(),
-      },
-    ],
-    history: [
-      {
-        id: 'msg_1',
-        sender: 'BUYER',
-        senderName: 'Vikram Mehta',
-        price: 25.0,
-        text: 'Hello Ramesh ji, can you supply 500kg at ₹25/kg with farmgate pickup?',
-        timestamp: new Date(Date.now() - 7200000).toISOString(),
-      },
-      {
-        id: 'msg_2',
-        sender: 'FARMER',
-        senderName: 'Ramesh Patel',
-        price: 26.5,
-        text: 'This is premium Grade A cured onion. Best counter offer is ₹26.50/kg.',
-        timestamp: new Date(Date.now() - 3600000).toISOString(),
-      },
-    ],
-    createdAt: new Date(Date.now() - 7200000).toISOString(),
-    updatedAt: new Date(Date.now() - 3600000).toISOString(),
-  },
-];
+const DEFAULT_NEGOTIATIONS: RegisteredNegotiation[] = [];
 
 function readFromDisk(): RegisteredNegotiation[] {
   try {
     if (fs.existsSync(CACHE_FILE)) {
       const content = fs.readFileSync(CACHE_FILE, 'utf8');
       const parsed = JSON.parse(content);
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        // Ensure every item has messages array
-        return parsed.map((item) => ({
+      if (Array.isArray(parsed)) {
+        // Filter out legacy demo mock items so only genuine user requests remain
+        const filtered = parsed.filter(item => item && item.id && !item.id.includes('neg_101') && !item.id.includes('req_101') && !item.id.includes('req_102') && !item.id.includes('req_103'));
+        return filtered.map((item) => ({
           ...item,
           messages: Array.isArray(item.messages) ? item.messages : (item.history || []).map((h: any, idx: number) => ({
             id: h.id || `msg_mig_${idx}`,
