@@ -19,26 +19,36 @@ export const PushNotifications: React.FC<PushNotificationsProps> = ({
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
 
-  // Mock initial push history
-  const [history, setHistory] = useState<PushNotificationPayload[]>([
-    {
-      id: 'PUSH-948201',
-      targetApp: 'ALL',
-      targetSegment: 'all_users',
-      category: 'MARKET_SURGE',
-      title: '⚡ Market Surge Alert: Tomato Prices +18% Today',
-      body: 'Harvest prices in Nashik Mandi jumped due to high regional demand. Sell your stock now for maximum payout!',
-      deepLink: 'mandikart://prices/tomatoes',
-      sentAt: '09:45 AM Today',
-      recipientCount: 1,
-      deliveryRate: '100%',
-      status: 'DELIVERED',
-    },
-  ]);
+  // Initial push history with LocalStorage Hydration
+  const [history, setHistory] = useState<PushNotificationPayload[]>(() => {
+    try {
+      const saved = localStorage.getItem('mandikart_admin_push_history');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [
+      {
+        id: 'PUSH-948201',
+        targetApp: 'ALL',
+        targetSegment: 'all_users',
+        category: 'MARKET_SURGE',
+        title: '⚡ Market Surge Alert: Tomato Prices +18% Today',
+        body: 'Harvest prices in Nashik Mandi jumped due to high regional demand. Sell your stock now for maximum payout!',
+        deepLink: 'mandikart://prices/tomatoes',
+        sentAt: '09:45 AM Today',
+        recipientCount: 342,
+        deliveryRate: '100%',
+        status: 'DELIVERED',
+      },
+    ];
+  });
 
   const handlePushSuccess = (newPush: PushNotificationPayload) => {
-    setHistory(prev => [newPush, ...prev]);
-    setToastMessage(`Broadcast "${newPush.title}" sent successfully to ${newPush.recipientCount} device!`);
+    const updated = [newPush, ...history];
+    setHistory(updated);
+    try {
+      localStorage.setItem('mandikart_admin_push_history', JSON.stringify(updated));
+    } catch {}
+    setToastMessage(`Broadcast "${newPush.title}" sent successfully to ${newPush.recipientCount} active devices!`);
     setTimeout(() => setToastMessage(null), 5000);
   };
 
@@ -48,8 +58,12 @@ export const PushNotifications: React.FC<PushNotificationsProps> = ({
       id: `PUSH-${Date.now().toString().slice(-6)}`,
       sentAt: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' Just Now',
     };
-    setHistory(prev => [resentItem, ...prev]);
-    setToastMessage(`Re-broadcasted "${item.title}" to ${item.recipientCount} active device.`);
+    const updated = [resentItem, ...history];
+    setHistory(updated);
+    try {
+      localStorage.setItem('mandikart_admin_push_history', JSON.stringify(updated));
+    } catch {}
+    setToastMessage(`Re-broadcasted "${item.title}" to ${item.recipientCount} active devices.`);
     setTimeout(() => setToastMessage(null), 5000);
   };
 

@@ -80,6 +80,7 @@ export class CatalogController {
         .from('products')
         .select('*, farmers(full_name, state, district)')
         .eq('is_active', true)
+        .or('target_buyer.eq.BOTH,target_buyer.is.null')
         .gt('available_quantity', 0);
 
       if (crop) query = query.ilike('crop_name', `%${crop}%`);
@@ -168,12 +169,19 @@ export class CatalogController {
         const registered = ProductRegistryService.getRegisteredProducts();
         for (const reg of registered) {
           if (reg.isActive && !formatted.some((p: any) => p.id === reg.id)) {
-            formatted.unshift(reg);
+            formatted.push(reg);
           }
         }
       } catch {}
 
-      catalogCache.set(cacheKey, formatted, 5);
+      // Sort with newest listings at the top
+      formatted.sort((a: any, b: any) => {
+        const timeA = new Date(a.createdAt || a.created_at || 0).getTime();
+        const timeB = new Date(b.createdAt || b.created_at || 0).getTime();
+        return timeB - timeA;
+      });
+
+      catalogCache.set(cacheKey, formatted, 0.5); // Fast TTL for real-time visibility
 
       res.status(200).json({
         data: formatted,

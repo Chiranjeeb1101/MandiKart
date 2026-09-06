@@ -5,11 +5,16 @@
 
 import { Request, Response } from 'express';
 import { OrderStatus, UserRole } from '@mandikart/shared-types';
-import { canTransition, getSupabaseAdmin, auditLog } from '@mandikart/shared-core';
+import { canTransition, getSupabaseAdmin, auditLog, OrderRegistryService } from '@mandikart/shared-core';
 import { WebhookService } from '../services/webhook.service.js';
 
 // Real verified in-memory orders queue for real dispatch
 let realOrdersStore: any[] = [];
+
+// Helper to push orders directly into store
+export function pushToRealOrdersStore(order: any) {
+  realOrdersStore.unshift(order);
+}
 
 function normalizeOrderFromDB(raw: any) {
   if (!raw) return raw;
@@ -95,9 +100,17 @@ export class LogisticTasksController {
   static async getAvailableTasks(_req: Request, res: Response): Promise<void> {
     const isMock = !process.env.SUPABASE_URL || process.env.SUPABASE_URL.includes('placeholder');
 
+    // 1. Fetch orders from shared OrderRegistry
+    const regOrders = OrderRegistryService.getRegisteredOrders();
+    const availableReg = regOrders.filter((o: any) =>
+      ['PLACED', 'CONFIRMED', 'PICKUP_SCHEDULED'].includes(o.status)
+    );
+    const mappedReg = availableReg.map(normalizeOrderFromDB);
+
     if (isMock) {
-      // Return ONLY real orders in the system, perfectly mapped
-      const cleanOrders = realOrdersStore.map(normalizeOrderFromDB);
+      // Merge realOrdersStore and shared registered orders
+      const dbIds = new Set(realOrdersStore.map((o: any) => o.id));
+      const cleanOrders = [...realOrdersStore.map(normalizeOrderFromDB), ...mappedReg.filter((o: any) => !dbIds.has(o.id))];
       res.status(200).json({
         data: cleanOrders,
         meta: { total: cleanOrders.length },
@@ -113,12 +126,13 @@ export class LogisticTasksController {
         .select('*')
         .in('status', [OrderStatus.CONFIRMED, OrderStatus.PICKUP_SCHEDULED]);
 
-      if (error) {
-        res.status(500).json({ data: null, meta: null, error: { code: 'TASKS_ERROR', message: error.message } });
-        return;
+      let cleanOrders = mappedReg;
+      if (!error && data && data.length > 0) {
+        const dbMapped = data.map(normalizeOrderFromDB);
+        const dbIds = new Set(dbMapped.map((o: any) => o.id));
+        cleanOrders = [...dbMapped, ...mappedReg.filter((o: any) => !dbIds.has(o.id))];
       }
 
-      const cleanOrders = (data || []).map(normalizeOrderFromDB);
       res.status(200).json({ data: cleanOrders, meta: { total: cleanOrders.length }, error: null });
     } catch (err) {
       res.status(500).json({ data: null, meta: null, error: { code: 'TASKS_ERROR', message: (err as Error).message } });
@@ -146,6 +160,7 @@ export class LogisticTasksController {
     // Notify farmer app that driver is on the way
     // Remove from unassigned real orders queue
     realOrdersStore = realOrdersStore.filter(o => (o.orderId || o.id) !== orderId);
+    OrderRegistryService.updateOrder(orderId, { status: OrderStatus.PICKUP_IN_PROGRESS });
 
     WebhookService.notifyPickupStarted(orderId, driverId);
 
@@ -176,6 +191,8 @@ export class LogisticTasksController {
       return;
     }
 
+    OrderRegistryService.updateOrder(orderId, { status: OrderStatus.COLLECTED });
+
     await auditLog({
       actorId: driverId,
       role: UserRole.LOGISTICS_DRIVER,
@@ -204,6 +221,8 @@ export class LogisticTasksController {
       res.status(400).json({ data: null, meta: null, error: { code: 'ILLEGAL_TRANSITION', message: check.reason } });
       return;
     }
+
+    OrderRegistryService.updateOrder(orderId, { status: OrderStatus.IN_TRANSIT });
 
     await auditLog({
       actorId: driverId,
@@ -239,6 +258,8 @@ export class LogisticTasksController {
       res.status(400).json({ data: null, meta: null, error: { code: 'ILLEGAL_TRANSITION', message: check.reason } });
       return;
     }
+
+    OrderRegistryService.updateOrder(orderId, { status: OrderStatus.DELIVERED, escrowStatus: 'RELEASED_TO_FARMER' });
 
     await auditLog({
       actorId: driverId,

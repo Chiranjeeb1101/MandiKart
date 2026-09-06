@@ -34,7 +34,7 @@ import {
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   ArrowLeft,
@@ -144,24 +144,55 @@ const CROP_PRESETS: CropPreset[] = [
 export default function AddProduceScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const params = useLocalSearchParams<{
+    cropName?: string;
+    variety?: string;
+    category?: string;
+    grade?: string;
+    price?: string;
+    imageUri?: string;
+    mandi?: string;
+  }>();
+
   const addCrop = useProduceStore((state) => state.addCrop);
 
-  // Form State
-  const [selectedPreset, setSelectedPreset] = useState<CropPreset>(CROP_PRESETS[0]);
-  const [cropName, setCropName] = useState(CROP_PRESETS[0].name);
-  const [variety, setVariety] = useState(CROP_PRESETS[0].defaultVariety);
-  const [category, setCategory] = useState(CROP_PRESETS[0].category);
+  // Form State initialized with route params if navigated from recommendations
+  const initialPreset = (() => {
+    if (params.cropName) {
+      const match = CROP_PRESETS.find(
+        (p) => p.name.toLowerCase() === params.cropName?.toLowerCase()
+      );
+      if (match) return match;
+    }
+    return CROP_PRESETS[0];
+  })();
+
+  const [selectedPreset, setSelectedPreset] = useState<CropPreset>(initialPreset);
+  const [cropName, setCropName] = useState(params.cropName || initialPreset.name);
+  const [variety, setVariety] = useState(params.variety || initialPreset.defaultVariety);
+  const [category, setCategory] = useState(params.category || initialPreset.category);
   const [quantityInput, setQuantityInput] = useState('');
   const [unit, setUnit] = useState<'KG' | 'Quintal' | 'Ton'>('Quintal');
-  const [grade, setGrade] = useState<QualityGrade>('Grade A');
+  const [grade, setGrade] = useState<QualityGrade>((params.grade as QualityGrade) || 'Grade A');
   const [harvestOption, setHarvestOption] = useState<'Today' | 'Yesterday' | '3 Days Ago' | '1 Week Ago'>('Today');
   const [storageType, setStorageType] = useState<StorageType>('Warehouse');
   const [storageDetails, setStorageDetails] = useState('');
   const [condition, setCondition] = useState<CropCondition>('Good');
-  const [photoUri, setPhotoUri] = useState<string>(CROP_PRESETS[0].defaultImage);
-  const [expectedPrice, setExpectedPrice] = useState('');
+  const [photoUri, setPhotoUri] = useState<string>(params.imageUri || initialPreset.defaultImage);
+  const [expectedPrice, setExpectedPrice] = useState(params.price || initialPreset.refPrice.toString());
   const [availableFrom, setAvailableFrom] = useState<'Immediate' | 'Within 3 Days' | 'Within 1 Week'>('Immediate');
   const [formErrors, setFormErrors] = useState<{ [key: string]: string }>({});
+
+  React.useEffect(() => {
+    if (params.cropName) {
+      setCropName(params.cropName);
+      if (params.variety) setVariety(params.variety);
+      if (params.category) setCategory(params.category);
+      if (params.price) setExpectedPrice(params.price);
+      if (params.imageUri) setPhotoUri(params.imageUri);
+      if (params.grade) setGrade(params.grade as QualityGrade);
+    }
+  }, [params.cropName, params.variety, params.category, params.price, params.imageUri, params.grade]);
 
   // Success Celebration Modal
   const [successModalVisible, setSuccessModalVisible] = useState(false);
@@ -285,6 +316,21 @@ export default function AddProduceScreen() {
     // Asynchronously dispatch to backend API & Supabase database
     const mappedGrade = grade === 'Grade B' ? 'B' : grade === 'Grade C' ? 'C' : 'A';
     const quantityVal = parseFloat(quantityInput) || computedKg;
+    const user = useAuthStore.getState().user;
+    const farmer = useAuthStore.getState().farmer;
+    const realFarmerName = user?.fullName || user?.name || farmer?.fullName || 'Farmer';
+    const realFarmerPhone = user?.phone || farmer?.phone || '';
+    const realLocation = user?.district ? `${user.district}, ${user.state || 'Maharashtra'}` : (user?.city || 'Nashik Mandi Area');
+
+    // Strip local file:// and data: URIs — they can't be stored or served by the backend.
+    // Fall back to the crop preset's default Unsplash thumbnail.
+    const isRemoteUri = (uri: string) =>
+      uri.startsWith('http://') || uri.startsWith('https://');
+    const remoteImages = photoUri && isRemoteUri(photoUri)
+      ? [photoUri]
+      : selectedPreset.defaultImage
+      ? [selectedPreset.defaultImage]
+      : [];
 
     apiClient.createProduct({
       cropName: cropName.trim(),
@@ -296,12 +342,22 @@ export default function AddProduceScreen() {
       basePricePerUnit: expPriceNum,
       minOrderQuantity: 10,
       targetBuyer: 'BOTH',
-      images: photoUri ? [photoUri] : [selectedPreset.defaultImage],
+      images: remoteImages,
       shelfLifeDays: selectedPreset.maxDays || 7,
-      pickupAddress: 'Nashik Mandi Area',
-    }, useAuthStore.getState().token).catch((err) => {
-      console.warn('[AddProduce] Background backend sync notice:', err);
-    });
+      pickupAddress: realLocation,
+      farmerName: realFarmerName,
+      farmerPhone: realFarmerPhone,
+      location: realLocation,
+    } as any, useAuthStore.getState().token)
+      .then((res: any) => {
+        if (res?.data?.id) {
+          useProduceStore.getState().replaceCropId(newCrop.id, res.data.id);
+        }
+        useProduceStore.getState().syncWithBackend();
+      })
+      .catch((err) => {
+        console.warn('[AddProduce] Background backend sync notice:', err);
+      });
 
     setCreatedCropId(newCrop.id);
     setSuccessModalVisible(true);

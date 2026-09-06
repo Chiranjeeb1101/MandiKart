@@ -20,6 +20,20 @@ async function requireAuth(req, res, next) {
         return;
     }
     const token = authHeader.split(' ')[1];
+    // 0. Dev/Mock mode bypass — accept mock_jwt_token_*, mock_otp_token_*, mock_google_token_* tokens
+    //    when Supabase is not configured. This allows full end-to-end testing without real auth.
+    const isMockMode = !process.env.SUPABASE_URL || process.env.SUPABASE_URL.includes('placeholder');
+    const isMockToken = token.startsWith('mock_jwt_token_') || token.startsWith('mock_otp_token_') || token.startsWith('mock_google_token_');
+    if (isMockMode && isMockToken) {
+        const suffix = token.split('_').pop() || 'default';
+        req.user = {
+            id: `buyer_mock_${suffix}`,
+            phone: '+91 98765 43210',
+            role: shared_types_1.UserRole.BUYER,
+        };
+        next();
+        return;
+    }
     // 1. Authoritative 15-Day Rolling Session Check & Sliding Renewal
     const sessionCheck = session_js_1.SessionManager.validateAndTouch(token);
     if (sessionCheck.valid && sessionCheck.session) {

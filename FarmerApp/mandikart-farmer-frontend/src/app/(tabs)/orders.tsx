@@ -250,12 +250,12 @@ export default function OrdersScreen() {
                       <Text style={styles.badgeCompletedText}>DELIVERED</Text>
                     </View>
                   )}
-                  <Text style={styles.orderNumberText}>{order.orderNumber}</Text>
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={styles.orderNumberText}>{order.orderNumber}</Text>
                 </View>
 
                 <View style={styles.orderValueWrap}>
-                  <Text style={styles.orderValueAmount}>{order.totalValue}</Text>
-                  <Text style={styles.orderValueSub}>Total Value</Text>
+                  <Text numberOfLines={1} ellipsizeMode="tail" style={styles.orderValueAmount}>{order.totalValue}</Text>
+                  <Text numberOfLines={1} style={styles.orderValueSub}>Total Value</Text>
                 </View>
               </View>
 
@@ -1055,35 +1055,37 @@ const styles = StyleSheet.create({
   cardActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
-    marginTop: 4,
+    gap: 6,
+    marginTop: 6,
   },
   seeDetailsBtn: {
     flex: 1,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
-    height: 40,
-    paddingHorizontal: 8,
+    gap: 4,
+    height: 38,
+    paddingHorizontal: 6,
     borderRadius: 10,
     backgroundColor: '#F3F4F6',
     borderWidth: 1,
     borderColor: '#E5E7EB',
   },
   seeDetailsBtnText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
     color: '#374151',
   },
   trackVehicleActionBtn: {
-    flex: 1.4,
+    flex: 1.3,
+    minWidth: 0,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
-    height: 40,
-    paddingHorizontal: 10,
+    gap: 4,
+    height: 38,
+    paddingHorizontal: 8,
     borderRadius: 10,
     backgroundColor: '#15803D',
     elevation: 2,
@@ -1093,14 +1095,15 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   trackVehicleActionText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '800',
     color: '#FFFFFF',
   },
   counterBtn: {
-    flex: 1,
-    height: 40,
-    paddingHorizontal: 8,
+    flex: 0.9,
+    minWidth: 0,
+    height: 38,
+    paddingHorizontal: 6,
     borderRadius: 10,
     backgroundColor: '#FEF3C7',
     alignItems: 'center',
@@ -1109,14 +1112,15 @@ const styles = StyleSheet.create({
     borderColor: '#FDE68A',
   },
   counterBtnText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '800',
     color: '#D97706',
   },
   acceptBtn: {
-    flex: 1.4,
-    height: 40,
-    paddingHorizontal: 8,
+    flex: 1.3,
+    minWidth: 0,
+    height: 38,
+    paddingHorizontal: 6,
     borderRadius: 10,
     backgroundColor: '#15803D',
     flexDirection: 'row',
@@ -1130,25 +1134,26 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
   },
   acceptBtnText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '800',
     color: '#FFFFFF',
   },
   invoiceBtn: {
-    flex: 1.4,
-    height: 40,
+    flex: 1.3,
+    minWidth: 0,
+    height: 38,
     borderRadius: 10,
     backgroundColor: '#DCFCE7',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
+    gap: 4,
     paddingHorizontal: 8,
     borderWidth: 1,
     borderColor: '#BBF7D0',
   },
   invoiceBtnText: {
-    fontSize: 11.5,
+    fontSize: 11,
     fontWeight: '800',
     color: '#15803D',
   },

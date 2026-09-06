@@ -17,10 +17,77 @@ export const LogisticsOverview: React.FC<LogisticsOverviewProps> = ({
   onNavigateTab,
 }) => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [shipments] = useState<LogisticsShipment[]>(MOCK_SHIPMENTS);
+  const [shipments, setShipments] = useState<LogisticsShipment[]>(() => {
+    try {
+      const saved = localStorage.getItem('mandikart_admin_shipments');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return MOCK_SHIPMENTS;
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
   const [selectedShipment, setSelectedShipment] = useState<LogisticsShipment | null>(null);
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 5000);
+  };
+
+  const syncShipments = (updated: LogisticsShipment[]) => {
+    setShipments(updated);
+    try {
+      localStorage.setItem('mandikart_admin_shipments', JSON.stringify(updated));
+    } catch {}
+  };
+
+  const handlePingDriver = (shipment: LogisticsShipment) => {
+    showToast(`SMS & GPS Ping transmitted to ${shipment.driverName} (${shipment.driverPhone}). Handset ACK received (Latency: 34ms).`);
+  };
+
+  const handleDispatchMaintenance = (shipmentId: string) => {
+    const updated = shipments.map(s => {
+      if (s.id === shipmentId) {
+        return {
+          ...s,
+          status: 'IN_TRANSIT' as ShipmentStatus,
+          currentTempCelsius: s.targetTempCelsius + 0.5,
+        };
+      }
+      return s;
+    });
+    syncShipments(updated);
+    if (selectedShipment?.id === shipmentId) {
+      setSelectedShipment(prev => prev ? {
+        ...prev,
+        status: 'IN_TRANSIT' as ShipmentStatus,
+        currentTempCelsius: prev.targetTempCelsius + 0.5,
+      } : null);
+    }
+    showToast(`Emergency Maintenance Unit dispatched to reefer truck #${shipmentId}. Reefer chilling restored to normal.`);
+  };
+
+  const handleForceTelemetryRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setIsRefreshing(false);
+      const updated = shipments.map(s => ({
+        ...s,
+        batteryLevelPct: Math.max(20, s.batteryLevelPct - 1),
+        gpsCoordinates: {
+          lat: Number((s.gpsCoordinates.lat + (Math.random() - 0.5) * 0.01).toFixed(4)),
+          lng: Number((s.gpsCoordinates.lng + (Math.random() - 0.5) * 0.01).toFixed(4)),
+        }
+      }));
+      syncShipments(updated);
+      if (selectedShipment) {
+        const found = updated.find(s => s.id === selectedShipment.id);
+        if (found) setSelectedShipment(found);
+      }
+      showToast('IoT Gateway Telemetry refreshed across all 6 active carrier corridors.');
+    }, 700);
+  };
 
   // Filtering
   const filteredShipments = shipments.filter(s => {
@@ -97,12 +164,31 @@ export const LogisticsOverview: React.FC<LogisticsOverviewProps> = ({
               <p className="text-sm text-zinc-400 mt-1">Real-time GPS tracking, Reefer cold-storage temperature sensors, and carrier fleet telemetry.</p>
             </div>
             <div className="flex items-center gap-3">
+              <button
+                onClick={handleForceTelemetryRefresh}
+                disabled={isRefreshing}
+                className="px-3 py-1.5 border border-white hover:bg-white hover:text-black font-mono text-xs font-bold uppercase transition-colors flex items-center gap-1.5"
+              >
+                <span className={`material-symbols-outlined text-sm ${isRefreshing ? 'animate-spin' : ''}`}>refresh</span>
+                {isRefreshing ? 'Refreshing...' : 'Refresh Telemetry'}
+              </button>
               <div className="flex items-center text-xs font-mono text-emerald-400 border border-emerald-400 bg-emerald-950 px-3 py-1.5 rounded">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse mr-2"></span>
                 IOT REEFER GATEWAY ACTIVE
               </div>
             </div>
           </div>
+
+          {/* Toast Notification */}
+          {toastMessage && (
+            <div className="p-3.5 bg-black border border-emerald-400 text-emerald-400 text-xs font-mono flex items-center justify-between shadow-lg">
+              <div className="flex items-center gap-2">
+                <span className="material-symbols-outlined text-sm">satellite_alt</span>
+                <span>{toastMessage}</span>
+              </div>
+              <button onClick={() => setToastMessage(null)} className="text-emerald-400 hover:text-white font-bold">✕</button>
+            </div>
+          )}
 
           {/* Fleet Metrics Row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -347,11 +433,17 @@ export const LogisticsOverview: React.FC<LogisticsOverviewProps> = ({
                 <div className="pt-4 border-t border-white space-y-2">
                   <span className="text-xs font-mono uppercase text-zinc-400 block">Fleet Admin Controls</span>
                   {selectedShipment.status === 'TEMP_ALERT' && (
-                    <button className="w-full py-2 bg-rose-950 border border-rose-400 text-rose-400 hover:bg-rose-400 hover:text-black font-mono text-xs font-bold uppercase transition-colors">
+                    <button 
+                      onClick={() => handleDispatchMaintenance(selectedShipment.id)}
+                      className="w-full py-2 bg-rose-950 border border-rose-400 text-rose-400 hover:bg-rose-400 hover:text-black font-mono text-xs font-bold uppercase transition-colors"
+                    >
                       Dispatch Nearest Maintenance Team
                     </button>
                   )}
-                  <button className="w-full py-2 bg-zinc-900 border border-white text-white hover:bg-white hover:text-black font-mono text-xs font-bold uppercase transition-colors">
+                  <button 
+                    onClick={() => handlePingDriver(selectedShipment)}
+                    className="w-full py-2 bg-zinc-900 border border-white text-white hover:bg-white hover:text-black font-mono text-xs font-bold uppercase transition-colors"
+                  >
                     Ping Driver Handset
                   </button>
                 </div>

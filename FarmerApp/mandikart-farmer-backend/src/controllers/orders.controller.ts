@@ -1,8 +1,3 @@
-/**
- * MandiKart — Orders Controller (Farmer-side actions only)
- * Enforces canonical order transitions via @mandikart/shared-core state machine.
- */
-
 import { Request, Response } from 'express';
 import {
   OrderStatus,
@@ -11,10 +6,67 @@ import {
   VerifyPickupSchema,
   NegotiateSchema,
 } from '@mandikart/shared-types';
-import { canTransition, getSupabaseAdmin, isSupabaseConfigured, auditLog } from '@mandikart/shared-core';
+import { canTransition, getSupabaseAdmin, isSupabaseConfigured, auditLog, OrderRegistryService } from '@mandikart/shared-core';
 import { InventoryService } from '../services/inventory.service.js';
 import { NegotiationService } from '../services/negotiation.service.js';
 import { DashboardService } from '../services/dashboard.service.js';
+
+function mapRegisteredOrderToFarmerOrder(reg: any, fallbackFarmerId: string) {
+  const cropName = reg.cropName || reg.produceName || 'Fresh Produce';
+  const quantity = Number(reg.quantityKg || reg.quantity || 100);
+  const pricePerUnit = Number(reg.pricePerKg || reg.pricePerUnit || 30);
+  const totalAmount = Number(reg.totalAmount || reg.totalPrice || quantity * pricePerUnit);
+  const platformFee = Math.round(totalAmount * 0.025 * 100) / 100;
+  const farmerPayoutAmount = totalAmount - platformFee;
+
+  const items = reg.items && Array.isArray(reg.items) && reg.items.length > 0
+    ? reg.items.map((it: any, idx: number) => ({
+        id: it.id || `item_${reg.id}_${idx}`,
+        orderId: reg.id,
+        productId: it.productId || `prod_${idx}`,
+        cropName: it.cropName || cropName,
+        grade: it.grade || reg.qualityGrade || 'A',
+        quantity: Number(it.quantity || quantity),
+        unit: it.unit || 'kg',
+        pricePerUnit: Number(it.pricePerUnit || pricePerUnit),
+        subtotal: Number(it.subtotal || (Number(it.quantity || quantity) * Number(it.pricePerUnit || pricePerUnit))),
+      }))
+    : [
+        {
+          id: `item_${reg.id}_0`,
+          orderId: reg.id,
+          productId: reg.productId || 'prod_1',
+          cropName,
+          grade: reg.qualityGrade ? String(reg.qualityGrade).replace('GRADE_', '') : 'A',
+          quantity,
+          unit: 'kg',
+          pricePerUnit,
+          subtotal: totalAmount,
+        },
+      ];
+
+  return {
+    id: reg.id,
+    orderNumber: reg.orderNumber || `#MK-${reg.id}`,
+    farmerId: reg.farmerId || fallbackFarmerId,
+    buyerId: reg.buyerId || 'buyer_mumbai_retail_04',
+    buyerName: reg.buyerName || 'MandiKart Buyer',
+    buyerPhone: reg.buyerPhone || '+91 9820011223',
+    status: reg.status as OrderStatus,
+    totalAmount,
+    platformFee,
+    farmerPayoutAmount,
+    pickupOtp: reg.pickupOtp || '482910',
+    deliveryOtp: reg.deliveryOtp || '839210',
+    pickupScheduledAt: reg.pickupScheduledAt || null,
+    driverName: reg.driverName || null,
+    driverPhone: reg.driverPhone || null,
+    vehicleNumber: reg.vehicleNumber || null,
+    items,
+    createdAt: reg.createdAt || new Date().toISOString(),
+    updatedAt: reg.timestamp || reg.createdAt || new Date().toISOString(),
+  };
+}
 
 export class OrdersController {
   static async listOrders(req: Request, res: Response): Promise<void> {
@@ -25,77 +77,20 @@ export class OrdersController {
     const offset = (page - 1) * limit;
 
     try {
+      // 1. Fetch cross-app registered orders
+      const rawRegOrders = OrderRegistryService.getRegisteredOrders();
+      const mappedRegOrders = rawRegOrders.map((r) => mapRegisteredOrderToFarmerOrder(r, farmerId));
+
       if (!isSupabaseConfigured()) {
-        const fallback = [
-          {
-            id: 'ord_101',
-            orderNumber: 'MK-ORD-2026-9041',
-            farmerId,
-            buyerId: 'buyer_mumbai_retail_04',
-            buyerName: 'Amit Grocery Mart',
-            buyerPhone: '+91 9820011223',
-            status: OrderStatus.PLACED,
-            totalAmount: 13250,
-            platformFee: 331.25,
-            farmerPayoutAmount: 12918.75,
-            pickupOtp: '482910',
-            pickupScheduledAt: null,
-            driverName: null,
-            driverPhone: null,
-            vehicleNumber: null,
-            items: [
-              {
-                id: 'item_1',
-                orderId: 'ord_101',
-                productId: 'prod_1',
-                cropName: 'Red Onion',
-                grade: 'A',
-                quantity: 500,
-                unit: 'kg',
-                pricePerUnit: 26.5,
-                subtotal: 13250,
-              },
-            ],
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-          {
-            id: 'ord_102',
-            orderNumber: 'MK-ORD-2026-8874',
-            farmerId,
-            buyerId: 'buyer_pune_bulk_01',
-            buyerName: 'FreshBasket Supermarkets',
-            buyerPhone: '+91 9821144556',
-            status: OrderStatus.CONFIRMED,
-            totalAmount: 11000,
-            platformFee: 275.0,
-            farmerPayoutAmount: 10725.0,
-            pickupOtp: '918234',
-            pickupScheduledAt: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
-            driverName: 'Santosh Shinde',
-            driverPhone: '+91 9844001122',
-            vehicleNumber: 'MH 15 AB 4402',
-            items: [
-              {
-                id: 'item_2',
-                orderId: 'ord_102',
-                productId: 'prod_2',
-                cropName: 'Tomato (Vaishali)',
-                grade: 'A',
-                quantity: 500,
-                unit: 'kg',
-                pricePerUnit: 22.0,
-                subtotal: 11000,
-              },
-            ],
-            createdAt: new Date(Date.now() - 2 * 3600 * 1000).toISOString(),
-            updatedAt: new Date().toISOString(),
-          },
-        ];
+        let combined = [...mappedRegOrders];
+        if (statusFilter) {
+          const statuses = statusFilter.split(',');
+          combined = combined.filter((o) => statuses.includes(o.status));
+        }
 
         res.status(200).json({
-          data: fallback,
-          meta: { page: 1, limit: 20, total: fallback.length, totalPages: 1 },
+          data: combined,
+          meta: { page: 1, limit: 20, total: combined.length, totalPages: 1 },
           error: null,
         });
         return;
@@ -115,25 +110,20 @@ export class OrdersController {
 
       const { data, count, error } = await query.range(offset, offset + limit - 1);
 
-      if (error || !data || data.length === 0) {
-        res.status(200).json({
-          data: [],
-          meta: { page, limit, total: 0, totalPages: 1 },
-          error: null,
-        });
-        return;
+      let finalOrders = mappedRegOrders;
+      if (!error && data && data.length > 0) {
+        // Merge Supabase orders with registered orders (avoiding duplicates)
+        const dbIds = new Set(data.map((d: any) => d.id));
+        const nonDuplicateReg = mappedRegOrders.filter((o) => !dbIds.has(o.id));
+        finalOrders = [...data, ...nonDuplicateReg];
       }
 
       res.status(200).json({
-        data,
-        meta: {
-          page,
-          limit,
-          total: count || data.length,
-          totalPages: Math.ceil((count || data.length) / limit),
-        },
+        data: finalOrders,
+        meta: { page: 1, limit: 20, total: finalOrders.length, totalPages: 1 },
         error: null,
       });
+      return;
     } catch (err) {
       res.status(500).json({
         data: null,

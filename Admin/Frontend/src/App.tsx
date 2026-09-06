@@ -12,19 +12,35 @@ import { SystemSettings } from './pages/SystemSettings';
 import { PushNotifications } from './pages/PushNotifications';
 
 export const App: React.FC = () => {
-  const [currentUser, setCurrentUser] = useState<AdminUser | null>({
-    id: 'adm-001',
-    name: 'Rajesh Sharma',
-    email: 'admin@mandikart.gov.in',
-    role: 'SUPER_ADMIN',
-    department: 'Platform Ops & Oversight',
+  const [currentUser, setCurrentUser] = useState<AdminUser | null>(() => {
+    try {
+      const saved = localStorage.getItem('mandikart_admin_profile');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return {
+      id: 'adm-001',
+      name: 'Rajesh Sharma',
+      email: 'admin@mandikart.gov.in',
+      role: 'SUPER_ADMIN',
+      department: 'Platform Ops & Oversight',
+    };
   });
 
   const [currentTab, setCurrentTab] = useState<string>('dashboard');
   const [selectedFarmer, setSelectedFarmer] = useState<FarmerUser | null>(null);
 
+  const handleUpdateUser = (updated: AdminUser) => {
+    setCurrentUser(updated);
+    try {
+      localStorage.setItem('mandikart_admin_profile', JSON.stringify(updated));
+    } catch {}
+  };
+
   const handleLoginSuccess = (user: AdminUser) => {
     setCurrentUser(user);
+    try {
+      localStorage.setItem('mandikart_admin_profile', JSON.stringify(user));
+    } catch {}
     setCurrentTab('dashboard');
   };
 
@@ -127,6 +143,7 @@ export const App: React.FC = () => {
         user={currentUser}
         onLogout={handleLogout}
         onNavigateTab={handleTabChange}
+        onUpdateUser={handleUpdateUser}
       />
     );
   }

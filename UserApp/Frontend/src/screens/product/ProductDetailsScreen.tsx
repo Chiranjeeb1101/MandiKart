@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, StatusBar } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, Image, TouchableOpacity, StatusBar, ActivityIndicator } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { NativeStackScreenProps } from '@react-navigation/native-stack';
@@ -8,28 +8,43 @@ import { Colors, Spacing, BorderRadius, Shadows } from '../../theme';
 import PrimaryButton from '../../components/PrimaryButton';
 import QuantitySelector from '../../components/QuantitySelector';
 import FarmerCard from '../../components/FarmerCard';
-import { SAMPLE_PRODUCTS } from '../../services/mockData';
 
 import NegotiationModal from '../../components/NegotiationModal';
 import { useLocation } from '../../context/LocationContext';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
+import { useCatalog } from '../../context/CatalogContext';
 
 import { getFallbackProductImage } from '../../utils/imageUtils';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProductStack'>;
 
 export default function ProductDetailsScreen({ navigation, route }: any) {
-  const { productId } = route.params;
-  const product = SAMPLE_PRODUCTS.find((p) => p.id === productId) || SAMPLE_PRODUCTS[0];
+  const productParam = route.params?.product;
+  const productId = route.params?.productId || productParam?.id;
+  const { getProductById } = useCatalog();
+  const product = productParam || getProductById(productId);
+
   const { currentAddress } = useLocation();
   const { addToCart } = useCart();
   const { toggleWishlist, isWishlisted } = useWishlist();
   const [qty, setQty] = useState(1);
   const [isNegotiating, setIsNegotiating] = useState(false);
-  const [imgUri, setImgUri] = useState<string>(product.imageUrl);
+  const [imgUri, setImgUri] = useState<string | null>(null);
 
-  const favorited = isWishlisted(product.id);
+  const favorited = product ? isWishlisted(product.id) : false;
+
+  if (!product) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center' }]}>
+        <Ionicons name="alert-circle-outline" size={48} color={Colors.textSecondary} />
+        <Text style={{ marginTop: 16, fontSize: 16, color: Colors.textSecondary }}>Product not found</Text>
+        <PrimaryButton title="Go Back" onPress={() => navigation.goBack()} style={{ marginTop: 24, width: 200 }} />
+      </View>
+    );
+  }
+
+  const activeImage = imgUri || product.imageUrl || getFallbackProductImage(product.category, product.name);
 
   return (
     <View style={styles.container}>
@@ -39,11 +54,11 @@ export default function ProductDetailsScreen({ navigation, route }: any) {
         {/* Image & Header */}
         <View style={styles.imageHeader}>
           <Image
-            source={{ uri: imgUri || getFallbackProductImage(product.category, product.name) }}
+            source={{ uri: activeImage }}
             style={styles.image}
             onError={() => {
               const fallback = getFallbackProductImage(product.category, product.name);
-              if (imgUri !== fallback) {
+              if (activeImage !== fallback) {
                 setImgUri(fallback);
               }
             }}

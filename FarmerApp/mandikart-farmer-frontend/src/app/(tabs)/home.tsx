@@ -676,7 +676,20 @@ export default function HomeScreen() {
 
               <Pressable
                 style={({ pressed }) => [styles.sellHarvestBtn, pressed && { opacity: 0.9 }]}
-                onPress={() => router.push('/produce/add')}
+                onPress={() =>
+                  router.push({
+                    pathname: '/produce/add',
+                    params: {
+                      cropName: 'Garlic',
+                      variety: 'Ooty Hybrid',
+                      category: 'Vegetables',
+                      grade: 'Grade A',
+                      price: '180',
+                      imageUri: GARLIC_PHOTO_URI,
+                      mandi: 'Nashik APMC Mandi',
+                    },
+                  })
+                }
               >
                 <Plus size={14} color="#FFFFFF" strokeWidth={2.8} />
                 <Text style={styles.sellHarvestBtnText}>Add Crop</Text>
@@ -722,7 +735,20 @@ export default function HomeScreen() {
 
               <Pressable
                 style={({ pressed }) => [styles.sellHarvestBtn, pressed && { opacity: 0.9 }]}
-                onPress={() => router.push('/produce/add')}
+                onPress={() =>
+                  router.push({
+                    pathname: '/produce/add',
+                    params: {
+                      cropName: 'Baby Corn',
+                      variety: 'Golden Sweet',
+                      category: 'Vegetables',
+                      grade: 'Grade A',
+                      price: '65',
+                      imageUri: CORN_PHOTO_URI,
+                      mandi: 'Pimpalgaon Mandi Hub',
+                    },
+                  })
+                }
               >
                 <Plus size={14} color="#FFFFFF" strokeWidth={2.8} />
                 <Text style={styles.sellHarvestBtnText}>Add Crop</Text>

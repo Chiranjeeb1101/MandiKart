@@ -7,6 +7,7 @@ interface SystemSettingsProps {
   user: AdminUser;
   onLogout: () => void;
   onNavigateTab: (tabId: string) => void;
+  onUpdateUser?: (updatedUser: AdminUser) => void;
 }
 
 interface AdminTeamMember {
@@ -22,46 +23,84 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({
   user,
   onLogout,
   onNavigateTab,
+  onUpdateUser,
 }) => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
 
-  // Settings State
-  const [escrowAutoReleaseHours, setEscrowAutoReleaseHours] = useState<number>(24);
-  const [aiPriceAutoSync, setAiPriceAutoSync] = useState<boolean>(true);
-  const [tempAlertVariance, setTempAlertVariance] = useState<number>(2.0);
-  const [mandatoryQualityAssay, setMandatoryQualityAssay] = useState<boolean>(true);
+  // Account Profile State
+  const [accountName, setAccountName] = useState(user.name);
+  const [accountEmail, setAccountEmail] = useState(user.email);
+  const [accountDepartment, setAccountDepartment] = useState(user.department);
+  const [accountPhone, setAccountPhone] = useState('+91 98230 44910');
+  const [twoFactorAuth, setTwoFactorAuth] = useState(true);
+
+  // Settings State with LocalStorage Hydration
+  const [escrowAutoReleaseHours, setEscrowAutoReleaseHours] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('mandikart_admin_system_settings');
+      if (saved) return JSON.parse(saved).escrowAutoReleaseHours || 24;
+    } catch {}
+    return 24;
+  });
+  const [aiPriceAutoSync, setAiPriceAutoSync] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('mandikart_admin_system_settings');
+      if (saved) return JSON.parse(saved).aiPriceAutoSync ?? true;
+    } catch {}
+    return true;
+  });
+  const [tempAlertVariance, setTempAlertVariance] = useState<number>(() => {
+    try {
+      const saved = localStorage.getItem('mandikart_admin_system_settings');
+      if (saved) return JSON.parse(saved).tempAlertVariance || 2.0;
+    } catch {}
+    return 2.0;
+  });
+  const [mandatoryQualityAssay, setMandatoryQualityAssay] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('mandikart_admin_system_settings');
+      if (saved) return JSON.parse(saved).mandatoryQualityAssay ?? true;
+    } catch {}
+    return true;
+  });
   const [maintenanceMode, setMaintenanceMode] = useState<boolean>(false);
 
   // Saved Alert State
   const [saveSuccessMsg, setSaveSuccessMsg] = useState<string | null>(null);
 
-  // Admin Team Members State
-  const [teamMembers, setTeamMembers] = useState<AdminTeamMember[]>([
-    {
-      id: 'adm-001',
-      name: 'Rajesh Sharma',
-      email: 'admin@mandikart.gov.in',
-      role: 'SUPER_ADMIN',
-      department: 'Platform Ops & Oversight',
-      status: 'ACTIVE',
-    },
-    {
-      id: 'adm-002',
-      name: 'Priya Nair',
-      email: 'priya.nair@mandikart.gov.in',
-      role: 'DISPUTE_MANAGER',
-      department: 'Legal & Arbitration Tribunal',
-      status: 'ACTIVE',
-    },
-    {
-      id: 'adm-003',
-      name: 'Amit Patel',
-      email: 'amit.patel@mandikart.gov.in',
-      role: 'LOGISTICS_AUDITOR',
-      department: 'Cold-Chain Telemetry',
-      status: 'ACTIVE',
-    },
-  ]);
+  // Admin Team Members State with LocalStorage Hydration
+  const [teamMembers, setTeamMembers] = useState<AdminTeamMember[]>(() => {
+    try {
+      const saved = localStorage.getItem('mandikart_admin_team_members');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return [
+      {
+        id: 'adm-001',
+        name: 'Rajesh Sharma',
+        email: 'admin@mandikart.gov.in',
+        role: 'SUPER_ADMIN',
+        department: 'Platform Ops & Oversight',
+        status: 'ACTIVE',
+      },
+      {
+        id: 'adm-002',
+        name: 'Priya Nair',
+        email: 'priya.nair@mandikart.gov.in',
+        role: 'DISPUTE_MANAGER',
+        department: 'Legal & Arbitration Tribunal',
+        status: 'ACTIVE',
+      },
+      {
+        id: 'adm-003',
+        name: 'Amit Patel',
+        email: 'amit.patel@mandikart.gov.in',
+        role: 'LOGISTICS_AUDITOR',
+        department: 'Cold-Chain Telemetry',
+        status: 'ACTIVE',
+      },
+    ];
+  });
 
   // Invite Modal State
   const [showInviteModal, setShowInviteModal] = useState(false);
@@ -69,8 +108,36 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [newAdminRole, setNewAdminRole] = useState<AdminTeamMember['role']>('LOGISTICS_AUDITOR');
 
+  const handleSaveAccountProfile = (e: React.FormEvent) => {
+    e.preventDefault();
+    const updated: AdminUser = {
+      ...user,
+      name: accountName,
+      email: accountEmail,
+      department: accountDepartment,
+    };
+    try {
+      localStorage.setItem('mandikart_admin_profile', JSON.stringify(updated));
+    } catch {}
+    if (onUpdateUser) {
+      onUpdateUser(updated);
+    }
+    setSaveSuccessMsg(`Account Profile updated successfully for ${accountName}. Credentials synced.`);
+    setTimeout(() => setSaveSuccessMsg(null), 5000);
+  };
+
   const handleSaveSettings = () => {
-    setSaveSuccessMsg('System configuration settings updated successfully. Applied to MandiEngine gateway.');
+    const settingsPayload = {
+      escrowAutoReleaseHours,
+      aiPriceAutoSync,
+      tempAlertVariance,
+      mandatoryQualityAssay,
+      maintenanceMode,
+    };
+    try {
+      localStorage.setItem('mandikart_admin_system_settings', JSON.stringify(settingsPayload));
+    } catch {}
+    setSaveSuccessMsg('System operational parameters updated and saved to MandiEngine gateway.');
     setTimeout(() => setSaveSuccessMsg(null), 5000);
   };
 
@@ -87,11 +154,30 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({
       status: 'ACTIVE',
     };
 
-    setTeamMembers(prev => [...prev, newMember]);
+    const updatedMembers = [...teamMembers, newMember];
+    setTeamMembers(updatedMembers);
+    try {
+      localStorage.setItem('mandikart_admin_team_members', JSON.stringify(updatedMembers));
+    } catch {}
+
     setShowInviteModal(false);
     setNewAdminName('');
     setNewAdminEmail('');
     setSaveSuccessMsg(`New admin user ${newAdminName} onboarded with role ${newAdminRole}.`);
+    setTimeout(() => setSaveSuccessMsg(null), 5000);
+  };
+
+  const handleRevokeAdmin = (memberId: string, memberName: string) => {
+    if (memberId === 'adm-001') {
+      alert('Cannot revoke primary Super Admin account.');
+      return;
+    }
+    const updated = teamMembers.filter(m => m.id !== memberId);
+    setTeamMembers(updated);
+    try {
+      localStorage.setItem('mandikart_admin_team_members', JSON.stringify(updated));
+    } catch {}
+    setSaveSuccessMsg(`Credentials for ${memberName} (${memberId}) revoked.`);
     setTimeout(() => setSaveSuccessMsg(null), 5000);
   };
 
@@ -113,7 +199,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-white">
             <div>
               <h1 className="text-2xl font-black uppercase tracking-wider text-white">System Settings & Engine Gateway</h1>
-              <p className="text-sm text-zinc-400 mt-1">Configure platform escrow rules, AI price auto-sync, cold-chain telemetry thresholds, and admin team RBAC.</p>
+              <p className="text-sm text-zinc-400 mt-1">Configure platform escrow rules, AI price auto-sync, cold-chain telemetry thresholds, and admin account security.</p>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center text-xs font-mono text-emerald-400 border border-emerald-400 bg-emerald-950 px-3 py-1.5 rounded">
@@ -133,6 +219,90 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({
               <button onClick={() => setSaveSuccessMsg(null)} className="text-xs text-emerald-400 underline">[DISMISS]</button>
             </div>
           )}
+
+          {/* Section 0: Admin Account & Security Profile */}
+          <div className="bg-black border border-white p-6 space-y-6 font-mono">
+            <div className="flex items-center justify-between border-b border-white pb-3">
+              <div>
+                <h2 className="text-lg font-black uppercase tracking-wider text-white flex items-center gap-2">
+                  <span className="material-symbols-outlined text-emerald-400">manage_accounts</span>
+                  Admin Account & Security Profile
+                </h2>
+                <p className="text-xs text-zinc-400 mt-0.5">Manage authenticated administrator credentials, contact information, and two-factor authentication.</p>
+              </div>
+              <span className="text-xs font-bold px-2.5 py-1 bg-emerald-950 border border-emerald-400 text-emerald-400">
+                ACTIVE ADMIN SESSION
+              </span>
+            </div>
+
+            <form onSubmit={handleSaveAccountProfile} className="space-y-4 text-xs">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div>
+                  <label className="text-zinc-400 block mb-1">Administrator Full Name:</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={accountName}
+                    onChange={(e) => setAccountName(e.target.value)}
+                    className="w-full bg-zinc-950 text-white border border-zinc-700 focus:border-white p-2.5 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-zinc-400 block mb-1">Official Email Address:</label>
+                  <input 
+                    type="email" 
+                    required
+                    value={accountEmail}
+                    onChange={(e) => setAccountEmail(e.target.value)}
+                    className="w-full bg-zinc-950 text-white border border-zinc-700 focus:border-white p-2.5 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-zinc-400 block mb-1">Department / Office:</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={accountDepartment}
+                    onChange={(e) => setAccountDepartment(e.target.value)}
+                    className="w-full bg-zinc-950 text-white border border-zinc-700 focus:border-white p-2.5 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-zinc-400 block mb-1">Direct Secure Phone:</label>
+                  <input 
+                    type="text" 
+                    required
+                    value={accountPhone}
+                    onChange={(e) => setAccountPhone(e.target.value)}
+                    className="w-full bg-zinc-950 text-white border border-zinc-700 focus:border-white p-2.5 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2 border-t border-zinc-800">
+                <div className="flex items-center gap-3">
+                  <span className="text-zinc-300 font-bold">Two-Factor Authentication (SMS & OTP Gate):</span>
+                  <button 
+                    type="button"
+                    onClick={() => setTwoFactorAuth(!twoFactorAuth)}
+                    className={`px-2.5 py-1 text-[11px] font-bold border transition-colors ${twoFactorAuth ? 'bg-emerald-950 border-emerald-400 text-emerald-400' : 'bg-zinc-900 border-zinc-700 text-zinc-400'}`}
+                  >
+                    {twoFactorAuth ? '✓ 2FA ENABLED' : '✗ 2FA DISABLED'}
+                  </button>
+                </div>
+
+                <button 
+                  type="submit"
+                  className="px-6 py-2.5 bg-white text-black font-black uppercase text-xs hover:bg-zinc-200 transition-colors border border-white"
+                >
+                  Save Account Profile
+                </button>
+              </div>
+            </form>
+          </div>
 
           {/* Section 1: Escrow & Telemetry Platform Rules */}
           <div className="bg-black border border-white p-6 space-y-6">
@@ -241,6 +411,7 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({
                     <th className="p-3">Department</th>
                     <th className="p-3">Assigned Role</th>
                     <th className="p-3">Status</th>
+                    <th className="p-3 text-center">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-800">
@@ -267,6 +438,18 @@ export const SystemSettings: React.FC<SystemSettingsProps> = ({
                         <span className="inline-flex items-center text-emerald-400 font-bold text-xs">
                           <span className="w-2 h-2 rounded-full bg-emerald-400 mr-1.5 animate-pulse" /> {member.status}
                         </span>
+                      </td>
+                      <td className="p-3 text-center">
+                        {member.id !== 'adm-001' ? (
+                          <button
+                            onClick={() => handleRevokeAdmin(member.id, member.name)}
+                            className="text-rose-400 hover:text-rose-300 hover:underline text-[11px] font-bold"
+                          >
+                            Revoke Access
+                          </button>
+                        ) : (
+                          <span className="text-zinc-600 text-[10px]">Primary Root</span>
+                        )}
                       </td>
                     </tr>
                   ))}

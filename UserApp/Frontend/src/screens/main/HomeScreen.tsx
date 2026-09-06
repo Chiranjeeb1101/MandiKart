@@ -15,10 +15,10 @@ import ProductCard from '../../components/ProductCard';
 import MarqueeTicker from '../../components/MarqueeTicker';
 import { SAMPLE_PRODUCTS, SAMPLE_CATEGORIES } from '../../services/mockData';
 import { apiClient } from '../../services/apiClient';
-import { Product } from '../../types';
 import { useAuth } from '../../context/AuthContext';
 import { useLocation } from '../../context/LocationContext';
 import { useLanguage, LANGUAGE_OPTIONS, SupportedLanguage } from '../../context/LanguageContext';
+import { useCatalog } from '../../context/CatalogContext';
 import InteractiveMapView from '../../components/InteractiveMapView';
 
 type Nav = NativeStackNavigationProp<RootStackParamList>;
@@ -114,9 +114,9 @@ export default function HomeScreen() {
     selectSavedAddress,
   } = useLocation();
   const { t, currentLanguageOption, setLanguage } = useLanguage();
+  const { products, refresh: refreshCatalog } = useCatalog();
   const [searchText, setSearchText] = useState('');
   const [wishlisted, setWishlisted] = useState<string[]>([]);
-  const [products, setProducts] = useState<Product[]>(SAMPLE_PRODUCTS);
   const [isRefreshingProducts, setIsRefreshingProducts] = useState<boolean>(false);
   const [isLocationModalVisible, setIsLocationModalVisible] = useState<boolean>(false);
   const [isLanguageModalVisible, setIsLanguageModalVisible] = useState<boolean>(false);
@@ -128,10 +128,7 @@ export default function HomeScreen() {
   const fetchLiveProducts = async () => {
     try {
       setIsRefreshingProducts(true);
-      const live = await apiClient.catalog.search();
-      if (live && live.length > 0) {
-        setProducts(live);
-      }
+      await refreshCatalog();
     } catch (err) {
       console.log('[HomeScreen] Live catalog fetch notice, keeping cached:', err);
     } finally {
@@ -339,7 +336,7 @@ export default function HomeScreen() {
 
         {/* Marquee ticker */}
         <MarqueeTicker
-          items={SAMPLE_PRODUCTS.map((p) => ({
+          items={(products && products.length > 0 ? products : SAMPLE_PRODUCTS).map((p) => ({
             name: p.name,
             price: `₹${p.price}/${p.unit}`,
             imageUrl: p.imageUrl,

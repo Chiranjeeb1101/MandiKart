@@ -70,7 +70,7 @@ export default function ProductCard({
       <View style={styles.info}>
         <Text style={styles.name} numberOfLines={2}>{product.name}</Text>
         <Text style={styles.farmerName} numberOfLines={1}>
-          {product.farmer.name}
+          {product.farmer?.name || 'Verified Farmer'}
         </Text>
 
         <View style={styles.ratingRow}>

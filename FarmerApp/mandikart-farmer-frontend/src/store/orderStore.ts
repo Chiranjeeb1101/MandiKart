@@ -9,6 +9,8 @@
  */
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export type OrderTab = 'All' | 'Active' | 'Pending' | 'Completed';
 export type OrderStatusType = 'en_route' | 'scheduled' | 'pending' | 'completed';
@@ -208,87 +210,96 @@ const INITIAL_ORDERS: OrderItem[] = [
   },
 ];
 
-export const useOrderStore = create<OrderStoreState>((set, get) => ({
-  orders: INITIAL_ORDERS,
+export const useOrderStore = create<OrderStoreState>()(
+  persist(
+    (set, get) => ({
+      orders: INITIAL_ORDERS,
 
-  createOrderFromSale: (params) => {
-    const randomSuffix = Math.floor(1000 + Math.random() * 9000);
-    const orderNumber = `#MK${randomSuffix}`;
-    const newId = `ord_${Date.now()}`;
+      createOrderFromSale: (params) => {
+        const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+        const orderNumber = `#MK${randomSuffix}`;
+        const newId = `ord_${Date.now()}`;
 
-    // Get default crop image if none provided
-    let fallbackImage = ONION_CROP_URI;
-    const nameLower = params.cropName.toLowerCase();
-    if (nameLower.includes('tomato')) fallbackImage = TOMATO_CROP_URI;
-    else if (nameLower.includes('potato')) fallbackImage = POTATO_CROP_URI;
-    else if (nameLower.includes('wheat') || nameLower.includes('grain')) fallbackImage = WHEAT_CROP_URI;
+        // Get default crop image if none provided
+        let fallbackImage = ONION_CROP_URI;
+        const nameLower = params.cropName.toLowerCase();
+        if (nameLower.includes('tomato')) fallbackImage = TOMATO_CROP_URI;
+        else if (nameLower.includes('potato')) fallbackImage = POTATO_CROP_URI;
+        else if (nameLower.includes('wheat') || nameLower.includes('grain')) fallbackImage = WHEAT_CROP_URI;
 
-    const newOrder: OrderItem = {
-      id: newId,
-      orderNumber,
-      tab: 'Active',
-      cropName: params.cropName,
-      cropVariety: params.cropVariety || 'Harvest Batch',
-      grade: params.grade || 'Grade A',
-      quantity: `${params.quantityKg.toLocaleString()} KG`,
-      cropImage: params.cropImage || fallbackImage,
-      buyerName: params.buyerName,
-      buyerType: params.buyerType || 'Verified Agro Buyer',
-      totalValue: `₹${params.grossAmount.toLocaleString()}`,
-      ratePerKg: `₹${params.ratePerKg.toFixed(2)}/kg`,
-      netPayout: `₹${params.netPayout.toLocaleString()}`,
-      transportDeduction: `₹${params.transportDeduction.toLocaleString()}`,
-      pickupDate: 'Today (Live Scheduled)',
-      pickupTime: '11:30 AM - 01:30 PM',
-      location: params.location || 'Farmgate, Main Farm Storage',
-      statusLabel: 'Vehicle Dispatched (4.8 km away)',
-      statusType: 'en_route',
-      stepIndex: 3,
-      driverName: 'Ramesh Pawar',
-      driverPhone: '+91 98231 44510',
-      vehicleNumber: `MH 15 CP ${randomSuffix}`,
-      vehicleModel: 'Tata Ace Gold (1.5T)',
-      etaMins: 18,
-      paymentMode: params.paymentMode || 'MandiKart Escrow Guaranteed',
-      createdAt: new Date().toISOString(),
-    };
+        const newOrder: OrderItem = {
+          id: newId,
+          orderNumber,
+          tab: 'Active',
+          cropName: params.cropName,
+          cropVariety: params.cropVariety || 'Harvest Batch',
+          grade: params.grade || 'Grade A',
+          quantity: `${params.quantityKg.toLocaleString()} KG`,
+          cropImage: params.cropImage || fallbackImage,
+          buyerName: params.buyerName,
+          buyerType: params.buyerType || 'Verified Agro Buyer',
+          totalValue: `₹${params.grossAmount.toLocaleString()}`,
+          ratePerKg: `₹${params.ratePerKg.toFixed(2)}/kg`,
+          netPayout: `₹${params.netPayout.toLocaleString()}`,
+          transportDeduction: `₹${params.transportDeduction.toLocaleString()}`,
+          pickupDate: 'Today (Live Scheduled)',
+          pickupTime: '11:30 AM - 01:30 PM',
+          location: params.location || 'Farmgate, Main Farm Storage',
+          statusLabel: 'Vehicle Dispatched (4.8 km away)',
+          statusType: 'en_route',
+          stepIndex: 3,
+          driverName: 'Ramesh Pawar',
+          driverPhone: '+91 98231 44510',
+          vehicleNumber: `MH 15 CP ${randomSuffix}`,
+          vehicleModel: 'Tata Ace Gold (1.5T)',
+          etaMins: 18,
+          paymentMode: params.paymentMode || 'MandiKart Escrow Guaranteed',
+          createdAt: new Date().toISOString(),
+        };
 
-    set((state) => ({
-      orders: [newOrder, ...state.orders],
-    }));
+        set((state) => ({
+          orders: [newOrder, ...state.orders],
+        }));
 
-    return newOrder;
-  },
+        return newOrder;
+      },
 
-  acceptOrderOffer: (orderId) => {
-    set((state) => ({
-      orders: state.orders.map((o) =>
-        o.id === orderId
-          ? {
-              ...o,
-              tab: 'Active',
-              statusType: 'scheduled',
-              statusLabel: 'Offer Accepted • Vehicle Scheduled',
-              stepIndex: 2,
-              driverName: o.driverName || 'Sunil Jadhav',
-              driverPhone: o.driverPhone || '+91 94222 18904',
-              vehicleNumber: o.vehicleNumber || 'MH 15 CT 8812',
-              vehicleModel: o.vehicleModel || 'Mahindra Bolero Maxi Truck',
-              pickupDate: 'Tomorrow Morning',
-              pickupTime: '09:00 AM - 11:00 AM',
-            }
-          : o
-      ),
-    }));
-  },
+      acceptOrderOffer: (orderId) => {
+        set((state) => ({
+          orders: state.orders.map((o) =>
+            o.id === orderId
+              ? {
+                  ...o,
+                  tab: 'Active',
+                  statusType: 'scheduled',
+                  statusLabel: 'Offer Accepted • Vehicle Scheduled',
+                  stepIndex: 2,
+                  driverName: o.driverName || 'Sunil Jadhav',
+                  driverPhone: o.driverPhone || '+91 94222 18904',
+                  vehicleNumber: o.vehicleNumber || 'MH 15 CT 8812',
+                  vehicleModel: o.vehicleModel || 'Mahindra Bolero Maxi Truck',
+                  pickupDate: 'Tomorrow Morning',
+                  pickupTime: '09:00 AM - 11:00 AM',
+                }
+              : o
+          ),
+        }));
+      },
 
-  updateOrderStatus: (orderId, updates) => {
-    set((state) => ({
-      orders: state.orders.map((o) => (o.id === orderId ? { ...o, ...updates } : o)),
-    }));
-  },
+      updateOrderStatus: (orderId, updates) => {
+        set((state) => ({
+          orders: state.orders.map((o) => (o.id === orderId ? { ...o, ...updates } : o)),
+        }));
+      },
 
-  getOrderById: (orderId) => {
-    return get().orders.find((o) => o.id === orderId);
-  },
-}));
+      getOrderById: (orderId) => {
+        return get().orders.find((o) => o.id === orderId);
+      },
+    }),
+    {
+      name: 'mandikart_farmer_orders_storage',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ orders: state.orders }),
+    }
+  )
+);

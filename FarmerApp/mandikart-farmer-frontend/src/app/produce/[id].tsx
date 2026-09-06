@@ -14,7 +14,7 @@
  * Simple, professional English throughout.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -51,6 +51,7 @@ import {
   HelpCircle,
   Trash2,
   PlusCircle,
+  Lock,
 } from 'lucide-react-native';
 import { MKColors } from '@/constants/colors';
 import {
@@ -70,10 +71,20 @@ export default function CropDetailsScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
 
   const crops = useProduceStore((state) => state.crops);
+  const syncWithBackend = useProduceStore((state) => state.syncWithBackend);
   const updateCropCondition = useProduceStore((state) => state.updateCropCondition);
   const updateCropQuantity = useProduceStore((state) => state.updateCropQuantity);
   const updateCropDetails = useProduceStore((state) => state.updateCropDetails);
   const deleteCrop = useProduceStore((state) => state.deleteCrop);
+
+  // Poll backend every 3 seconds for instant automatic admin acceptance sync
+  useEffect(() => {
+    syncWithBackend();
+    const interval = setInterval(() => {
+      syncWithBackend();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [syncWithBackend]);
 
   // Find crop
   const crop = crops.find((c) => c.id === id);
@@ -334,6 +345,28 @@ export default function CropDetailsScreen() {
                 <Text style={styles.heroVarietyText}>
                   {crop.variety ? crop.variety : crop.category} • {crop.grade}
                 </Text>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
+                  <View
+                    style={{
+                      paddingHorizontal: 8,
+                      paddingVertical: 3,
+                      borderRadius: 6,
+                      backgroundColor: crop.status === 'PENDING_APPROVAL' ? '#FEF3C7' : '#DCFCE7',
+                      borderWidth: 1,
+                      borderColor: crop.status === 'PENDING_APPROVAL' ? '#FCD34D' : '#86EFAC',
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: '800',
+                        color: crop.status === 'PENDING_APPROVAL' ? '#92400E' : '#166534',
+                      }}
+                    >
+                      {crop.status === 'PENDING_APPROVAL' ? '🟡 Pending Admin Verification' : '🟢 Verified Active Produce'}
+                    </Text>
+                  </View>
+                </View>
               </View>
               <Pressable
                 style={[styles.conditionChip, { backgroundColor: conditionConfig.bg }]}
@@ -703,27 +736,49 @@ export default function CropDetailsScreen() {
 
       {/* ── Sticky Bottom Action Bar: "Sell This Crop" ─────────── */}
       <View style={[styles.bottomActionBar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
-        <Pressable
-          style={({ pressed }) => [
-            styles.primarySellButton,
-            pressed && styles.pressedSellButton,
-          ]}
-          onPress={() =>
-            router.push({
-              pathname: '/sell/best-options',
-              params: {
-                crop: crop.cropName,
-                qty: crop.availableKg.toString(),
-                grade: crop.grade,
-              },
-            })
-          }
-        >
-          <Text style={styles.primarySellButtonText}>
-            Sell This Crop ({crop.availableKg.toLocaleString()} kg available)
-          </Text>
-          <ArrowRight size={20} color="#FFFFFF" style={{ marginLeft: 8 }} />
-        </Pressable>
+        {crop.status === 'PENDING_APPROVAL' ? (
+          <Pressable
+            style={({ pressed }) => [
+              styles.primarySellButton,
+              styles.primarySellButtonLocked,
+              pressed && styles.pressedSellButton,
+            ]}
+            onPress={() =>
+              Alert.alert(
+                'Produce Verification Protocol',
+                'This harvest is currently awaiting MandiKart Admin quality verification. Selling is locked until approved by Mandi administrators to ensure food safety and regulatory trade standards.',
+                [{ text: 'Understood', style: 'default' }]
+              )
+            }
+          >
+            <Lock size={18} color="#6B7280" style={{ marginRight: 8 }} />
+            <Text style={styles.primarySellButtonTextLocked}>
+              Awaiting Admin Approval (Selling Locked)
+            </Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            style={({ pressed }) => [
+              styles.primarySellButton,
+              pressed && styles.pressedSellButton,
+            ]}
+            onPress={() =>
+              router.push({
+                pathname: '/sell/best-options',
+                params: {
+                  crop: crop.cropName,
+                  qty: crop.availableKg.toString(),
+                  grade: crop.grade,
+                },
+              })
+            }
+          >
+            <Text style={styles.primarySellButtonText}>
+              Sell This Crop ({crop.availableKg.toLocaleString()} kg available)
+            </Text>
+            <ArrowRight size={20} color="#FFFFFF" style={{ marginLeft: 8 }} />
+          </Pressable>
+        )}
       </View>
 
       {/* ── Update Condition Modal ───────────────────────────────── */}
@@ -1609,6 +1664,16 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontWeight: '800',
     color: '#FFFFFF',
+  },
+  primarySellButtonLocked: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1.5,
+    borderColor: '#D1D5DB',
+  },
+  primarySellButtonTextLocked: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#6B7280',
   },
 
   // ── Modal ─────────────────────────────────────────────────────────

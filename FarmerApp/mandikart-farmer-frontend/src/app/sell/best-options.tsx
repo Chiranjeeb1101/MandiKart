@@ -12,7 +12,7 @@
  * Simple, professional English throughout.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -43,6 +43,7 @@ import {
   SlidersHorizontal,
   ChevronDown,
   ChevronUp,
+  Lock,
 } from 'lucide-react-native';
 import { MKColors } from '@/constants/colors';
 import { useSellStore, SellingOpportunity } from '@/store/sellStore';
@@ -60,6 +61,24 @@ export default function BestSellingOptionsScreen() {
   const getOpportunitiesForCrop = useSellStore((state) => state.getOpportunitiesForCrop);
   const executeSale = useSellStore((state) => state.executeSale);
   const crops = useProduceStore((state) => state.crops);
+  const syncWithBackend = useProduceStore((state) => state.syncWithBackend);
+
+  // Poll backend every 3 seconds for instant automatic admin acceptance sync
+  useEffect(() => {
+    syncWithBackend();
+    const interval = setInterval(() => {
+      syncWithBackend();
+    }, 3000);
+    return () => clearInterval(interval);
+  }, [syncWithBackend]);
+
+  const matchingCrop = useMemo(() => {
+    return crops.find(
+      (c) => c.cropName.toLowerCase() === cropName.toLowerCase()
+    );
+  }, [crops, cropName]);
+
+  const isPending = matchingCrop?.status === 'PENDING_APPROVAL';
 
   // Get ranked opportunities
   const opportunities = useMemo(() => {
@@ -81,12 +100,30 @@ export default function BestSellingOptionsScreen() {
   const [oppToAccept, setOppToAccept] = useState<SellingOpportunity | null>(null);
 
   const handleOpenAccept = (opp: SellingOpportunity) => {
+    if (isPending) {
+      Alert.alert(
+        'Produce Verification Protocol',
+        `Selling ${cropName} is restricted. This produce is currently awaiting quality verification and approval from MandiKart Admin. Once verified, trading will be enabled automatically.`,
+        [{ text: 'Understood', style: 'default' }]
+      );
+      return;
+    }
     setOppToAccept(opp);
     setAcceptModalVisible(true);
   };
 
   const handleConfirmAccept = () => {
     if (!oppToAccept) return;
+
+    if (isPending) {
+      Alert.alert(
+        'Produce Verification Protocol',
+        `Cannot accept contract for ${cropName}. This harvest is pending quality verification by MandiKart Admin.`,
+        [{ text: 'Understood', style: 'default' }]
+      );
+      return;
+    }
+
     setAcceptModalVisible(false);
 
     const matchingCrop = crops.find(
@@ -161,6 +198,34 @@ export default function BestSellingOptionsScreen() {
           <Text style={styles.contextSub}>AGMARKNET Ref</Text>
         </View>
       </View>
+
+      {/* Verification Protocol Warning Banner */}
+      {isPending && (
+        <View
+          style={{
+            backgroundColor: '#FEF3C7',
+            borderColor: '#F59E0B',
+            borderWidth: 1,
+            borderRadius: 12,
+            padding: 12,
+            marginHorizontal: 16,
+            marginBottom: 10,
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 10,
+          }}
+        >
+          <Lock size={20} color="#D97706" />
+          <View style={{ flex: 1 }}>
+            <Text style={{ fontSize: 13, fontWeight: '800', color: '#92400E' }}>
+              Selling Protocol: Pending Admin Approval
+            </Text>
+            <Text style={{ fontSize: 11, color: '#B45309', marginTop: 2, lineHeight: 15 }}>
+              This harvest is currently awaiting MandiKart Admin quality verification. Buyer matching is in preview mode — deal acceptance will unlock automatically once approved.
+            </Text>
+          </View>
+        </View>
+      )}
 
       {/* ── Tab Switcher: Ranked vs Compare ───────────────────────── */}
       <View style={styles.tabSwitcher}>

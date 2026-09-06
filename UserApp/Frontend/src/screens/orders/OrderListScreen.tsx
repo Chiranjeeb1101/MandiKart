@@ -1,16 +1,16 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View, Text, StyleSheet, FlatList, TouchableOpacity,
   StatusBar, Image, TextInput, Alert,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from '@react-navigation/native';
 import { Colors, Spacing, BorderRadius, Shadows } from '../../theme';
 import StatusBadge from '../../components/StatusBadge';
 import { SAMPLE_PRODUCTS } from '../../services/mockData';
 import { apiClient } from '../../services/apiClient';
 import { getStatusConfig } from '../../constants/orderStatusLabels';
-import { useEffect } from 'react';
 
 type FilterTab = 'ALL' | 'ACTIVE' | 'DELIVERED' | 'CANCELLED';
 
@@ -20,32 +20,62 @@ export default function OrderListScreen({ navigation }: any) {
   const [activeTab, setActiveTab] = useState<FilterTab>('ALL');
   const [searchQuery, setSearchQuery] = useState('');
 
-  const loadOrders = async () => {
+  const loadOrders = useCallback(async () => {
     try {
       const data = await apiClient.orders.listOrders();
-      const mapped = data.map((o) => ({
-        id: o.orderNumber || o.id,
-        date: new Date(o.placedAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
-        status: o.status,
-        total: o.total,
-        itemsCount: o.items.length,
-        itemsPreview: o.items.map((it) => it.product),
-        deliveryAddress: o.deliveryAddress?.line1 || 'Pune, Maharashtra',
-        farmerName: o.farmer?.name || 'Rajan Kumar',
-        estimatedDelivery: o.estimatedDelivery || 'Today by 5:30 PM',
-        deliveryOtp: (o as any).deliveryOtp || '719284',
-      }));
+      const mapped = data.map((o: any) => {
+        // Handle both backend format (createdAt, items.cropName) and legacy frontend format (placedAt, items.product)
+        const rawDate = o.placedAt || o.createdAt || o.timestamp || new Date().toISOString();
+        const dateStr = (() => {
+          try {
+            return new Date(rawDate).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+          } catch {
+            return rawDate;
+          }
+        })();
+
+        // Normalize items — backend returns {cropName, quantity, pricePerUnit}, frontend returns {product: {...}, quantity}
+        const rawItems: any[] = o.items || [];
+        const itemsPreview = rawItems.map((it: any) => {
+          if (it.product) return it.product;
+          // Backend format — create a minimal product-like object
+          return {
+            id: it.productId || `item_${Math.random()}`,
+            name: it.cropName || it.produceName || 'Fresh Produce',
+            imageUrl: 'https://images.unsplash.com/photo-1607305387299-a3d9611cd469?w=400',
+            price: it.pricePerUnit || 30,
+            unit: it.unit || 'kg',
+          };
+        });
+
+        return {
+          id: o.orderNumber || o.id,
+          date: dateStr,
+          status: o.status || 'PLACED',
+          total: o.total || o.totalAmount || (rawItems.reduce((sum: number, it: any) => sum + ((it.quantity || 1) * (it.pricePerUnit || 30)), 0) + 25),
+          itemsCount: rawItems.length || 1,
+          itemsPreview,
+          deliveryAddress: typeof o.deliveryAddress === 'object' ? (o.deliveryAddress?.line1 || 'Pune, Maharashtra') : (o.deliveryAddress || 'Pune, Maharashtra'),
+          farmerName: o.farmer?.name || o.farmerName || 'Rajan Kumar',
+          estimatedDelivery: o.estimatedDelivery || 'Today by 5:30 PM',
+          deliveryOtp: o.deliveryOtp || '719284',
+        };
+      });
       setOrders(mapped);
     } catch (err) {
       console.warn('Orders fetch error:', err);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    loadOrders();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      loadOrders();
+      const interval = setInterval(loadOrders, 3000);
+      return () => clearInterval(interval);
+    }, [loadOrders])
+  );
 
   const cancelOrderById = (orderId: string) => {
     Alert.alert(

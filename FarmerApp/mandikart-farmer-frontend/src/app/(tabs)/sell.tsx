@@ -17,7 +17,7 @@
  * Simple, professional English throughout.
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -29,7 +29,7 @@ import {
   Modal,
   TextInput,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Tag,
@@ -58,10 +58,13 @@ import {
   Percent,
   X,
   SlidersHorizontal,
+  Globe,
 } from 'lucide-react-native';
 import { MKColors } from '@/constants/colors';
 import { useProduceStore, CropItem } from '@/store/produceStore';
 import { useSellStore, BuyerRequest, CompletedSale } from '@/store/sellStore';
+import { useAuthStore } from '@/store/authStore';
+import { apiClient } from '@/services/apiClient';
 
 export default function SellHomeScreen() {
   const router = useRouter();
@@ -77,6 +80,20 @@ export default function SellHomeScreen() {
   const rejectRequest = useSellStore((state) => state.rejectRequest);
   const counterOffer = useSellStore((state) => state.counterOffer);
   const executeSale = useSellStore((state) => state.executeSale);
+
+  // Stable sync guard — call getState() directly to avoid reactive loop crash
+  // (subscribing to syncWithBackend reference causes it to change on every store
+  //  update, which re-fires useFocusEffect and creates an infinite re-render loop)
+  const isSyncing = useRef(false);
+  useFocusEffect(
+    useCallback(() => {
+      if (isSyncing.current) return;
+      isSyncing.current = true;
+      useProduceStore.getState().syncWithBackend().finally(() => {
+        isSyncing.current = false;
+      });
+    }, []) // empty deps — intentional, getState() is always stable
+  );
 
   // Active new / pending requests
   const newRequests = useMemo(() => {
@@ -107,6 +124,14 @@ export default function SellHomeScreen() {
 
   // Open quantity modal
   const handleOpenSellModal = (crop: CropItem) => {
+    if (crop.status === 'PENDING_APPROVAL') {
+      Alert.alert(
+        'Produce Verification Protocol',
+        `Selling ${crop.cropName} is restricted. This produce is currently awaiting MandiKart Admin quality verification. Once verified, trading will unlock automatically.`,
+        [{ text: 'Understood', style: 'default' }]
+      );
+      return;
+    }
     setSelectedCropForSell(crop);
     setSellQuantityInput(crop.availableKg.toString());
     setSelectedPercentage(100);
@@ -220,28 +245,102 @@ export default function SellHomeScreen() {
     setListingModalVisible(true);
   };
 
-  const handleCreateListing = () => {
+  const handleCreateListing = async () => {
     if (!listingCrop) return;
     const targetPrice = parseFloat(listingTargetPrice) || listingCrop.referencePricePerKg;
 
-    createListing({
-      cropId: listingCrop.id,
-      cropName: listingCrop.cropName,
-      variety: listingCrop.variety,
-      totalKg: listingCrop.availableKg,
-      availableKg: listingCrop.availableKg,
-      grade: listingCrop.grade,
-      targetPricePerKg: targetPrice,
-      availableFrom: 'Immediate',
-      pickupLocation: listingCrop.location || 'Main Farm Warehouse',
-      notes: listingNotes || 'Clean harvested crop ready for buyer inspection.',
-      status: 'Available',
-    });
+    // Remote image URLs — filter out local file:// or data: URIs, with fallback
+    const validRemote = [listingCrop.imageUri].filter(
+      (uri) => uri && (uri.startsWith('http://') || uri.startsWith('https://'))
+    );
+    const safeImages = validRemote.length > 0 
+      ? validRemote 
+      : ['https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=600'];
 
-    setListingModalVisible(false);
+    const user = useAuthStore.getState().user;
+    const farmer = useAuthStore.getState().farmer;
+    const realFarmerName = user?.fullName || user?.name || farmer?.fullName || 'Ramesh Patel';
+    const realFarmerPhone = user?.phone || farmer?.phone || '';
+
+    try {
+      // Publish to global market — send full crop data so the backend can
+      // create a complete registry entry even if this crop hasn't synced before
+      await apiClient.updateProduct(listingCrop.id, {
+        targetBuyer: 'BOTH',
+        basePricePerUnit: targetPrice,
+        status: 'ACTIVE',
+        isActive: true,
+        farmerName: realFarmerName,
+        farmerPhone: realFarmerPhone,
+        // Full crop data for registry creation
+        cropName: listingCrop.cropName,
+        cropVariety: listingCrop.variety || '',
+        grade: listingCrop.grade?.replace('Grade ', '') || 'A',
+        category: listingCrop.category,
+        totalQuantity: listingCrop.totalKg,
+        availableQuantity: listingCrop.availableKg,
+        quantityUnit: listingCrop.unit || 'kg',
+        pickupAddress: listingCrop.location || 'Farm',
+        shelfLifeDays: listingCrop.shelfLifeDaysEstMax || 14,
+        images: safeImages,
+        notes: listingNotes || '',
+      } as any);
+
+      // Update local store to reflect that this crop is now active/listed
+      useProduceStore.getState().updateCropStatus(listingCrop.id, 'ACTIVE');
+
+      createListing({
+        cropId: listingCrop.id,
+        cropName: listingCrop.cropName,
+        variety: listingCrop.variety,
+        totalKg: listingCrop.availableKg,
+        availableKg: listingCrop.availableKg,
+        grade: listingCrop.grade,
+        targetPricePerKg: targetPrice,
+        availableFrom: 'Immediate',
+        pickupLocation: listingCrop.location || 'Main Farm Warehouse',
+        notes: listingNotes || 'Clean harvested crop ready for buyer inspection.',
+        status: 'Available',
+      });
+
+      // Synchronize with backend so listing status is instantly reflected
+      useProduceStore.getState().syncWithBackend().catch(() => {});
+
+      setListingModalVisible(false);
+      Alert.alert(
+        '✅ Published to All Buyers',
+        `${listingCrop.cropName} (${listingCrop.availableKg.toLocaleString()} kg @ ₹${targetPrice}/kg) is now live in the global MandiKart marketplace. All buyers and FPOs can see and order it.`
+      );
+    } catch (error) {
+      console.warn('Failed to publish crop:', error);
+      Alert.alert('Listing Error', 'Failed to publish to the global marketplace. Please check your connection and try again.');
+    }
+  };
+
+  const handleUnlistCrop = async (crop: CropItem) => {
     Alert.alert(
-      'Listing Published',
-      `Your ${listingCrop.cropName} (${listingCrop.availableKg.toLocaleString()} kg) is now discoverable by verified buyers in the marketplace.`
+      'Remove from Global Market?',
+      `Are you sure you want to stop selling ${crop.cropName} to all buyers?`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Unlist',
+          style: 'destructive',
+          onPress: async () => {
+            try {
+              await apiClient.updateProduct(crop.id, {
+                status: 'DRAFT',
+                isActive: false,
+              } as any);
+              useProduceStore.getState().updateCropStatus(crop.id, 'DRAFT');
+              Alert.alert('Crop Unlisted', 'This crop has been removed from the global market.');
+            } catch (error) {
+              console.warn('Failed to unlist crop:', error);
+              Alert.alert('Error', 'Failed to remove crop. Please try again.');
+            }
+          },
+        },
+      ]
     );
   };
 
@@ -389,6 +488,16 @@ export default function SellHomeScreen() {
 
           <Pressable
             style={styles.quickActionItem}
+            onPress={() => router.push('/sell/global-listings')}
+          >
+            <View style={[styles.quickActionIconWrap, { backgroundColor: '#DCFCE7' }]}>
+              <Globe size={18} color="#15803D" />
+            </View>
+            <Text style={styles.quickActionText}>Listed Globally</Text>
+          </Pressable>
+
+          <Pressable
+            style={styles.quickActionItem}
             onPress={() => router.push('/sell/history')}
           >
             <View style={[styles.quickActionIconWrap, { backgroundColor: '#F1F5F9' }]}>
@@ -440,6 +549,44 @@ export default function SellHomeScreen() {
                         <Text style={styles.gradePillText}>{crop.grade}</Text>
                       </View>
                     </View>
+                    {crop.status === 'PENDING_APPROVAL' && (
+                      <View
+                        style={{
+                          alignSelf: 'flex-start',
+                          backgroundColor: '#FEF3C7',
+                          borderColor: '#FCD34D',
+                          borderWidth: 1,
+                          borderRadius: 6,
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          marginTop: 2,
+                          marginBottom: 4,
+                        }}
+                      >
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#92400E' }}>
+                          🟡 Pending Admin Approval
+                        </Text>
+                      </View>
+                    )}
+                    {crop.status === 'ACTIVE' && (
+                      <View
+                        style={{
+                          alignSelf: 'flex-start',
+                          backgroundColor: '#DCFCE7',
+                          borderColor: '#86EFAC',
+                          borderWidth: 1,
+                          borderRadius: 6,
+                          paddingHorizontal: 6,
+                          paddingVertical: 2,
+                          marginTop: 2,
+                          marginBottom: 4,
+                        }}
+                      >
+                        <Text style={{ fontSize: 10, fontWeight: '800', color: '#166534' }}>
+                          🟢 Live on Global Market
+                        </Text>
+                      </View>
+                    )}
                     <Text style={styles.produceSubtext}>
                       {crop.variety || crop.category} • Harvested: {crop.harvestDate}
                     </Text>
@@ -496,21 +643,40 @@ export default function SellHomeScreen() {
 
                 {/* Action Row */}
                 <View style={styles.cardActionsRow}>
-                  <Pressable
-                    style={styles.listForSaleBtn}
-                    onPress={() => handleOpenListingModal(crop)}
-                  >
-                    <Text style={styles.listForSaleBtnText}>List for Sale</Text>
-                  </Pressable>
+                  {/* Sell to All Buyers — primary global market publish action */}
+                  {crop.status === 'ACTIVE' ? (
+                    <Pressable 
+                      style={[styles.listForSaleBtn, { backgroundColor: '#F0FDF4', borderColor: '#86EFAC', flex: 1 }]}
+                      onPress={() => router.push('/sell/global-listings')}
+                    >
+                      <Globe size={14} color="#166534" style={{ marginRight: 6 }} />
+                      <Text style={[styles.listForSaleBtnText, { color: '#166534', fontWeight: '700' }]}>
+                        Listed Globally
+                      </Text>
+                    </Pressable>
+                  ) : (
+                    <Pressable
+                      style={[styles.listForSaleBtn, { flex: 1, backgroundColor: '#1B6D24', borderColor: '#1B6D24' }]}
+                      onPress={() => handleOpenListingModal(crop)}
+                    >
+                      <PackageCheck size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
+                      <Text style={[styles.listForSaleBtnText, { color: '#FFFFFF', fontWeight: '700' }]}>
+                        Sell to All Buyers
+                      </Text>
+                    </Pressable>
+                  )}
 
-                  <Pressable
-                    style={[styles.sellThisCropBtn, !isAvailable && styles.btnDisabled]}
-                    disabled={!isAvailable}
-                    onPress={() => handleOpenSellModal(crop)}
-                  >
-                    <Text style={styles.sellThisCropBtnText}>Sell This Crop</Text>
-                    <ArrowRight size={15} color="#FFFFFF" style={{ marginLeft: 6 }} />
-                  </Pressable>
+                  {/* Quick-sell to specific buyer (existing flow) */}
+                  {crop.status !== 'PENDING_APPROVAL' && (
+                    <Pressable
+                      style={[styles.sellThisCropBtn, !isAvailable && styles.btnDisabled, { marginLeft: 8 }]}
+                      disabled={!isAvailable}
+                      onPress={() => handleOpenSellModal(crop)}
+                    >
+                      <Text style={styles.sellThisCropBtnText}>Quick Sell</Text>
+                      <ArrowRight size={15} color="#FFFFFF" style={{ marginLeft: 6 }} />
+                    </Pressable>
+                  )}
                 </View>
               </View>
             );
@@ -1042,14 +1208,14 @@ export default function SellHomeScreen() {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalSheet}>
             <View style={styles.modalHeaderRow}>
-              <Text style={styles.modalTitle}>Put Crop Up for Sale</Text>
+              <Text style={styles.modalTitle}>Sell to All Buyers 🌐</Text>
               <Pressable onPress={() => setListingModalVisible(false)} hitSlop={10}>
                 <X size={20} color={MKColors.textSecondary} />
               </Pressable>
             </View>
 
             <Text style={styles.modalCropSub}>
-              Make your {listingCrop?.cropName} discoverable to all verified buyers.
+              Your {listingCrop?.cropName} will be published to the global MandiKart marketplace — visible to all verified buyers, FPOs, and traders.
             </Text>
 
             <View style={styles.listingSummaryRow}>
@@ -1085,7 +1251,7 @@ export default function SellHomeScreen() {
               style={styles.modalPrimaryBtn}
               onPress={handleCreateListing}
             >
-              <Text style={styles.modalPrimaryBtnText}>LIST FOR SALE</Text>
+              <Text style={styles.modalPrimaryBtnText}>SELL TO ALL BUYERS</Text>
               <CheckCircle2 size={18} color="#FFFFFF" style={{ marginLeft: 6 }} />
             </Pressable>
           </View>

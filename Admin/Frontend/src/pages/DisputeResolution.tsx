@@ -17,7 +17,13 @@ export const DisputeResolution: React.FC<DisputeResolutionProps> = ({
   onNavigateTab,
 }) => {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [disputes, setDisputes] = useState<DisputeCase[]>(MOCK_DISPUTES);
+  const [disputes, setDisputes] = useState<DisputeCase[]>(() => {
+    try {
+      const saved = localStorage.getItem('mandikart_admin_disputes');
+      if (saved) return JSON.parse(saved);
+    } catch {}
+    return MOCK_DISPUTES;
+  });
   const [searchTerm, setSearchTerm] = useState('');
   const [severityFilter, setSeverityFilter] = useState<string>('ALL');
   const [statusFilter, setStatusFilter] = useState<string>('ALL');
@@ -27,12 +33,33 @@ export const DisputeResolution: React.FC<DisputeResolutionProps> = ({
   const [adminNote, setAdminNote] = useState('');
   const [actionSuccessMsg, setActionSuccessMsg] = useState<string | null>(null);
 
+  // Helper for evidence images
+  const getDisputeCropImage = (cropName: string) => {
+    const lower = cropName.toLowerCase();
+    if (lower.includes('tomato')) return 'https://images.unsplash.com/photo-1592924357228-91a4daadcfea?w=600&auto=format&fit=crop&q=80';
+    if (lower.includes('onion')) return 'https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=600&auto=format&fit=crop&q=80';
+    if (lower.includes('potato')) return 'https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=600&auto=format&fit=crop&q=80';
+    return 'https://images.unsplash.com/photo-1542838132-92c53300491e?w=600&auto=format&fit=crop&q=80';
+  };
+
   // Arbitration Handler
-  const handleResolve = (disputeId: string, actionType: 'RELEASE_FARMER' | 'REFUND_BUYER' | 'SPLIT_50_50') => {
+  const handleResolve = async (disputeId: string, actionType: 'RELEASE_FARMER' | 'REFUND_BUYER' | 'SPLIT_50_50') => {
     let outcomeText = '';
-    if (actionType === 'RELEASE_FARMER') outcomeText = 'Decided in favor of Farmer (100% Payout Released)';
-    if (actionType === 'REFUND_BUYER') outcomeText = 'Decided in favor of Buyer (100% Refund Issued)';
-    if (actionType === 'SPLIT_50_50') outcomeText = '50/50 Partial Settlement Issued to both parties';
+    let backendResolution = 'APPROVE_PAYOUT';
+    if (actionType === 'RELEASE_FARMER') {
+      outcomeText = 'Decided in favor of Farmer (100% Payout Released)';
+      backendResolution = 'APPROVE_PAYOUT';
+    }
+    if (actionType === 'REFUND_BUYER') {
+      outcomeText = 'Decided in favor of Buyer (100% Refund Issued)';
+      backendResolution = 'REFUND_BUYER';
+    }
+    if (actionType === 'SPLIT_50_50') {
+      outcomeText = '50/50 Partial Settlement Issued to both parties';
+      backendResolution = 'APPROVE_PAYOUT';
+    }
+
+    const note = adminNote || 'Tribunal ruling executed by MandiKart Admin.';
 
     const updatedDisputes = disputes.map(d => {
       if (d.id === disputeId) {
@@ -40,20 +67,58 @@ export const DisputeResolution: React.FC<DisputeResolutionProps> = ({
           ...d,
           status: 'RESOLVED' as DisputeStatus,
           resolutionOutcome: outcomeText,
-          arbitratorNote: adminNote || 'Tribunal ruling executed by MandiKart Admin.'
+          arbitratorNote: note
         };
       }
       return d;
     });
 
     setDisputes(updatedDisputes);
+    try {
+      localStorage.setItem('mandikart_admin_disputes', JSON.stringify(updatedDisputes));
+    } catch {}
+
+    const targetCase = disputes.find(d => d.id === disputeId);
     if (selectedDispute?.id === disputeId) {
       setSelectedDispute(prev => prev ? {
         ...prev,
         status: 'RESOLVED' as DisputeStatus,
         resolutionOutcome: outcomeText,
-        arbitratorNote: adminNote || 'Tribunal ruling executed by MandiKart Admin.'
+        arbitratorNote: note
       } : null);
+    }
+
+    // Synchronize with local orders if found
+    if (targetCase?.orderId) {
+      try {
+        const savedOrders = localStorage.getItem('mandikart_admin_orders');
+        if (savedOrders) {
+          const orders = JSON.parse(savedOrders);
+          const updatedOrders = orders.map((o: any) => {
+            if (o.id === targetCase.orderId || o.orderCode === targetCase.orderId) {
+              return {
+                ...o,
+                status: actionType === 'REFUND_BUYER' ? 'CANCELLED' : 'COMPLETED',
+                escrowStatus: actionType === 'REFUND_BUYER' ? 'REFUNDED' : 'RELEASED'
+              };
+            }
+            return o;
+          });
+          localStorage.setItem('mandikart_admin_orders', JSON.stringify(updatedOrders));
+        }
+      } catch {}
+
+      // Call Admin Backend API
+      try {
+        await fetch(`http://localhost:4003/api/v1/admin/disputes/${targetCase.orderId}/resolve`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            resolution: backendResolution,
+            remarks: note
+          })
+        });
+      } catch {}
     }
 
     setActionSuccessMsg(`Dispute ${disputeId} arbitration finalized: ${outcomeText}`);
@@ -375,8 +440,12 @@ export const DisputeResolution: React.FC<DisputeResolutionProps> = ({
                     <div className="grid grid-cols-2 gap-2">
                       {selectedDispute.evidenceFiles.map((file, idx) => (
                         <div key={idx} className="bg-zinc-950 border border-zinc-800 p-2 text-center space-y-1">
-                          <div className="bg-zinc-900 h-16 flex items-center justify-center border border-zinc-800 text-zinc-500 font-mono text-[10px]">
-                            [EVIDENCE MEDIA #{idx + 1}]
+                          <div className="bg-zinc-900 h-24 overflow-hidden rounded border border-zinc-800 flex items-center justify-center">
+                            <img 
+                              src={getDisputeCropImage(selectedDispute.cropName)} 
+                              alt="Dispute Evidence"
+                              className="w-full h-full object-cover"
+                            />
                           </div>
                           <div className="text-[10px] font-mono text-zinc-400 truncate">{file}</div>
                         </div>

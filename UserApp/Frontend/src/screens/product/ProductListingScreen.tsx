@@ -5,8 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius } from '../../theme';
 import ProductCard from '../../components/ProductCard';
 import SearchBar from '../../components/SearchBar';
-import { SAMPLE_PRODUCTS } from '../../services/mockData';
-import { apiClient } from '../../services/apiClient';
+import { useCatalog } from '../../context/CatalogContext';
 import { Product } from '../../types';
 
 const SORT_OPTIONS = ['Relevance', 'Price: Low to High', 'Price: High to Low', 'Rating'];
@@ -16,17 +15,7 @@ export default function ProductListingScreen({ navigation, route }: any) {
   const [search, setSearch] = useState('');
   const [sort, setSort] = useState(0);
   const [wishlisted, setWishlisted] = useState<string[]>([]);
-  const [products, setProducts] = useState<Product[]>(SAMPLE_PRODUCTS);
-
-  useEffect(() => {
-    let isMounted = true;
-    apiClient.catalog.search().then((live) => {
-      if (isMounted && live && live.length > 0) {
-        setProducts(live);
-      }
-    }).catch(() => {});
-    return () => { isMounted = false; };
-  }, []);
+  const { products } = useCatalog();
 
   const filtered = products
     .filter((p) => {
@@ -82,7 +71,7 @@ export default function ProductListingScreen({ navigation, route }: any) {
           <View style={{ flex: 1 }}>
             <ProductCard
               product={item}
-              onPress={() => navigation.navigate('ProductDetails', { productId: item.id })}
+              onPress={() => navigation.navigate('ProductDetails', { productId: item.id, product: item })}
               onAddToCart={() => {}}
               onWishlistToggle={() => setWishlisted((prev) => prev.includes(item.id) ? prev.filter((i) => i !== item.id) : [...prev, item.id])}
               isWishlisted={wishlisted.includes(item.id)}

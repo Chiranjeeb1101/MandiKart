@@ -23,31 +23,41 @@ import { SAMPLE_PRODUCTS, SAMPLE_CATEGORIES, SAMPLE_FARMER } from './mockData';
 import { Platform, NativeModules } from 'react-native';
 
 export function resolveApiBaseUrl(): string {
+  // 1. Always prefer explicitly configured env URL (works for web AND native Expo Go)
   const envUrl = process.env.EXPO_PUBLIC_USER_API_URL;
-  if (envUrl && !envUrl.includes('localhost') && !envUrl.includes('127.0.0.1')) {
-    return envUrl;
+  if (envUrl && envUrl.trim().length > 0) {
+    return envUrl.trim();
   }
 
+  // 2. On web, use the browser's own hostname so it works in all environments
   if (Platform.OS === 'web') {
     if (typeof window !== 'undefined' && window.location?.hostname && window.location.hostname !== 'localhost') {
       return `http://${window.location.hostname}:4001/api/v1`;
     }
-    return envUrl || 'http://localhost:4001/api/v1';
+    return 'http://localhost:4001/api/v1';
   }
 
-  // On native device (Android / iOS)
+  // 3. On native (Expo Go / standalone) — use the Expo bundler host so it
+  //    automatically resolves to the dev machine's LAN IP on physical devices
   try {
     const scriptURL: string = (NativeModules as any)?.SourceCode?.scriptURL || '';
     if (scriptURL) {
       const host = scriptURL.split('://')[1]?.split('/')[0]?.split(':')[0];
       if (host && host !== 'localhost' && host !== '127.0.0.1') {
+        // Same host as the Metro bundler → same LAN IP → API is reachable
         return `http://${host}:4001/api/v1`;
       }
     }
   } catch {}
 
-  return 'http://10.166.230.97:4001/api/v1';
+  // 4. Default to current Wi-Fi LAN IP (works on both physical devices and emulator)
+  return (
+    process.env.EXPO_PUBLIC_USER_API_URL ||
+    process.env.EXPO_PUBLIC_API_URL ||
+    'http://10.179.209.101:4001/api/v1'
+  );
 }
+
 
 const REQUEST_TIMEOUT_MS = 15000;
 
@@ -394,13 +404,13 @@ export const apiClient = {
 
   // 2. Catalog Service
   catalog: {
-    async search(params?: { crop?: string; category?: string; grade?: string }): Promise<Product[]> {
-      const queryParts: string[] = [];
+    async search(params?: { crop?: string; category?: string; grade?: string; fresh?: boolean }): Promise<Product[]> {
+      const queryParts: string[] = ['fresh=true'];
       if (params?.crop) queryParts.push(`crop=${encodeURIComponent(params.crop)}`);
       if (params?.category) queryParts.push(`category=${encodeURIComponent(params.category)}`);
       if (params?.grade) queryParts.push(`grade=${encodeURIComponent(params.grade)}`);
 
-      const queryString = queryParts.length ? `?${queryParts.join('&')}` : '';
+      const queryString = `?${queryParts.join('&')}`;
       const result = await safeFetch<any[]>(`/catalog/search${queryString}`, { method: 'GET' }, []);
 
       if (result.isFallback || !result.data || result.data.length === 0) {
@@ -418,33 +428,50 @@ export const apiClient = {
       }
 
       // Map backend products to frontend Product interface
-      return result.data.map((p) => ({
-        id: p.id,
-        name: p.cropName || p.crop_name || 'Produce',
-        imageUrl: (p.images && p.images[0]) || 'https://images.unsplash.com/photo-1607305387299-a3d9611cd469?w=400',
-        images: p.images || ['https://images.unsplash.com/photo-1607305387299-a3d9611cd469?w=400'],
-        price: p.basePricePerUnit || p.base_price_per_unit || 30,
-        unit: p.quantityUnit || p.quantity_unit || 'kg',
-        minOrder: p.minOrderQuantity || p.min_order_quantity || 1,
-        stock: p.availableQuantity || p.available_quantity || 100,
-        category: p.category || 'Vegetables',
-        categoryId: 'cat-1',
-        farmer: {
-          id: p.farmerId || 'farmer-1',
-          name: p.farmerName || 'Rajan Kumar',
-          location: p.location || 'Nashik, Maharashtra',
-          state: 'Maharashtra',
+      return result.data.map((p) => {
+        const category = p.category || 'Vegetables';
+        const catLower = category.toLowerCase();
+        let categoryId = 'cat-1';
+        if (catLower.includes('fruit')) categoryId = 'cat-2';
+        else if (catLower.includes('grain') || catLower.includes('wheat') || catLower.includes('rice')) categoryId = 'cat-3';
+        else if (catLower.includes('spice')) categoryId = 'cat-5';
+        else if (catLower.includes('pulse')) categoryId = 'cat-6';
+        else if (catLower.includes('oil')) categoryId = 'cat-7';
+        else if (catLower.includes('herb')) categoryId = 'cat-8';
+        else if (catLower.includes('poultry')) categoryId = 'cat-9';
+
+        const cropTitle = p.cropName || p.crop_name || 'Farm Produce';
+        const farmerName = p.farmerName || (p.farmers && p.farmers.full_name) || 'Registered Farmer';
+        const farmerLoc = p.location || p.pickupAddress || p.pickup_address || (p.farmers ? `${p.farmers.district || ''}, ${p.farmers.state || ''}` : 'Nashik, Maharashtra');
+
+        return {
+          id: p.id,
+          name: cropTitle,
+          imageUrl: (p.images && p.images[0]) || 'https://images.unsplash.com/photo-1607305387299-a3d9611cd469?w=400',
+          images: p.images && p.images.length > 0 ? p.images : ['https://images.unsplash.com/photo-1607305387299-a3d9611cd469?w=400'],
+          price: Number(p.basePricePerUnit || p.base_price_per_unit || 30),
+          unit: p.quantityUnit || p.quantity_unit || 'kg',
+          minOrder: Number(p.minOrderQuantity || p.min_order_quantity || 1),
+          stock: Number(p.availableQuantity || p.available_quantity || 100),
+          category: category,
+          categoryId: categoryId,
+          farmer: {
+            id: p.farmerId || p.farmer_id || 'farmer-1',
+            name: farmerName,
+            location: farmerLoc,
+            state: (p.farmers && p.farmers.state) || 'Maharashtra',
+            rating: 4.9,
+            reviewCount: 128,
+            isVerified: true,
+            totalProducts: 15,
+            memberSince: '2023',
+          },
           rating: 4.8,
-          reviewCount: 120,
-          isVerified: true,
-          totalProducts: 20,
-          memberSince: '2023',
-        },
-        rating: 4.8,
-        reviewCount: 94,
-        description: `Freshly harvested ${p.cropName || 'produce'} direct from farm. Grade ${p.grade || 'A'}.`,
-        isFreshDeal: true,
-      }));
+          reviewCount: 94,
+          description: `Freshly harvested ${cropTitle} direct from farm. Grade ${p.grade || 'A'}. Available for instant dispatch to all buyers across India.`,
+          isFreshDeal: true,
+        };
+      });
     },
 
     getCategories(): Category[] {

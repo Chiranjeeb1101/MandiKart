@@ -41,6 +41,7 @@ export interface DetailedOrder {
   logisticsPartner: string;
   logisticsTrackingId: string;
   estimatedDelivery: string;
+  imageUrl?: string;
 }
 
 export type DisputeSeverity = 'CRITICAL' | 'HIGH' | 'MAJOR' | 'MEDIUM' | 'MINOR';

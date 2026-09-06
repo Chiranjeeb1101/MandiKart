@@ -29,16 +29,22 @@ export async function pickImageFromGallery(): Promise<ImagePickerResult> {
       mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
+      quality: 0.7,
+      base64: true,
     });
 
     if (result.canceled || !result.assets || result.assets.length === 0) {
       return { cancelled: true };
     }
 
+    const asset = result.assets[0];
+    const resolvedUri = asset.base64
+      ? `data:image/jpeg;base64,${asset.base64}`
+      : asset.uri;
+
     return {
       cancelled: false,
-      uri: result.assets[0].uri,
+      uri: resolvedUri,
     };
   } catch (err: any) {
     console.error('Error picking image from gallery:', err);
@@ -64,16 +70,22 @@ export async function takePhotoWithCamera(): Promise<ImagePickerResult> {
       mediaTypes: ['images'],
       allowsEditing: true,
       aspect: [1, 1],
-      quality: 0.8,
+      quality: 0.7,
+      base64: true,
     });
 
     if (result.canceled || !result.assets || result.assets.length === 0) {
       return { cancelled: true };
     }
 
+    const asset = result.assets[0];
+    const resolvedUri = asset.base64
+      ? `data:image/jpeg;base64,${asset.base64}`
+      : asset.uri;
+
     return {
       cancelled: false,
-      uri: result.assets[0].uri,
+      uri: resolvedUri,
     };
   } catch (err: any) {
     console.error('Error taking photo:', err);

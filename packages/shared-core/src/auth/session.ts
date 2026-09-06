@@ -141,18 +141,31 @@ export class SessionManager {
     }
 
     const now = Date.now();
-    const existing = sessionRegistry.get(payload.sessionId);
+    const maxInactivityMs = CONSTANTS.SESSION_TTL_SECONDS * 1000;
+    let existing = sessionRegistry.get(payload.sessionId);
     if (!existing) {
-      return {
-        valid: false,
-        error: 'Session has been revoked or expired. Please log in again.',
+      // Reconstitute session from cryptographically verified HMAC payload across server restarts
+      if (now > payload.expiresAt || (payload.lastActivityAt && now - payload.lastActivityAt > maxInactivityMs)) {
+        return {
+          valid: false,
+          error: 'Session expired due to 15 days of inactivity. Please log in again.',
+        };
+      }
+      existing = {
+        sessionId: payload.sessionId,
+        userId: payload.userId,
+        role: payload.role,
+        phone: payload.phone,
+        email: payload.email,
+        lastActivityAt: payload.lastActivityAt || now,
+        expiresAt: payload.expiresAt,
       };
+      sessionRegistry.set(payload.sessionId, existing);
     }
 
     // 2. Inactivity Check: Has 15 days elapsed?
     const lastActivity = existing.lastActivityAt;
     const inactivityDurationMs = now - lastActivity;
-    const maxInactivityMs = CONSTANTS.SESSION_TTL_SECONDS * 1000;
 
     if (inactivityDurationMs > maxInactivityMs) {
       sessionRegistry.delete(payload.sessionId);

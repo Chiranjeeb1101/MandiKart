@@ -73,6 +73,8 @@ export interface FarmerProduceListing {
   mandiName?: string;
   submittedAt?: string;
   labCertificateNumber?: string;
+  imageUrl?: string;
+  images?: string[];
 }
 
 export interface FarmerUser {

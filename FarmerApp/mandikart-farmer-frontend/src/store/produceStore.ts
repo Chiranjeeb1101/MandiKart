@@ -12,6 +12,9 @@
  */
 
 import { create } from 'zustand';
+import { persist, createJSONStorage } from 'zustand/middleware';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import { apiClient } from '@/services/apiClient';
 
 export type CropCondition = 'Good' | 'Needs Attention' | 'Deteriorating' | 'Condition not updated';
 export type QualityGrade = 'Grade A' | 'Grade B' | 'Grade C' | 'Unsorted';
@@ -73,15 +76,17 @@ export interface CropItem {
   attentionActionRoute?: string;
 
   // Lifecycle Status: Pending Admin Verification -> Active Live Order
-  status?: 'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED';
+  status?: 'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED' | 'DRAFT';
 }
 
 interface ProduceStoreState {
   crops: CropItem[];
 
   // Actions
+  syncWithBackend: (token?: string | null) => Promise<void>;
+  replaceCropId: (oldId: string, newId: string) => void;
   addCrop: (crop: Omit<CropItem, 'id'>) => CropItem;
-  updateCropStatus: (id: string, status: 'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED') => void;
+  updateCropStatus: (id: string, status: 'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED' | 'DRAFT') => void;
   updateCropCondition: (id: string, condition: CropCondition, note?: string) => void;
   updateCropQuantity: (id: string, availableKg: number, reservedKg?: number) => void;
   updateCropDetails: (id: string, updates: Partial<CropItem>) => void;
@@ -341,86 +346,202 @@ const INITIAL_CROPS: CropItem[] = [
   },
 ];
 
-export const useProduceStore = create<ProduceStoreState>((set, get) => ({
-  crops: INITIAL_CROPS.map((c) => ({ ...c, status: c.status || 'ACTIVE' })),
+export const useProduceStore = create<ProduceStoreState>()(
+  persist(
+    (set, get) => ({
+      crops: INITIAL_CROPS.map((c) => ({ ...c, status: c.status || 'ACTIVE' })),
 
-  addCrop: (newCropData) => {
-    const newId = `crop_${Date.now()}`;
-    const newCrop: CropItem = {
-      ...newCropData,
-      id: newId,
-      status: newCropData.status || 'PENDING_APPROVAL',
-    };
-
-    set((state) => ({
-      crops: [newCrop, ...state.crops],
-    }));
-
-    return newCrop;
-  },
-
-  updateCropStatus: (id, status) => {
-    set((state) => ({
-      crops: state.crops.map((c) => (c.id === id ? { ...c, status } : c)),
-    }));
-  },
-
-  updateCropCondition: (id, condition, note) => {
-    set((state) => ({
-      crops: state.crops.map((c) => {
-        if (c.id === id) {
-          return {
-            ...c,
-            condition,
-            conditionNote: note !== undefined ? note : c.conditionNote,
-            conditionUpdatedAt: 'Today',
-          };
-        }
-        return c;
-      }),
-    }));
-  },
-
-  updateCropQuantity: (id, availableKg, reservedKg) => {
-    set((state) => ({
-      crops: state.crops.map((c) => {
-        if (c.id === id) {
-          const res = reservedKg !== undefined ? reservedKg : c.reservedKg;
-          return {
-            ...c,
-            availableKg,
-            reservedKg: res,
-            totalKg: availableKg + res + c.soldKg,
-          };
-        }
-        return c;
-      }),
-    }));
-  },
-
-  updateCropDetails: (id, updates) => {
-    set((state) => ({
-      crops: state.crops.map((c) => {
-        if (c.id === id) {
-          const updated = { ...c, ...updates };
-          // Keep totalKg in sync if availableKg is provided
-          if (updates.availableKg !== undefined && updates.totalKg === undefined) {
-            updated.totalKg = updates.availableKg + (updated.reservedKg || 0) + (updated.soldKg || 0);
+      syncWithBackend: async (token?: string | null) => {
+        try {
+          const backendProducts = await apiClient.getProducts(token);
+          if (!Array.isArray(backendProducts) || backendProducts.length === 0) {
+            return;
           }
-          return updated;
+
+          set((state) => {
+            const cropMap = new Map<string, CropItem>();
+            for (const crop of (state.crops || [])) {
+              if (crop && crop.id) {
+                cropMap.set(crop.id, crop);
+              }
+            }
+
+            for (const bp of backendProducts) {
+              if (!bp || !bp.id) continue;
+              const bpStatus: 'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED' =
+                bp.status === 'REJECTED'
+                  ? 'REJECTED'
+                  : (bp.isActive || bp.status === 'ACTIVE' || bp.is_active)
+                  ? 'ACTIVE'
+                  : 'PENDING_APPROVAL';
+
+              // Check if already in map by ID or by initial crop name
+              let matchedExisting: CropItem | undefined = cropMap.get(bp.id);
+              if (!matchedExisting) {
+                for (const [id, existingCrop] of cropMap.entries()) {
+                  if (
+                    id.startsWith('crop_') &&
+                    existingCrop.cropName.trim().toLowerCase() === String(bp.cropName || '').trim().toLowerCase()
+                  ) {
+                    matchedExisting = existingCrop;
+                    cropMap.delete(id);
+                    break;
+                  }
+                }
+              }
+
+              if (matchedExisting) {
+                cropMap.set(bp.id, {
+                  ...matchedExisting,
+                  id: bp.id,
+                  status: bpStatus,
+                  availableKg: Number(bp.availableQuantity ?? matchedExisting.availableKg),
+                  totalKg: Number(bp.totalQuantity ?? matchedExisting.totalKg),
+                  watchTag: bpStatus === 'REJECTED' ? 'Rejected by Admin' : bpStatus === 'ACTIVE' ? 'Marketplace Active' : 'Under Admin Verification',
+                  watchUrgency: bpStatus === 'REJECTED' ? 'warning' : bpStatus === 'ACTIVE' ? 'positive' : 'neutral',
+                });
+              } else {
+                cropMap.set(bp.id, {
+                  id: bp.id,
+                  cropName: bp.cropName || 'Fresh Produce',
+                  variety: bp.cropVariety || 'Harvest Batch',
+                  category: bp.category || 'Vegetables',
+                  totalKg: Number(bp.totalQuantity || bp.availableQuantity || 100),
+                  availableKg: Number(bp.availableQuantity || bp.totalQuantity || 100),
+                  reservedKg: Number(bp.reservedQuantity || 0),
+                  soldKg: 0,
+                  unit: bp.quantityUnit || 'KG',
+                  grade: (bp.grade === 'B' ? 'Grade B' : 'Grade A') as QualityGrade,
+                  harvestDate: bp.harvestDate || 'Recent',
+                  availableFrom: 'Immediate',
+                  location: bp.pickupAddress || 'Farm Shed',
+                  storageType: 'Warehouse',
+                  condition: 'Good',
+                  imageUri: (bp.images && bp.images[0]) ? bp.images[0] : ONION_PHOTO_URI,
+                  expectedPricePerKg: Number(bp.basePricePerUnit || 25),
+                  shelfLifeDaysEstMin: Math.max(3, Number(bp.shelfLifeDays || 14) - 4),
+                  shelfLifeDaysEstMax: Number(bp.shelfLifeDays || 14),
+                  shelfLifeBasis: 'Standard aerated storage condition',
+                  referencePricePerKg: Number(bp.basePricePerUnit || 25),
+                  priceMovementPct: 0,
+                  priceMovementTrend: 'stable',
+                  marketDemand: 'High',
+                  marketName: bp.pickupAddress || 'Regional APMC Mandi',
+                  marketDistanceKm: 15,
+                  marketSource: 'e-NAM / Mandi Portal',
+                  marketLastUpdated: 'Today',
+                  history7D: [],
+                  history30D: [],
+                  history90D: [],
+                  watchTag: bpStatus === 'REJECTED' ? 'Rejected by Admin' : bpStatus === 'ACTIVE' ? 'Marketplace Active' : 'Under Admin Verification',
+                  watchUrgency: bpStatus === 'REJECTED' ? 'warning' : bpStatus === 'ACTIVE' ? 'positive' : 'neutral',
+                  status: bpStatus,
+                });
+              }
+            }
+
+            return { crops: Array.from(cropMap.values()) };
+          });
+        } catch {
+          // Graceful offline fallback
         }
-        return c;
-      }),
-    }));
-  },
+      },
 
-  deleteCrop: (id) => {
-    set((state) => ({
-      crops: state.crops.filter((c) => c.id !== id),
-    }));
-  },
+      replaceCropId: (oldId: string, newId: string) => {
+        set((state) => {
+          const filtered = (state.crops || []).filter((c) => c.id !== newId);
+          return {
+            crops: filtered.map((c) => (c.id === oldId ? { ...c, id: newId } : c)),
+          };
+        });
+      },
 
-  getCropById: (id) => {
-    return get().crops.find((c) => c.id === id);
-  },
-}));
+      addCrop: (newCropData) => {
+        const newId = `crop_${Date.now()}`;
+        const newCrop: CropItem = {
+          ...newCropData,
+          id: newId,
+          status: newCropData.status || 'PENDING_APPROVAL',
+        };
+
+        set((state) => {
+          const filtered = (state.crops || []).filter((c) => c.id !== newId);
+          return {
+            crops: [newCrop, ...filtered],
+          };
+        });
+
+        return newCrop;
+      },
+
+      updateCropStatus: (id, status) => {
+        set((state) => ({
+          crops: state.crops.map((c) => (c.id === id ? { ...c, status } : c)),
+        }));
+      },
+
+      updateCropCondition: (id, condition, note) => {
+        set((state) => ({
+          crops: state.crops.map((c) => {
+            if (c.id === id) {
+              return {
+                ...c,
+                condition,
+                conditionNote: note !== undefined ? note : c.conditionNote,
+                conditionUpdatedAt: 'Today',
+              };
+            }
+            return c;
+          }),
+        }));
+      },
+
+      updateCropQuantity: (id, availableKg, reservedKg) => {
+        set((state) => ({
+          crops: state.crops.map((c) => {
+            if (c.id === id) {
+              const res = reservedKg !== undefined ? reservedKg : c.reservedKg;
+              return {
+                ...c,
+                availableKg,
+                reservedKg: res,
+                totalKg: availableKg + res + c.soldKg,
+              };
+            }
+            return c;
+          }),
+        }));
+      },
+
+      updateCropDetails: (id, updates) => {
+        set((state) => ({
+          crops: state.crops.map((c) => {
+            if (c.id === id) {
+              const updated = { ...c, ...updates };
+              if (updates.availableKg !== undefined && updates.totalKg === undefined) {
+                updated.totalKg = updates.availableKg + (updated.reservedKg || 0) + (updated.soldKg || 0);
+              }
+              return updated;
+            }
+            return c;
+          }),
+        }));
+      },
+
+      deleteCrop: (id) => {
+        set((state) => ({
+          crops: state.crops.filter((c) => c.id !== id),
+        }));
+      },
+
+      getCropById: (id) => {
+        return get().crops.find((c) => c.id === id);
+      },
+    }),
+    {
+      name: 'mandikart_farmer_produce_storage',
+      storage: createJSONStorage(() => AsyncStorage),
+      partialize: (state) => ({ crops: state.crops }),
+    }
+  )
+);

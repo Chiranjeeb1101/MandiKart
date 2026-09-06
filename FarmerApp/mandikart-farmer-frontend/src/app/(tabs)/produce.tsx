@@ -14,7 +14,7 @@
  * - Direct routing to /produce/add, /produce/[id], and /sell/best-options
  */
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -24,8 +24,10 @@ import {
   TextInput,
   ScrollView,
   Modal,
+  RefreshControl,
+  Alert,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import {
   Plus,
@@ -59,6 +61,28 @@ export default function ProduceScreen() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const crops = useProduceStore((state) => state.crops);
+  const [refreshing, setRefreshing] = useState(false);
+
+  // Stable ref guard: prevent duplicate sync calls during tab switches
+  const isSyncing = useRef(false);
+
+  // Use getState() directly — avoids subscribing to syncWithBackend reference
+  // which changes on every store update and causes focus-loop crashes
+  useFocusEffect(
+    useCallback(() => {
+      if (isSyncing.current) return;
+      isSyncing.current = true;
+      useProduceStore.getState().syncWithBackend().finally(() => {
+        isSyncing.current = false;
+      });
+    }, []) // empty deps — intentional, getState() is always stable
+  );
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    await useProduceStore.getState().syncWithBackend();
+    setRefreshing(false);
+  }, []);
 
   // Search & Filter State
   const [searchQuery, setSearchQuery] = useState('');
@@ -176,6 +200,14 @@ export default function ProduceScreen() {
         style={styles.scrollContainer}
         contentContainerStyle={styles.screenScrollContent}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={[MKColors.primaryGreen]}
+            tintColor={MKColors.primaryGreen}
+          />
+        }
       >
         {/* ── Interactive Summary Strip: 4 Key Metric Cards ────────── */}
         <View style={styles.summaryStrip}>
@@ -472,36 +504,36 @@ export default function ProduceScreen() {
               onPress={() => {
                 setSearchQuery('');
                 setActiveFilter('all');
-                router.push('/produce/add');
+                router.push('/produce/add' as any);
               }}
             >
-              <Plus size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-              <Text style={styles.emptyStateButtonText}>Add New Crop</Text>
+              <Plus size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+              <Text style={styles.emptyStateButtonText}>Add New Harvest</Text>
             </Pressable>
           </View>
         ) : (
-          filteredCrops.map((crop) => {
+          (filteredCrops || []).filter(Boolean).map((crop, idx) => {
             const cond = getConditionConfig(crop.condition);
             const CondIcon = cond.icon;
             const stockPct =
               crop.totalKg > 0 ? Math.min(100, Math.round((crop.availableKg / crop.totalKg) * 100)) : 0;
 
             return (
-              <View key={crop.id} style={styles.cropCard}>
+              <View key={`${crop.id || 'crop'}_${idx}`} style={styles.cropCard}>
                 {/* Crop Top Info */}
                 <View style={styles.cropCardTopRow}>
                   <Image source={{ uri: crop.imageUri }} style={styles.cropThumbnail} />
                   <View style={styles.cropMetaInfo}>
                     <View style={styles.cropTitleBadgeRow}>
-                      <Text style={styles.cropCardTitle} numberOfLines={1}>
-                        {crop.cropName}
+                      <Text style={styles.cropCardTitle} numberOfLines={1} ellipsizeMode="tail">
+                        {crop.cropName || 'Fresh Produce'}
                       </Text>
                       <View style={styles.gradeBadge}>
-                        <Text style={styles.gradeBadgeText}>{crop.grade}</Text>
+                        <Text style={styles.gradeBadgeText}>{crop.grade || 'Grade A'}</Text>
                       </View>
                     </View>
-                    <Text style={styles.cropVarietyText}>
-                      {crop.variety ? crop.variety : crop.category} • {crop.storageType}
+                    <Text style={styles.cropVarietyText} numberOfLines={1} ellipsizeMode="tail">
+                      {crop.variety ? crop.variety : (crop.category || 'Vegetables')} • {crop.storageType || 'Warehouse'}
                     </Text>
 
                     {/* Status & Condition Badges */}
@@ -525,6 +557,7 @@ export default function ProduceScreen() {
                               ? styles.statusBadgeTextRejected
                               : styles.statusBadgeTextActive,
                           ]}
+                          numberOfLines={1}
                         >
                           {crop.status === 'PENDING_APPROVAL'
                             ? '🟡 Pending Approval'
@@ -537,7 +570,7 @@ export default function ProduceScreen() {
                       {/* Condition Chip */}
                       <View style={[styles.conditionChip, { backgroundColor: cond.bg }]}>
                         <CondIcon size={12} color={cond.color} style={{ marginRight: 4 }} />
-                        <Text style={[styles.conditionChipText, { color: cond.color }]}>
+                        <Text style={[styles.conditionChipText, { color: cond.color }]} numberOfLines={1}>
                           {cond.label}
                         </Text>
                       </View>
@@ -548,10 +581,10 @@ export default function ProduceScreen() {
                 {/* Stock Level Bar */}
                 <View style={styles.stockProgressContainer}>
                   <View style={styles.stockLabelRow}>
-                    <Text style={styles.stockStatusLabel}>
-                      Available: <Text style={styles.stockHighlight}>{formatQuantity(crop.availableKg)}</Text>
+                    <Text style={styles.stockStatusLabel} numberOfLines={1}>
+                      Available: <Text style={styles.stockHighlight}>{formatQuantity(crop.availableKg || 0)}</Text>
                     </Text>
-                    <Text style={styles.stockTotalLabel}>Total: {formatQuantity(crop.totalKg)}</Text>
+                    <Text style={styles.stockTotalLabel} numberOfLines={1}>Total: {formatQuantity(crop.totalKg || 0)}</Text>
                   </View>
                   <View style={styles.progressBarTrack}>
                     <View
@@ -565,8 +598,8 @@ export default function ProduceScreen() {
                       ]}
                     />
                   </View>
-                  {crop.reservedKg > 0 && (
-                    <Text style={styles.reservedSubtext}>
+                  {(crop.reservedKg || 0) > 0 && (
+                    <Text style={styles.reservedSubtext} numberOfLines={1} ellipsizeMode="tail">
                       🔒 {crop.reservedKg.toLocaleString()} kg reserved for confirmed buyer orders
                     </Text>
                   )}
@@ -583,27 +616,29 @@ export default function ProduceScreen() {
                     }}
                   >
                     <Clock
-                      size={14}
-                      color={crop.shelfLifeDaysEstMax <= 5 ? '#DC2626' : MKColors.textSecondary}
+                      size={13}
+                      color={(crop.shelfLifeDaysEstMax || 7) <= 5 ? '#DC2626' : MKColors.textSecondary}
                     />
                     <Text
                       style={[
                         styles.intelligenceText,
-                        crop.shelfLifeDaysEstMax <= 5 && { color: '#DC2626', fontWeight: '700' },
+                        (crop.shelfLifeDaysEstMax || 7) <= 5 && { color: '#DC2626', fontWeight: '700' },
                       ]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
                     >
-                      Approx. {crop.shelfLifeDaysEstMin}–{crop.shelfLifeDaysEstMax} days
+                      Approx. {crop.shelfLifeDaysEstMin || 3}–{crop.shelfLifeDaysEstMax || 7} days
                     </Text>
-                    <Info size={12} color={MKColors.textMuted} style={{ marginLeft: 2 }} />
+                    <Info size={11} color={MKColors.textMuted} style={{ marginLeft: 2 }} />
                   </Pressable>
 
                   {/* Mandi Reference Price & Movement */}
                   <View style={styles.intelligencePill}>
-                    <Building2 size={13} color={MKColors.textSecondary} />
-                    <Text style={styles.intelligenceText}>
-                      ₹{crop.referencePricePerKg}/kg
+                    <Building2 size={12} color={MKColors.textSecondary} />
+                    <Text style={styles.intelligenceText} numberOfLines={1} ellipsizeMode="tail">
+                      ₹{crop.referencePricePerKg || 25}/kg
                     </Text>
-                    {crop.priceMovementPct !== 0 && (
+                    {(crop.priceMovementPct || 0) !== 0 && (
                       <View
                         style={[
                           styles.trendBadge,
@@ -613,9 +648,9 @@ export default function ProduceScreen() {
                         ]}
                       >
                         {crop.priceMovementTrend === 'up' ? (
-                          <TrendingUp size={11} color={MKColors.primaryGreen} />
+                          <TrendingUp size={10} color={MKColors.primaryGreen} />
                         ) : (
-                          <TrendingDown size={11} color="#DC2626" />
+                          <TrendingDown size={10} color="#DC2626" />
                         )}
                         <Text
                           style={[
@@ -624,6 +659,7 @@ export default function ProduceScreen() {
                               ? { color: MKColors.primaryGreen }
                               : { color: '#DC2626' },
                           ]}
+                          numberOfLines={1}
                         >
                           {crop.priceMovementPct > 0 ? `+${crop.priceMovementPct}%` : `${crop.priceMovementPct}%`}
                         </Text>
@@ -632,11 +668,11 @@ export default function ProduceScreen() {
                   </View>
                 </View>
 
-                {/* Source Verification Badge */}
+                {/* Source Verified Badge */}
                 <View style={styles.sourceVerifiedRow}>
                   <ShieldCheck size={12} color={MKColors.primaryGreen} />
-                  <Text style={styles.sourceVerifiedText}>
-                    Benchmark: {crop.marketName} ({crop.marketSource}) • {crop.marketLastUpdated}
+                  <Text style={styles.sourceVerifiedText} numberOfLines={1} ellipsizeMode="tail">
+                    Benchmark: {crop.marketName || 'APMC Mandi'} ({crop.marketSource || 'Official Feed'}) • {crop.marketLastUpdated || 'Today'}
                   </Text>
                 </View>
 
@@ -649,7 +685,7 @@ export default function ProduceScreen() {
                     ]}
                     onPress={() => router.push(`/produce/${crop.id}` as any)}
                   >
-                    <Text style={styles.detailsButtonText}>View Intel</Text>
+                    <Text style={styles.detailsButtonText} numberOfLines={1}>View Intel</Text>
                   </Pressable>
 
                   <Pressable
@@ -661,28 +697,66 @@ export default function ProduceScreen() {
                     hitSlop={6}
                   >
                     <Edit3 size={13} color={MKColors.primaryGreen} />
-                    <Text style={styles.cardEditBtnText}>Edit</Text>
+                    <Text style={styles.cardEditBtnText} numberOfLines={1}>Edit</Text>
                   </Pressable>
 
-                  <Pressable
-                    style={({ pressed }) => [
-                      styles.sellCropButton,
-                      pressed && styles.pressedButton,
-                    ]}
-                    onPress={() =>
-                      router.push({
-                        pathname: '/sell/best-options',
-                        params: {
-                          crop: crop.cropName,
-                          qty: crop.availableKg.toString(),
-                          grade: crop.grade,
-                        },
-                      })
-                    }
-                  >
-                    <Text style={styles.sellCropButtonText}>Sell This Crop</Text>
-                    <ArrowRight size={16} color="#FFFFFF" style={{ marginLeft: 6 }} />
-                  </Pressable>
+                  {crop.status === 'REJECTED' ? (
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.sellCropButton,
+                        styles.sellCropButtonRejected,
+                        pressed && styles.pressedButton,
+                      ]}
+                      onPress={() =>
+                        Alert.alert(
+                          'Produce Verification Notice',
+                          'This produce listing was rejected by MandiKart Admin during quality moderation and cannot be sold. Please review quality standards or add a compliant harvest batch.',
+                          [{ text: 'Understood', style: 'default' }]
+                        )
+                      }
+                    >
+                      <AlertCircle size={13} color="#DC2626" style={{ marginRight: 4 }} />
+                      <Text style={styles.sellCropButtonTextRejected} numberOfLines={1}>Rejected</Text>
+                    </Pressable>
+                  ) : crop.status === 'PENDING_APPROVAL' ? (
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.sellCropButton,
+                        styles.sellCropButtonLocked,
+                        pressed && styles.pressedButton,
+                      ]}
+                      onPress={() =>
+                        Alert.alert(
+                          'Produce Verification Protocol',
+                          'This harvest is currently awaiting MandiKart Admin quality verification. Selling is locked until approved by Mandi administrators to ensure market compliance and food standards.',
+                          [{ text: 'Understood', style: 'default' }]
+                        )
+                      }
+                    >
+                      <Lock size={13} color="#6B7280" style={{ marginRight: 4 }} />
+                      <Text style={styles.sellCropButtonTextLocked} numberOfLines={1}>Locked</Text>
+                    </Pressable>
+                  ) : (
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.sellCropButton,
+                        pressed && styles.pressedButton,
+                      ]}
+                      onPress={() =>
+                        router.push({
+                          pathname: '/sell/best-options',
+                          params: {
+                            crop: crop.cropName,
+                            qty: (crop.availableKg || 0).toString(),
+                            grade: crop.grade,
+                          },
+                        })
+                      }
+                    >
+                      <Text style={styles.sellCropButtonText} numberOfLines={1}>Sell Crop</Text>
+                      <ArrowRight size={14} color="#FFFFFF" style={{ marginLeft: 4 }} />
+                    </Pressable>
+                  )}
                 </View>
               </View>
             );
@@ -695,8 +769,8 @@ export default function ProduceScreen() {
         </View>
 
         {urgentCrops.length > 0 ? (
-          urgentCrops.map((crop) => (
-            <View key={`alert_${crop.id}`} style={styles.alertCard}>
+          urgentCrops.map((crop, idx) => (
+            <View key={`alert_${crop.id || 'crop'}_${idx}`} style={styles.alertCard}>
               <View style={styles.alertCardHeader}>
                 <AlertTriangle size={18} color={MKColors.accentOrange} />
                 <Text style={styles.alertCardTitle}>
@@ -708,8 +782,19 @@ export default function ProduceScreen() {
               </Text>
               <View style={styles.alertActionRow}>
                 <Pressable
-                  style={styles.alertActionButton}
-                  onPress={() =>
+                  style={[
+                    styles.alertActionButton,
+                    crop.status === 'PENDING_APPROVAL' && { backgroundColor: '#F3F4F6', borderColor: '#D1D5DB' },
+                  ]}
+                  onPress={() => {
+                    if (crop.status === 'PENDING_APPROVAL') {
+                      Alert.alert(
+                        'Produce Verification Protocol',
+                        'This harvest is currently awaiting MandiKart Admin quality verification. Selling is locked until approved by Mandi administrators.',
+                        [{ text: 'Understood', style: 'default' }]
+                      );
+                      return;
+                    }
                     router.push({
                       pathname: '/sell/best-options',
                       params: {
@@ -717,11 +802,20 @@ export default function ProduceScreen() {
                         qty: crop.availableKg.toString(),
                         grade: crop.grade,
                       },
-                    })
-                  }
+                    });
+                  }}
                 >
-                  <Text style={styles.alertActionText}>Sell Now</Text>
-                  <ArrowRight size={14} color={MKColors.primaryGreen} />
+                  {crop.status === 'PENDING_APPROVAL' ? (
+                    <>
+                      <Lock size={13} color="#6B7280" style={{ marginRight: 4 }} />
+                      <Text style={[styles.alertActionText, { color: '#6B7280' }]}>Verification Pending</Text>
+                    </>
+                  ) : (
+                    <>
+                      <Text style={styles.alertActionText}>Sell Now</Text>
+                      <ArrowRight size={14} color={MKColors.primaryGreen} />
+                    </>
+                  )}
                 </Pressable>
                 <Pressable
                   style={styles.alertSecondaryButton}
@@ -750,9 +844,9 @@ export default function ProduceScreen() {
         </View>
 
         <View style={styles.watchContainer}>
-          {crops.map((crop) => (
+          {crops.map((crop, idx) => (
             <Pressable
-              key={`watch_${crop.id}`}
+              key={`watch_${crop.id || 'crop'}_${idx}`}
               style={({ pressed }) => [styles.watchRow, pressed && { backgroundColor: '#F8FAFC' }]}
               onPress={() => router.push(`/produce/${crop.id}` as any)}
             >
@@ -1398,6 +1492,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '800',
     color: '#FFFFFF',
+  },
+  sellCropButtonLocked: {
+    backgroundColor: '#F3F4F6',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    elevation: 0,
+  },
+  sellCropButtonTextLocked: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#6B7280',
+  },
+  sellCropButtonRejected: {
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FCA5A5',
+    elevation: 0,
+  },
+  sellCropButtonTextRejected: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#DC2626',
   },
   pressedButton: {
     opacity: 0.85,

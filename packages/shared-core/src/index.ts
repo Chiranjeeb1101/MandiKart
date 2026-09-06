@@ -21,6 +21,7 @@ export * from './firebase/admin.js';
 export * from './utils/geo.utils.js';
 export * from './services/stripe.service.js';
 export * from './services/product-registry.service.js';
+export * from './services/order-registry.service.js';
 
 
 

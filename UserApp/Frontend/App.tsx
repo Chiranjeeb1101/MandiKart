@@ -8,6 +8,7 @@ import { LocationProvider } from './src/context/LocationContext';
 import { LanguageProvider } from './src/context/LanguageContext';
 import { CartProvider } from './src/context/CartContext';
 import { WishlistProvider } from './src/context/WishlistContext';
+import { CatalogProvider } from './src/context/CatalogContext';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StyleSheet, View } from 'react-native';
 
@@ -16,31 +17,33 @@ export default function App() {
     <AuthProvider>
       <LanguageProvider>
         <LocationProvider>
-          <CartProvider>
-            <WishlistProvider>
-              <SafeAreaProvider>
-                {/* Global faded green + orange background — applied to every screen */}
-                <View style={styles.root}>
-                  <LinearGradient
-                    colors={['rgba(35,134,54,0.14)', 'rgba(35,134,54,0.0)']}
-                    style={styles.blobTopLeft}
-                    start={{ x: 0, y: 0 }}
-                    end={{ x: 1, y: 1 }}
-                  />
-                  <LinearGradient
-                    colors={['rgba(245,158,11,0.13)', 'rgba(245,158,11,0.0)']}
-                    style={styles.blobBottomRight}
-                    start={{ x: 1, y: 1 }}
-                    end={{ x: 0, y: 0 }}
-                  />
-                  <NavigationContainer>
-                    <StatusBar style="dark" />
-                    <RootNavigator />
-                  </NavigationContainer>
-                </View>
-              </SafeAreaProvider>
-            </WishlistProvider>
-          </CartProvider>
+          <CatalogProvider>
+            <CartProvider>
+              <WishlistProvider>
+                <SafeAreaProvider>
+                  {/* Global faded green + orange background — applied to every screen */}
+                  <View style={styles.root}>
+                    <LinearGradient
+                      colors={['rgba(35,134,54,0.14)', 'rgba(35,134,54,0.0)']}
+                      style={styles.blobTopLeft}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 1 }}
+                    />
+                    <LinearGradient
+                      colors={['rgba(245,158,11,0.13)', 'rgba(245,158,11,0.0)']}
+                      style={styles.blobBottomRight}
+                      start={{ x: 1, y: 1 }}
+                      end={{ x: 0, y: 0 }}
+                    />
+                    <NavigationContainer>
+                      <StatusBar style="dark" />
+                      <RootNavigator />
+                    </NavigationContainer>
+                  </View>
+                </SafeAreaProvider>
+              </WishlistProvider>
+            </CartProvider>
+          </CatalogProvider>
         </LocationProvider>
       </LanguageProvider>
     </AuthProvider>

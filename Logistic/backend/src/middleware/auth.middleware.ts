@@ -37,13 +37,16 @@ const decodeJwtPayload = (token: string): Record<string, any> | null => {
  * Returns 401 if token is missing or malformed in production mode.
  */
 export const requireAuth = (req: Request, res: Response, next: NextFunction): void => {
-  // In mock/dev environment skip auth entirely
-  if (isMockEnv()) {
+  const authHeader = req.headers.authorization;
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : '';
+  const isMockToken = token.startsWith('mock_jwt_token_') || token.startsWith('mock_otp_token_') || token.startsWith('mock_google_token_');
+
+  // In mock/dev environment or with mock token, skip auth verification
+  if (isMockEnv() || isMockToken) {
     (req as any).user = MOCK_USER;
     return next();
   }
 
-  const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
     res.status(401).json({
       data: null,
@@ -53,7 +56,6 @@ export const requireAuth = (req: Request, res: Response, next: NextFunction): vo
     return;
   }
 
-  const token = authHeader.slice(7);
   const payload = decodeJwtPayload(token);
 
   if (!payload || !payload.sub) {

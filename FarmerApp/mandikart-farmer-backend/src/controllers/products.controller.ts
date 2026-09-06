@@ -71,11 +71,20 @@ export class ProductsController {
       }
 
       const supabase = getSupabaseAdmin();
+      const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const isFarmerUuid = UUID_REGEX.test(farmerId);
+      
       let query = supabase
         .from('products')
-        .select('*', { count: 'exact' })
-        .or(`farmer_id.eq.${farmerId},farmer_id.eq.d1111111-1111-1111-1111-111111111111`)
-        .order('created_at', { ascending: false });
+        .select('*', { count: 'exact' });
+
+      if (isFarmerUuid && farmerId !== 'd1111111-1111-1111-1111-111111111111') {
+        query = query.or(`farmer_id.eq.${farmerId},farmer_id.eq.d1111111-1111-1111-1111-111111111111`);
+      } else {
+        query = query.eq('farmer_id', 'd1111111-1111-1111-1111-111111111111');
+      }
+
+      query = query.order('created_at', { ascending: false });
 
       if (status === 'active') {
         query = query.eq('is_active', true).gt('available_quantity', 0);
@@ -85,16 +94,7 @@ export class ProductsController {
 
       const { data, count, error } = await query.range(offset, offset + limit - 1);
 
-      if (error || !data || data.length === 0) {
-        res.status(200).json({
-          data: [],
-          meta: { page, limit, total: 0, totalPages: 1 },
-          error: null,
-        });
-        return;
-      }
-
-      const formatted = data.map((row: any) => ({
+      let formatted = (data || []).map((row: any) => ({
         id: row.id,
         farmerId: row.farmer_id,
         cropName: row.crop_name,
@@ -110,20 +110,63 @@ export class ProductsController {
         targetBuyer: row.target_buyer,
         images: row.images || [],
         pickupAddress: row.pickup_address,
-        isActive: row.is_active,
+        isActive: !!row.is_active,
+        status: (row.is_active ? 'ACTIVE' : 'PENDING_APPROVAL') as 'ACTIVE' | 'PENDING_APPROVAL' | 'REJECTED',
         harvestDate: row.harvest_date,
         shelfLifeDays: row.shelf_life_days,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
       }));
 
+      // Merge real-time produce status from ProductRegistryService
+      try {
+        const registered = ProductRegistryService.getRegisteredProducts();
+        for (const reg of registered) {
+          const existing = formatted.find((f: any) => f.id === reg.id);
+          const computedStatus = reg.status === 'REJECTED'
+            ? 'REJECTED'
+            : (reg.isActive || reg.status === 'ACTIVE')
+            ? 'ACTIVE'
+            : 'PENDING_APPROVAL';
+
+          if (existing) {
+            existing.isActive = reg.isActive ?? existing.isActive;
+            existing.status = computedStatus;
+          } else {
+            formatted.unshift({
+              id: reg.id,
+              farmerId: reg.farmerId,
+              cropName: reg.cropName,
+              cropVariety: reg.cropVariety,
+              grade: reg.grade,
+              category: reg.category,
+              totalQuantity: Number(reg.totalQuantity || 0),
+              availableQuantity: Number(reg.availableQuantity || 0),
+              reservedQuantity: Number(reg.reservedQuantity || 0),
+              quantityUnit: reg.quantityUnit || 'kg',
+              basePricePerUnit: Number(reg.basePricePerUnit || 0),
+              minOrderQuantity: Number(reg.minOrderQuantity || 1),
+              targetBuyer: reg.targetBuyer || 'BOTH',
+              images: reg.images || [],
+              pickupAddress: reg.location || reg.pickupAddress,
+              isActive: !!reg.isActive,
+              status: computedStatus,
+              harvestDate: reg.harvestDate || 'Recent',
+              shelfLifeDays: reg.shelfLifeDays || 14,
+              createdAt: reg.createdAt || new Date().toISOString(),
+              updatedAt: reg.updatedAt || new Date().toISOString(),
+            });
+          }
+        }
+      } catch {}
+
       res.status(200).json({
         data: formatted,
         meta: {
           page,
           limit,
-          total: count || formatted.length,
-          totalPages: Math.ceil((count || formatted.length) / limit),
+          total: formatted.length,
+          totalPages: Math.ceil(formatted.length / limit),
         },
         error: null,
       });
@@ -210,11 +253,16 @@ export class ProductsController {
           createdAt: new Date().toISOString(),
         };
 
+        const reqFarmerName = (req.body && req.body.farmerName) || (req.user as any)?.fullName || (req.user as any)?.name || 'Registered Farmer';
+        const reqFarmerPhone = (req.body && req.body.farmerPhone) || (req.user as any)?.phone || '';
+        const reqLocation = (req.body && req.body.location) || payload.pickupAddress || 'Nashik, Maharashtra';
+
         ProductRegistryService.registerProduct({
           id: mockProduct.id,
           farmerId,
-          farmerName: 'Ramesh Patil',
-          location: payload.pickupAddress || 'Nashik, Maharashtra',
+          farmerName: reqFarmerName,
+          farmerPhone: reqFarmerPhone,
+          location: reqLocation,
           cropName: payload.cropName,
           cropVariety: payload.cropVariety,
           grade: payload.grade,
@@ -239,11 +287,16 @@ export class ProductsController {
         return;
       }
 
+      const reqFarmerName = (req.body && req.body.farmerName) || (req.user as any)?.fullName || (req.user as any)?.name || 'Registered Farmer';
+      const reqFarmerPhone = (req.body && req.body.farmerPhone) || (req.user as any)?.phone || '';
+      const reqLocation = (req.body && req.body.location) || data.pickup_address || 'Nashik, Maharashtra';
+
       ProductRegistryService.registerProduct({
         id: data.id,
         farmerId: data.farmer_id,
-        farmerName: 'Ramesh Patil',
-        location: data.pickup_address || 'Nashik, Maharashtra',
+        farmerName: reqFarmerName,
+        farmerPhone: reqFarmerPhone,
+        location: reqLocation,
         cropName: data.crop_name,
         cropVariety: data.crop_variety,
         grade: data.grade,
@@ -255,7 +308,7 @@ export class ProductsController {
         basePricePerUnit: data.base_price_per_unit,
         minOrderQuantity: data.min_order_quantity,
         targetBuyer: data.target_buyer,
-        images: data.images,
+        images: (data.images && data.images.length > 0) ? data.images : (payload.images || []),
         pickupAddress: data.pickup_address,
         shelfLifeDays: data.shelf_life_days,
         isActive: false,
@@ -274,7 +327,14 @@ export class ProductsController {
         metadata: { crop: payload.cropName, qty: payload.totalQuantity },
       });
 
-      res.status(201).json({ data, meta: null, error: null });
+      res.status(201).json({
+        data: {
+          ...data,
+          status: 'PENDING_APPROVAL',
+        },
+        meta: null,
+        error: null,
+      });
     } catch (err) {
       res.status(500).json({
         data: null,
@@ -347,6 +407,140 @@ export class ProductsController {
         data: null,
         meta: null,
         error: { code: 'STOCK_UPDATE_ERROR', message: (err as Error).message },
+      });
+    }
+  }
+
+  /**
+   * PUT /:id — Update product details / publish to all buyers
+   * Allows farmers to update price, status, or targetBuyer of a product.
+   * When status=ACTIVE or targetBuyer=BOTH, the crop becomes visible in the User App.
+   */
+  static async updateProduct(req: Request, res: Response): Promise<void> {
+    const farmerId = req.user?.id || 'farmer_ramesh_01';
+    const productId = String(req.params.id);
+    const {
+      targetBuyer, basePricePerUnit, status, isActive, images,
+      // Full crop data (optional) — sent by the Farmer App "Sell to All" flow
+      cropName, cropVariety, grade, category, totalQuantity, availableQuantity,
+      quantityUnit, pickupAddress, shelfLifeDays, farmerName, farmerPhone, location,
+    } = req.body;
+
+    try {
+      const isNowActive = status === 'ACTIVE' || isActive === true || targetBuyer === 'BOTH';
+
+      // Always update/create in the shared ProductRegistryService for cross-app visibility
+      const registered = ProductRegistryService.getProductById(productId);
+
+      if (registered) {
+        // Merge updates into existing registry entry
+        ProductRegistryService.registerProduct({
+          ...registered,
+          ...(targetBuyer !== undefined && { targetBuyer }),
+          ...(basePricePerUnit !== undefined && { basePricePerUnit }),
+          ...(images !== undefined && { images }),
+          isActive: isNowActive || registered.isActive,
+          status: (isNowActive || registered.isActive) ? 'ACTIVE' : 'PENDING_APPROVAL',
+        });
+      } else {
+        // Not yet in registry — create a full entry from request body data
+        const reqFarmerName = farmerName || (req.user as any)?.fullName || (req.user as any)?.name || 'MandiKart Farmer';
+        const reqLocation = location || pickupAddress || 'Mandi Area';
+        const safeCropName = cropName || 'Fresh Produce';
+        const safeImages = (images && images.length > 0)
+          ? images
+          : [`https://source.unsplash.com/featured/600x400/?${encodeURIComponent(safeCropName + ' vegetable farm')}`];
+
+        ProductRegistryService.registerProduct({
+          id: productId,
+          farmerId,
+          farmerName: reqFarmerName,
+          farmerPhone: farmerPhone || (req.user as any)?.phone || '',
+          location: reqLocation,
+          cropName: safeCropName,
+          cropVariety: cropVariety || '',
+          grade: grade || 'A',
+          category: category || 'Vegetables',
+          totalQuantity: Number(totalQuantity || availableQuantity || 100),
+          availableQuantity: Number(availableQuantity || totalQuantity || 100),
+          reservedQuantity: 0,
+          quantityUnit: quantityUnit || 'kg',
+          basePricePerUnit: Number(basePricePerUnit || 25),
+          minOrderQuantity: 10,
+          targetBuyer: targetBuyer || 'BOTH',
+          images: safeImages,
+          pickupAddress: reqLocation,
+          shelfLifeDays: Number(shelfLifeDays || 14),
+          isActive: isNowActive,
+          status: isNowActive ? 'ACTIVE' : 'PENDING_APPROVAL',
+          createdAt: new Date().toISOString(),
+        });
+      }
+
+      // If Supabase is configured, also persist there
+      if (isSupabaseConfigured()) {
+        const supabase = getSupabaseAdmin();
+        const dbUpdate: Record<string, any> = { updated_at: new Date().toISOString() };
+        if (targetBuyer !== undefined) dbUpdate.target_buyer = targetBuyer;
+        if (basePricePerUnit !== undefined) dbUpdate.base_price_per_unit = basePricePerUnit;
+        if (isNowActive) dbUpdate.is_active = true;
+        if (images !== undefined && images.length > 0) dbUpdate.images = images;
+        if (totalQuantity !== undefined) dbUpdate.total_quantity = totalQuantity;
+        if (availableQuantity !== undefined) dbUpdate.available_quantity = availableQuantity;
+
+        const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        let updatedRows: any[] | null = null;
+        if (UUID_REGEX.test(productId)) {
+          const res = await supabase
+            .from('products')
+            .update(dbUpdate)
+            .eq('id', productId)
+            .select();
+          updatedRows = res.data;
+        }
+
+        // If no row matched in Supabase (e.g. productId was client-side local ID like crop-xxx),
+        // INSERT as an active product in Supabase so UserApp can query it immediately!
+        if (!updatedRows || updatedRows.length === 0) {
+          const safeFarmerId = UUID_REGEX.test(farmerId) ? farmerId : 'd1111111-1111-1111-1111-111111111111';
+          const safePrice = Number(basePricePerUnit || 25);
+          const safeQty = Number(totalQuantity || availableQuantity || 100);
+
+          await supabase
+            .from('products')
+            .insert({
+              farmer_id: safeFarmerId,
+              crop_name: cropName || 'Fresh Produce',
+              crop_variety: cropVariety || null,
+              grade: grade || 'A',
+              category: category || 'Vegetables',
+              total_quantity: safeQty,
+              available_quantity: safeQty,
+              reserved_quantity: 0.0,
+              quantity_unit: quantityUnit || 'kg',
+              base_price_per_unit: safePrice,
+              min_order_quantity: 10,
+              target_buyer: 'BOTH',
+              images: (images && images.length > 0) ? images : ['https://images.unsplash.com/photo-1618512496248-a07fe83aa8cb?w=600'],
+              pickup_address: pickupAddress || location || 'Nashik, Maharashtra',
+              shelf_life_days: Number(shelfLifeDays || 14),
+              is_active: true,
+            });
+        }
+      }
+
+      DashboardService.invalidateCache(farmerId);
+
+      res.status(200).json({
+        data: { id: productId, message: 'Crop published to global marketplace. Visible to all buyers.' },
+        meta: null,
+        error: null,
+      });
+    } catch (err) {
+      res.status(500).json({
+        data: null,
+        meta: null,
+        error: { code: 'PRODUCT_UPDATE_ERROR', message: (err as Error).message },
       });
     }
   }

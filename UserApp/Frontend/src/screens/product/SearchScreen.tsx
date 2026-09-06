@@ -7,25 +7,14 @@ import { RootStackParamList } from '../../navigation/types';
 import { Colors, Spacing } from '../../theme';
 import ProductCard from '../../components/ProductCard';
 import SearchBar from '../../components/SearchBar';
-import { SAMPLE_PRODUCTS } from '../../services/mockData';
-import { apiClient } from '../../services/apiClient';
+import { useCatalog } from '../../context/CatalogContext';
 import { Product } from '../../types';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'ProductStack'>;
 
 export default function SearchScreen({ navigation }: any) {
   const [query, setQuery] = useState('');
-  const [products, setProducts] = useState<Product[]>(SAMPLE_PRODUCTS);
-
-  useEffect(() => {
-    let isMounted = true;
-    apiClient.catalog.search().then((live) => {
-      if (isMounted && live && live.length > 0) {
-        setProducts(live);
-      }
-    }).catch(() => {});
-    return () => { isMounted = false; };
-  }, []);
+  const { products } = useCatalog();
 
   const results = query.length > 1
     ? products.filter((p) =>
@@ -67,7 +56,7 @@ export default function SearchScreen({ navigation }: any) {
             <View style={{ flex: 1 }}>
               <ProductCard
                 product={item}
-                onPress={() => navigation.navigate('ProductDetails', { productId: item.id })}
+                onPress={() => navigation.navigate('ProductDetails', { productId: item.id, product: item })}
                 onAddToCart={() => {}}
               />
             </View>
