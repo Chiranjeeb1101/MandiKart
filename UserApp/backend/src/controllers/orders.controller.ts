@@ -84,27 +84,9 @@ export class BuyerOrdersController {
     }));
 
     if (isMock) {
-      /*
-      // DEMO MOCK ORDERS (COMMENTED OUT FOR RETRIEVAL)
-      const DEMO_MOCK_ORDERS = [
-        {
-          id: 'ord_101',
-          orderNumber: 'MK-ORD-2026-9041',
-          status: 'CONFIRMED',
-          totalAmount: 13250,
-          deliveryOtp: '719284',
-          items: [
-            { cropName: 'Red Onion', grade: 'A', quantity: 500, unit: 'kg', pricePerUnit: 26.5 },
-          ],
-          driverName: 'Santosh Shinde',
-          driverPhone: '+91 9844001122',
-          createdAt: new Date().toISOString(),
-        },
-      ];
-      */
       res.status(200).json({
-        data: [],
-        meta: { total: 0 },
+        data: mappedReg,
+        meta: { total: mappedReg.length },
         error: null,
       });
       return;
@@ -120,9 +102,29 @@ export class BuyerOrdersController {
 
       let finalData = mappedReg;
       if (!error && data && data.length > 0) {
-        const dbIds = new Set(data.map((d: any) => d.id));
+        const mappedDb = data.map((d: any) => ({
+          id: d.id,
+          orderNumber: d.order_number || `#MK-${d.id.slice(0, 5)}`,
+          status: d.status || 'PLACED',
+          totalAmount: d.total_amount,
+          deliveryOtp: d.delivery_otp || '719284',
+          pickupOtp: d.pickup_otp || '482910',
+          items: d.order_items?.map((it: any) => ({
+            cropName: it.crop_name,
+            grade: it.grade,
+            quantity: it.quantity,
+            unit: it.unit || 'kg',
+            pricePerUnit: it.price_per_unit,
+          })) || [],
+          deliveryAddress: d.delivery_address || 'Pune, Maharashtra',
+          driverName: d.driver_name || 'Santosh Shinde',
+          driverPhone: d.driver_phone || '+91 9844001122',
+          createdAt: d.created_at || new Date().toISOString(),
+        }));
+
+        const dbIds = new Set(mappedDb.map((d: any) => d.id));
         const nonDuplicateReg = mappedReg.filter((m: any) => !dbIds.has(m.id));
-        finalData = [...data, ...nonDuplicateReg];
+        finalData = [...mappedDb, ...nonDuplicateReg];
       }
 
       res.status(200).json({

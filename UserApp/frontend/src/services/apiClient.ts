@@ -127,6 +127,9 @@ async function safeFetch<T>(
 // Sub-services
 // ─────────────────────────────────────────────
 
+// Local in-memory store for freshly placed orders on this client session
+const localPlacedOrdersMemory: any[] = [];
+
 export const apiClient = {
   // 1. Auth Service
   auth: {
@@ -561,19 +564,25 @@ export const apiClient = {
   orders: {
     async listOrders(): Promise<Order[]> {
       const res = await safeFetch<any[]>('/orders', { method: 'GET' }, []);
-      if (res.isFallback || !res.data || res.data.length === 0) {
-        return [];
+      let rawList: any[] = (res.data && Array.isArray(res.data) && res.data.length > 0) ? res.data : [];
+
+      // Merge with localPlacedOrdersMemory so newly placed orders are never lost
+      const existingKeys = new Set(rawList.map((x: any) => x.id || x.orderNumber || x.order_number));
+      for (const lo of localPlacedOrdersMemory) {
+        if (lo && (lo.id || lo.orderNumber) && !existingKeys.has(lo.id) && !existingKeys.has(lo.orderNumber)) {
+          rawList.unshift(lo);
+        }
       }
 
-      return res.data.map((o: any) => ({
-        id: o.id || `ord_${Date.now()}`,
+      return rawList.map((o: any) => ({
+        id: o.orderNumber || o.id || `ord_${Date.now()}`,
         orderNumber: o.orderNumber || o.order_number || 'MK-ORD-2026-1001',
         status: (o.status as OrderStatus) || 'PLACED',
         items: (o.items || []).map((it: any) => ({
           product: {
             ...SAMPLE_PRODUCTS[0],
             id: it.productId || 'prod-1',
-            name: it.cropName || 'Fresh Produce',
+            name: it.cropName || it.produceName || 'Fresh Produce',
             price: it.pricePerUnit || 35,
             unit: it.unit || 'kg',
           },
@@ -585,19 +594,21 @@ export const apiClient = {
           label: 'Delivery',
           fullName: o.buyerName || o.buyer_name || 'Buyer',
           phone: o.buyerPhone || o.buyer_phone || '',
-          line1: o.deliveryAddress || '123 Market Road',
+          line1: typeof o.deliveryAddress === 'string' ? o.deliveryAddress : (o.deliveryAddress?.line1 || '123 Market Road'),
           city: o.city || 'Pune',
           state: o.state || 'Maharashtra',
           pincode: o.pincode || '411001',
           isDefault: true,
         },
         paymentMethod: 'UPI' as const,
-        subtotal: o.totalAmount || 350,
+        subtotal: o.totalAmount || o.total || 350,
         deliveryCharge: 25,
-        total: (o.totalAmount || 350) + 25,
-        placedAt: o.createdAt || new Date().toISOString(),
+        total: (o.totalAmount || o.total || 350) + 25,
+        placedAt: o.createdAt || o.placedAt || new Date().toISOString(),
         estimatedDelivery: 'Today by 5:30 PM',
         farmer: SAMPLE_FARMER,
+        deliveryOtp: o.deliveryOtp || '719284',
+        pickupOtp: o.pickupOtp || '482910',
       }));
     },
 
@@ -626,7 +637,19 @@ export const apiClient = {
         fallbackOrder
       );
 
-      return { success: true, order: res.data };
+      const createdOrder = res.data || fallbackOrder;
+      if (createdOrder) {
+        const existingIdx = localPlacedOrdersMemory.findIndex(
+          (x) => x.id === createdOrder.id || x.orderNumber === createdOrder.orderNumber
+        );
+        if (existingIdx >= 0) {
+          localPlacedOrdersMemory[existingIdx] = createdOrder;
+        } else {
+          localPlacedOrdersMemory.unshift(createdOrder);
+        }
+      }
+
+      return { success: true, order: createdOrder };
     },
 
     async confirmDelivery(orderId: string, deliveryOtp: string): Promise<{ success: boolean; message: string }> {
