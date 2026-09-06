@@ -11,15 +11,27 @@ export class FarmerNegotiationsController {
   static async listNegotiations(req: Request, res: Response): Promise<void> {
     const farmerId = req.user?.id || 'd1111111-1111-1111-1111-111111111111';
     const list = NegotiationRegistryService.getRegisteredNegotiations();
-    const filtered = list.filter(
-      (n) => !n.farmerId || n.farmerId === farmerId || n.farmerId === 'farmer_ramesh_01' || farmerId.includes('d1111111')
-    );
+    const demoFarmerIds = [
+      'd1111111-1111-1111-1111-111111111111',
+      'farmer_ramesh_01',
+      'farmer_ramesh',
+      'farmer-1',
+      'frm-101',
+    ];
+    const isDemo = demoFarmerIds.includes(farmerId) || farmerId.includes('d1111111') || farmerId.includes('farmer');
+    const filtered = list.filter((n) => {
+      if (!n.farmerId) return true;
+      if (n.farmerId === farmerId) return true;
+      if (isDemo && (demoFarmerIds.includes(n.farmerId) || n.farmerId.includes('farmer') || n.farmerId.includes('d1111111'))) return true;
+      return false;
+    });
     res.status(200).json({
       data: filtered,
       meta: { total: filtered.length },
       error: null,
     });
   }
+
 
   static async getNegotiation(req: Request, res: Response): Promise<void> {
     const id = String(req.params.id);

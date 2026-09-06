@@ -25,6 +25,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadows } from '../../theme';
 import { apiClient } from '../../services/apiClient';
+import { useAuth } from '../../context/AuthContext';
 
 interface ChatItem {
   id: string;
@@ -45,14 +46,16 @@ interface ChatItem {
   isRead?: boolean;
 }
 
-const CURRENT_USER_ID = 'buyer_default_01';
-
 export default function ChatScreen({ navigation, route }: any) {
+  const { user } = useAuth();
+  const currentUserId = user?.id || 'buyer_default_01';
+  const currentUserName = user?.fullName || 'You';
   const params = route?.params ?? {};
   const [activeNegId, setActiveNegId] = useState<string>(params.negotiationId || '');
   const [farmerName, setFarmerName] = useState<string>(params.farmerName || 'Ramesh Patel');
   const [cropName, setCropName] = useState<string>(params.cropName || 'Produce');
   const [productImage, setProductImage] = useState<string>(params.productImage || '');
+
 
   const [negotiation, setNegotiation] = useState<any>(null);
   const [messages, setMessages] = useState<ChatItem[]>([]);
@@ -120,9 +123,9 @@ export default function ChatScreen({ navigation, route }: any) {
     const optimisticMsg: ChatItem = {
       id: tempId,
       negotiationId: activeNegId,
-      senderId: CURRENT_USER_ID,
+      senderId: currentUserId,
       senderRole: 'BUYER',
-      senderName: 'You',
+      senderName: currentUserName,
       messageType: 'TEXT',
       text: trimmed,
       timestamp: new Date().toISOString(),

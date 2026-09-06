@@ -167,9 +167,13 @@ export interface NegotiationOffer {
   id: string;
   productId: string;
   cropName: string;
+  cropImage?: string;
+  grade?: string;
   farmerId: string;
   farmerName: string;
   buyerId: string;
+  buyerName?: string;
+  buyerPhone?: string;
   originalPrice: number;
   offeredPrice: number;
   counterPrice?: number | null;
@@ -177,6 +181,7 @@ export interface NegotiationOffer {
   unit: string;
   status: 'PENDING_FARMER' | 'COUNTER_OFFERED' | 'ACCEPTED' | 'REJECTED' | 'ORDERED';
   remarks?: string;
+  messages?: any[];
   history?: Array<{
     sender: 'BUYER' | 'FARMER';
     price?: number | null;
@@ -185,6 +190,7 @@ export interface NegotiationOffer {
   }>;
   updatedAt?: string;
 }
+
 
 export interface BulkRequirement {
   id: string;

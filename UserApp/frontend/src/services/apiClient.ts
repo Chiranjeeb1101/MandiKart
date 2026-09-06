@@ -21,12 +21,13 @@ import {
 } from '../types';
 import { SAMPLE_PRODUCTS, SAMPLE_CATEGORIES, SAMPLE_FARMER } from './mockData';
 import { Platform, NativeModules } from 'react-native';
+import Constants from 'expo-constants';
 import { supabase } from './supabaseClient';
 
 export function resolveApiBaseUrl(): string {
-  // 1. Explicitly configured env URL (if not the stale old LAN IP)
+  // 1. Explicitly configured env URL
   const envUrl = process.env.EXPO_PUBLIC_USER_API_URL || process.env.EXPO_PUBLIC_API_URL;
-  if (envUrl && envUrl.trim().length > 0 && !envUrl.includes('10.179.209.101')) {
+  if (envUrl && envUrl.trim().length > 0) {
     return envUrl.trim();
   }
 
@@ -38,9 +39,26 @@ export function resolveApiBaseUrl(): string {
     return 'http://localhost:4001/api/v1';
   }
 
-  // 3. On native (Expo Go / standalone) — use the Expo bundler host so it
-  //    automatically resolves to the dev machine's LAN IP on physical devices
+  // 3. On native (Expo Go / standalone) — check hostUri, debuggerHost, scriptURL
   try {
+    const hostUri = Constants.expoConfig?.hostUri;
+    if (hostUri) {
+      const host = hostUri.split(':')[0];
+      if (host && host !== 'localhost' && host !== '127.0.0.1') {
+        return `http://${host}:4001/api/v1`;
+      }
+    }
+
+    const debuggerHost =
+      (Constants as any)?.manifest2?.extra?.expoGo?.debuggerHost ||
+      (Constants as any)?.manifest?.debuggerHost;
+    if (debuggerHost) {
+      const host = debuggerHost.split(':')[0];
+      if (host && host !== 'localhost' && host !== '127.0.0.1') {
+        return `http://${host}:4001/api/v1`;
+      }
+    }
+
     const scriptURL: string = (NativeModules as any)?.SourceCode?.scriptURL || '';
     if (scriptURL) {
       const host = scriptURL.split('://')[1]?.split('/')[0]?.split(':')[0];
@@ -50,8 +68,8 @@ export function resolveApiBaseUrl(): string {
     }
   } catch {}
 
-  // 4. Fallback to active Wi-Fi LAN IP (port 4001 for UserApp Backend)
-  return 'http://10.166.230.101:4001/api/v1';
+  // 4. Default to current Wi-Fi LAN IP (port 4001 for UserApp Backend)
+  return 'http://10.179.209.101:4001/api/v1';
 }
 
 const REQUEST_TIMEOUT_MS = 4000;
@@ -85,9 +103,15 @@ async function safeFetch<T>(
     ...(options.headers as Record<string, string>),
   };
 
-  if (activeAuthToken) {
-    headers['Authorization'] = `Bearer ${activeAuthToken}`;
+  // Attach auth token, or fallback mock token so authenticated backend routes allow requests
+  headers['Authorization'] = headers['Authorization'] || `Bearer ${activeAuthToken || 'mock_jwt_token_buyer_1'}`;
+
+  // Attach idempotency key on mutating HTTP requests
+  const method = (options.method || 'GET').toUpperCase();
+  if (['POST', 'PUT', 'PATCH', 'DELETE'].includes(method) && !headers['Idempotency-Key'] && !headers['idempotency-key']) {
+    headers['Idempotency-Key'] = `idemp-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
   }
+
 
   try {
     const response = await fetch(url, {
@@ -784,6 +808,7 @@ export const apiClient = {
       grade?: string;
       farmerId: string;
       farmerName: string;
+      buyerId?: string;
       buyerName?: string;
       buyerPhone?: string;
       originalPrice: number;
@@ -795,11 +820,14 @@ export const apiClient = {
       const fallback: NegotiationOffer = {
         id: `neg_${Date.now()}`,
         ...data,
-        buyerId: 'buyer_default_01',
+        buyerId: data.buyerId || 'buyer_default_01',
+        buyerName: data.buyerName || 'Verified Buyer',
+        buyerPhone: data.buyerPhone || '+91 98765 43210',
         counterPrice: null,
         status: 'PENDING_FARMER',
         updatedAt: new Date().toISOString(),
       };
+
 
       const res = await safeFetch<NegotiationOffer>(
         '/negotiations/offer',

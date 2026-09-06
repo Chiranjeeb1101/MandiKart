@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Colors, Spacing, BorderRadius, Shadows } from '../theme';
 import { Product } from '../types';
 import { apiClient } from '../services/apiClient';
+import { useAuth } from '../context/AuthContext';
 
 interface NegotiationModalProps {
   visible: boolean;
@@ -31,6 +32,7 @@ export default function NegotiationModal({
   onClose,
   onOfferSubmitted,
 }: NegotiationModalProps) {
+  const { user } = useAuth();
   const [quantity, setQuantity] = useState<string>(String(Math.max(product.minOrder || 1, initialQuantity)));
   const [offeredPrice, setOfferedPrice] = useState<string>(String(Math.round(product.price * 0.9)));
   const [remarks, setRemarks] = useState<string>('');
@@ -55,15 +57,22 @@ export default function NegotiationModal({
 
     setLoading(true);
     try {
+      const buyerName = user?.fullName || 'Verified Buyer';
+      const buyerPhone = user?.phone || '+91 98765 43210';
+      const buyerId = user?.id || 'buyer_default_01';
+      const farmerId = product.farmer?.id || (product as any).farmerId || 'd1111111-1111-1111-1111-111111111111';
+      const farmerName = product.farmer?.name || (product as any).farmerName || 'Ramesh Patel';
+
       const offer = await apiClient.negotiations.submitOffer({
         productId: product.id,
         cropName: product.name,
         cropImage: product.images?.[0] || product.imageUrl,
         grade: (product as any).grade || 'A',
-        farmerId: product.farmer?.id || 'd1111111-1111-1111-1111-111111111111',
-        farmerName: product.farmer?.name || 'Ramesh Patel',
-        buyerName: 'Aarav Sharma',
-        buyerPhone: '+91 98765 43210',
+        farmerId,
+        farmerName,
+        buyerId,
+        buyerName,
+        buyerPhone,
         originalPrice: product.price,
         offeredPrice: parsedOffer,
         quantity: parsedQty,
@@ -74,8 +83,15 @@ export default function NegotiationModal({
       setLoading(false);
       Alert.alert(
         'Offer Sent! 🤝',
-        `Your price offer of ₹${parsedOffer}/${product.unit} for ${parsedQty} ${product.unit} was dispatched to ${product.farmer?.name || 'the farmer'}. You can track responses in Chat.`,
+        `Your price offer of ₹${parsedOffer}/${product.unit} for ${parsedQty} ${product.unit} was dispatched to ${farmerName}. Open chat to discuss terms!`,
         [
+          {
+            text: '💬 Go to Chat',
+            onPress: () => {
+              onClose();
+              onOfferSubmitted(offer);
+            },
+          },
           {
             text: 'OK',
             onPress: () => {
@@ -90,6 +106,7 @@ export default function NegotiationModal({
       Alert.alert('Error', err.message || 'Failed to submit offer. Please try again.');
     }
   };
+
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>

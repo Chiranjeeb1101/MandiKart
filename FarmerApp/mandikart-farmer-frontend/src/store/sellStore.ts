@@ -744,13 +744,14 @@ export const useSellStore = create<SellStoreState>((set, get) => ({
           id: neg.id,
           buyerId: neg.buyerId || 'buyer_1',
           buyerName: neg.buyerName || 'MandiKart Buyer',
-          buyerType: 'Wholesale Buyer',
+          buyerType: (neg.buyerType as any) || (Number(neg.quantity || 0) >= 50 ? 'Wholesale Buyer' : 'Retail Chain Hub'),
           verified: true,
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+          avatar: neg.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
           rating: 4.8,
           cropName: neg.cropName || 'Produce',
+          variety: neg.variety || neg.grade || 'Standard',
           quantityKg: Number(neg.quantity || 100),
-          qualityGrade: 'Grade A',
+          qualityGrade: neg.grade || 'Grade A',
           offerPricePerKg: offerPrice,
           marketReferencePricePerKg: Math.round(offerPrice * 0.95),
           distanceKm: 15,
@@ -760,6 +761,8 @@ export const useSellStore = create<SellStoreState>((set, get) => ({
           receivedAt: neg.createdAt ? new Date(neg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
           expiresInHours: 24,
           status: statusMap[neg.status] || 'Negotiating',
+          farmerNote: neg.farmerNote,
+          rejectionReason: neg.rejectionReason,
           history: history.length > 0 ? history : [
             {
               id: `msg_init`,
@@ -772,6 +775,7 @@ export const useSellStore = create<SellStoreState>((set, get) => ({
             }
           ],
         };
+
 
         const existingIdx = currentReqs.findIndex((r) => r.id === neg.id);
         if (existingIdx >= 0) {

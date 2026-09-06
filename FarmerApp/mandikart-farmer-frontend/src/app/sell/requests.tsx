@@ -54,6 +54,8 @@ import {
   NegotiationMessage,
 } from '../../store/sellStore';
 import { useProduceStore } from '../../store/produceStore';
+import { resolveFarmerApiBaseUrl } from '../../services/apiClient';
+
 
 const TABS: { key: BuyerRequestStatus | 'All'; label: string }[] = [
   { key: 'All', label: 'All Requests' },
@@ -147,21 +149,28 @@ export default function BuyerRequestsScreen() {
     setAcceptModalVisible(true);
   };
 
-  // Sync backend negotiations on mount
+  // Sync backend negotiations on mount and poll every 2.5s for real-time buyer requests
   React.useEffect(() => {
+    let isMounted = true;
     const fetchNegotiations = async () => {
       try {
-        const apiHost = Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://127.0.0.1:4000';
-        const res = await fetch(`${apiHost}/api/v1/negotiations`, {
+        const apiBase = resolveFarmerApiBaseUrl();
+        const res = await fetch(`${apiBase}/negotiations`, {
           headers: { Authorization: 'Bearer mock_jwt_token_farmer_1' },
         });
         const json = await res.json();
-        if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+        if (isMounted && json.data && Array.isArray(json.data) && json.data.length > 0) {
           useSellStore.getState().mergeBackendNegotiations(json.data);
         }
       } catch (e) {}
     };
+
     fetchNegotiations();
+    const interval = setInterval(fetchNegotiations, 2500);
+    return () => {
+      isMounted = false;
+      clearInterval(interval);
+    };
   }, []);
 
   // Submit Counter Offer
@@ -194,8 +203,8 @@ export default function BuyerRequestsScreen() {
     counterOffer(selectedRequest.id, priceNum, qtyNum, counterMessage);
 
     try {
-      const apiHost = Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://127.0.0.1:4000';
-      await fetch(`${apiHost}/api/v1/negotiations/${selectedRequest.id}/respond`, {
+      const apiBase = resolveFarmerApiBaseUrl();
+      await fetch(`${apiBase}/negotiations/${selectedRequest.id}/respond`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -226,8 +235,8 @@ export default function BuyerRequestsScreen() {
     rejectRequest(selectedRequest.id, reasonText);
 
     try {
-      const apiHost = Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://127.0.0.1:4000';
-      await fetch(`${apiHost}/api/v1/negotiations/${selectedRequest.id}/respond`, {
+      const apiBase = resolveFarmerApiBaseUrl();
+      await fetch(`${apiBase}/negotiations/${selectedRequest.id}/respond`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -257,8 +266,8 @@ export default function BuyerRequestsScreen() {
     }
 
     try {
-      const apiHost = Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://127.0.0.1:4000';
-      await fetch(`${apiHost}/api/v1/negotiations/${selectedRequest.id}/accept`, {
+      const apiBase = resolveFarmerApiBaseUrl();
+      await fetch(`${apiBase}/negotiations/${selectedRequest.id}/accept`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -276,6 +285,7 @@ export default function BuyerRequestsScreen() {
     setDetailModalVisible(false);
     setOrderSuccessModalVisible(true);
   };
+
 
   // Status Badge Helper
   const renderStatusBadge = (status: BuyerRequestStatus) => {

@@ -49,6 +49,8 @@ import {
 } from 'lucide-react-native';
 import { useSellStore } from '../../store/sellStore';
 import { useProduceStore } from '../../store/produceStore';
+import { resolveFarmerApiBaseUrl } from '../../services/apiClient';
+
 
 interface ChatMessage {
   id: string;
@@ -115,8 +117,10 @@ export default function FarmerNegotiationChatScreen() {
   const isFetchingRef = useRef(false);
 
   const getApiHost = () => {
-    return Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://127.0.0.1:4000';
+    const base = resolveFarmerApiBaseUrl();
+    return base.replace(/\/api\/v1\/?$/, '');
   };
+
 
   // Fetch negotiation details & messages
   const fetchNegotiation = async (silent = false) => {
