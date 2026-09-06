@@ -79,6 +79,15 @@ export default function ProduceScreen() {
     }, []) // empty deps — intentional, getState() is always stable
   );
 
+  // Continuous 4-second real-time auto-refresh on Produce screen
+  React.useEffect(() => {
+    useProduceStore.getState().syncWithBackend().catch(() => {});
+    const timer = setInterval(() => {
+      useProduceStore.getState().syncWithBackend().catch(() => {});
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     await useProduceStore.getState().syncWithBackend();
