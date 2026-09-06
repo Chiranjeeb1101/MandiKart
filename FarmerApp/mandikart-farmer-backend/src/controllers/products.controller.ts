@@ -227,14 +227,14 @@ export class ProductsController {
           quantity_unit: payload.quantityUnit,
           base_price_per_unit: payload.basePricePerUnit,
           min_order_quantity: payload.minOrderQuantity,
-          target_buyer: payload.targetBuyer,
+          target_buyer: payload.targetBuyer || 'BOTH',
           images: payload.images,
           pickup_address: payload.pickupAddress || null,
           pickup_latitude: payload.pickupLatitude || null,
           pickup_longitude: payload.pickupLongitude || null,
           harvest_date: payload.harvestDate || null,
           shelf_life_days: payload.shelfLifeDays,
-          is_active: false,
+          is_active: (payload as any).isActive !== undefined ? Boolean((payload as any).isActive) : true,
         })
         .select()
         .single();
@@ -248,8 +248,8 @@ export class ProductsController {
           ...payload,
           availableQuantity: payload.totalQuantity,
           reservedQuantity: 0,
-          isActive: false,
-          status: 'PENDING_APPROVAL',
+          isActive: (payload as any).isActive !== undefined ? Boolean((payload as any).isActive) : true,
+          status: 'ACTIVE',
           createdAt: new Date().toISOString(),
         };
 

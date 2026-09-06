@@ -80,8 +80,8 @@ export class CatalogController {
         .from('products')
         .select('*, farmers(full_name, state, district)')
         .eq('is_active', true)
-        .or('target_buyer.eq.BOTH,target_buyer.is.null')
-        .gt('available_quantity', 0);
+        .gt('available_quantity', 0)
+        .order('created_at', { ascending: false });
 
       if (crop) query = query.ilike('crop_name', `%${crop}%`);
       if (category) query = query.eq('category', category);

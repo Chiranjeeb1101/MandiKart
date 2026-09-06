@@ -20,7 +20,15 @@ export default function ProductCard({
   onWishlistToggle,
   isWishlisted,
 }: Props) {
-  const [imgUri, setImgUri] = useState<string>(product.imageUrl);
+  const [hasImgError, setHasImgError] = useState(false);
+
+  React.useEffect(() => {
+    setHasImgError(false);
+  }, [product.imageUrl]);
+
+  const displayImage = hasImgError
+    ? getFallbackProductImage(product.category, product.name)
+    : (product.imageUrl || getFallbackProductImage(product.category, product.name));
 
   const discountedPrice = product.discount
     ? Math.round(product.price * (1 - product.discount / 100))
@@ -30,15 +38,10 @@ export default function ProductCard({
     <TouchableOpacity style={styles.card} onPress={onPress} activeOpacity={0.9}>
       <View style={styles.imageContainer}>
         <Image
-          source={{ uri: imgUri || getFallbackProductImage(product.category, product.name) }}
+          source={{ uri: displayImage }}
           style={styles.image}
           resizeMode="cover"
-          onError={() => {
-            const fallback = getFallbackProductImage(product.category, product.name);
-            if (imgUri !== fallback) {
-              setImgUri(fallback);
-            }
-          }}
+          onError={() => setHasImgError(true)}
         />
         {/* Badges */}
         <View style={styles.badgeRow}>

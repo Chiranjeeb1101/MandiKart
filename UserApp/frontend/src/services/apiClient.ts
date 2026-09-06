@@ -21,11 +21,12 @@ import {
 } from '../types';
 import { SAMPLE_PRODUCTS, SAMPLE_CATEGORIES, SAMPLE_FARMER } from './mockData';
 import { Platform, NativeModules } from 'react-native';
+import { supabase } from './supabaseClient';
 
 export function resolveApiBaseUrl(): string {
-  // 1. Always prefer explicitly configured env URL (works for web AND native Expo Go)
-  const envUrl = process.env.EXPO_PUBLIC_USER_API_URL;
-  if (envUrl && envUrl.trim().length > 0) {
+  // 1. Explicitly configured env URL (if not the stale old LAN IP)
+  const envUrl = process.env.EXPO_PUBLIC_USER_API_URL || process.env.EXPO_PUBLIC_API_URL;
+  if (envUrl && envUrl.trim().length > 0 && !envUrl.includes('10.179.209.101')) {
     return envUrl.trim();
   }
 
@@ -44,22 +45,16 @@ export function resolveApiBaseUrl(): string {
     if (scriptURL) {
       const host = scriptURL.split('://')[1]?.split('/')[0]?.split(':')[0];
       if (host && host !== 'localhost' && host !== '127.0.0.1') {
-        // Same host as the Metro bundler → same LAN IP → API is reachable
         return `http://${host}:4001/api/v1`;
       }
     }
   } catch {}
 
-  // 4. Default to current Wi-Fi LAN IP (works on both physical devices and emulator)
-  return (
-    process.env.EXPO_PUBLIC_USER_API_URL ||
-    process.env.EXPO_PUBLIC_API_URL ||
-    'http://10.179.209.101:4001/api/v1'
-  );
+  // 4. Fallback to active Wi-Fi LAN IP (port 4001 for UserApp Backend)
+  return 'http://10.166.230.101:4001/api/v1';
 }
 
-
-const REQUEST_TIMEOUT_MS = 15000;
+const REQUEST_TIMEOUT_MS = 4000;
 
 // Internal token memory
 let activeAuthToken: string | null = null;
@@ -411,10 +406,46 @@ export const apiClient = {
       if (params?.grade) queryParts.push(`grade=${encodeURIComponent(params.grade)}`);
 
       const queryString = `?${queryParts.join('&')}`;
-      const result = await safeFetch<any[]>(`/catalog/search${queryString}`, { method: 'GET' }, []);
+      let rawData: any[] | null = null;
 
-      if (result.isFallback || !result.data || result.data.length === 0) {
-        // Return local mock catalog filtered if requested
+      // 1. Try local UserApp backend first
+      try {
+        const result = await safeFetch<any[]>(`/catalog/search${queryString}`, { method: 'GET' }, []);
+        if (!result.isFallback && result.data && result.data.length > 0) {
+          rawData = result.data;
+        }
+      } catch (err: any) {
+        console.log('[Catalog] Backend safeFetch exception, falling back to Supabase directly:', err?.message);
+      }
+
+      // 2. If backend was unreachable or returned empty, query Supabase cloud directly
+      if (!rawData || rawData.length === 0) {
+        try {
+          console.log('[Catalog] Querying Supabase live products table directly...');
+          let sbQuery = supabase
+            .from('products')
+            .select('*, farmers(*)')
+            .eq('is_active', true)
+            .order('created_at', { ascending: false });
+
+          if (params?.crop) sbQuery = sbQuery.ilike('crop_name', `%${params.crop}%`);
+          if (params?.category) sbQuery = sbQuery.eq('category', params.category);
+          if (params?.grade) sbQuery = sbQuery.eq('grade', params.grade);
+
+          const { data: sbData, error: sbError } = await sbQuery.limit(50);
+          if (!sbError && sbData && sbData.length > 0) {
+            console.log(`[Catalog] Supabase direct fetch retrieved ${sbData.length} live products.`);
+            rawData = sbData;
+          } else if (sbError) {
+            console.warn('[Catalog] Supabase direct query error:', sbError.message);
+          }
+        } catch (sbErr: any) {
+          console.warn('[Catalog] Supabase query exception:', sbErr?.message);
+        }
+      }
+
+      // 3. Only if both backend AND Supabase cloud are unreachable (e.g. offline device)
+      if (!rawData || rawData.length === 0) {
         if (params?.crop) {
           return SAMPLE_PRODUCTS.filter((p) => p.name.toLowerCase().includes(params.crop!.toLowerCase()));
         }
@@ -427,8 +458,8 @@ export const apiClient = {
         return SAMPLE_PRODUCTS;
       }
 
-      // Map backend products to frontend Product interface
-      return result.data.map((p) => {
+      // Map backend or Supabase products to frontend Product interface
+      return rawData.map((p) => {
         const category = p.category || 'Vegetables';
         const catLower = category.toLowerCase();
         let categoryId = 'cat-1';
