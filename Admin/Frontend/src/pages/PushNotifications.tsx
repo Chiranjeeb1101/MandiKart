@@ -25,21 +25,7 @@ export const PushNotifications: React.FC<PushNotificationsProps> = ({
       const saved = localStorage.getItem('mandikart_admin_push_history');
       if (saved) return JSON.parse(saved);
     } catch {}
-    return [
-      {
-        id: 'PUSH-948201',
-        targetApp: 'ALL',
-        targetSegment: 'all_users',
-        category: 'MARKET_SURGE',
-        title: '⚡ Market Surge Alert: Tomato Prices +18% Today',
-        body: 'Harvest prices in Nashik Mandi jumped due to high regional demand. Sell your stock now for maximum payout!',
-        deepLink: 'mandikart://prices/tomatoes',
-        sentAt: '09:45 AM Today',
-        recipientCount: 342,
-        deliveryRate: '100%',
-        status: 'DELIVERED',
-      },
-    ];
+    return [];
   });
 
   const handlePushSuccess = (newPush: PushNotificationPayload) => {

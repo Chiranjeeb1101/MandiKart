@@ -11,10 +11,15 @@ interface WishlistContextType {
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
-const INITIAL_WISHLIST: Product[] = [
+/*
+// DEMO/MOCK INITIAL WISHLIST DATA (COMMENTED OUT FOR RETRIEVAL)
+const DEMO_INITIAL_WISHLIST: Product[] = [
   SAMPLE_PRODUCTS[1], // Organic Bananas
   SAMPLE_PRODUCTS[4], // Basmati Rice
 ];
+*/
+const INITIAL_WISHLIST: Product[] = [];
+
 
 export function WishlistProvider({ children }: { children: ReactNode }) {
   const [wishlist, setWishlist] = useState<Product[]>(INITIAL_WISHLIST);

@@ -624,7 +624,9 @@ export const apiClient = {
   // 4. Negotiations Service
   negotiations: {
     async listNegotiations(): Promise<NegotiationOffer[]> {
-      const fallback: NegotiationOffer[] = [
+      /*
+      // DEMO NEGOTIATIONS FALLBACK (COMMENTED OUT FOR RETRIEVAL)
+      const DEMO_FALLBACK: NegotiationOffer[] = [
         {
           id: 'neg_101',
           productId: 'prod_1',
@@ -645,6 +647,8 @@ export const apiClient = {
           ],
         },
       ];
+      */
+      const fallback: NegotiationOffer[] = [];
 
       const res = await safeFetch<NegotiationOffer[]>('/negotiations', { method: 'GET' }, fallback);
       return res.data;
@@ -730,7 +734,9 @@ export const apiClient = {
   // 5. Bulk Commercial Demand Service
   bulk: {
     async listRequirements(): Promise<BulkRequirement[]> {
-      const fallback: BulkRequirement[] = [
+      /*
+      // DEMO BULK REQUIREMENTS FALLBACK (COMMENTED OUT FOR RETRIEVAL)
+      const DEMO_FALLBACK: BulkRequirement[] = [
         {
           id: 'breq_101',
           buyerId: 'buyer_default_01',
@@ -746,6 +752,8 @@ export const apiClient = {
           createdAt: new Date(Date.now() - 86400000).toISOString(),
         },
       ];
+      */
+      const fallback: BulkRequirement[] = [];
 
       const res = await safeFetch<BulkRequirement[]>('/bulk-requirements', { method: 'GET' }, fallback);
       return res.data;
@@ -781,7 +789,9 @@ export const apiClient = {
     },
 
     async getMatches(requirementId: string): Promise<BulkSupplierMatch[]> {
-      const fallback: BulkSupplierMatch[] = [
+      /*
+      // DEMO SUPPLIER MATCHES FALLBACK (COMMENTED OUT FOR RETRIEVAL)
+      const DEMO_FALLBACK: BulkSupplierMatch[] = [
         {
           supplierId: 'farmer_ramesh_01',
           supplierName: 'Ramesh Patil (Nashik Kisan FPO)',
@@ -813,6 +823,8 @@ export const apiClient = {
           location: 'Satara Agri Cluster',
         },
       ];
+      */
+      const fallback: BulkSupplierMatch[] = [];
 
       const res = await safeFetch<{ matches: BulkSupplierMatch[] }>(
         `/bulk-requirements/${requirementId}/matches`,
@@ -821,6 +833,7 @@ export const apiClient = {
       );
       return res.data.matches || fallback;
     },
+
   },
 
   // Storage & Image Upload with Automatic Sharp WebP Compression

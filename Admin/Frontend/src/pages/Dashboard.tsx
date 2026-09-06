@@ -43,10 +43,10 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
   };
 
   // Dynamic KPI Metrics & Live Data State
-  const [liveGmv, setLiveGmv] = useState<number>(142500);
-  const [liveActiveOrders, setLiveActiveOrders] = useState<number>(4);
-  const [liveVerifiedFarmers, setLiveVerifiedFarmers] = useState<number>(18);
-  const spoilageRate = '2.1%';
+  const [liveGmv, setLiveGmv] = useState<number>(0);
+  const [liveActiveOrders, setLiveActiveOrders] = useState<number>(0);
+  const [liveVerifiedFarmers, setLiveVerifiedFarmers] = useState<number>(0);
+  const spoilageRate = '0%';
 
   // Orders State with localStorage hydration
   const [recentOrders, setRecentOrders] = useState<OrderSummary[]>(() => {
@@ -68,52 +68,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
       }
     } catch {}
 
-    return [
-      {
-        id: 'ord-101',
-        orderNumber: '#MK-9402',
-        farmerName: 'Ramesh Patel (Nasik Mandi)',
-        buyerName: 'BigBasket Bulk Ops',
-        produceName: 'Hybrid Tomatoes Grade A',
-        quantityKg: 2500,
-        totalAmount: 87500,
-        status: 'IN_TRANSIT',
-        timestamp: '15 mins ago',
-      },
-      {
-        id: 'ord-102',
-        orderNumber: '#MK-9403',
-        farmerName: 'Suresh Patil (Pune APMC)',
-        buyerName: 'Reliance Fresh Logistics',
-        produceName: 'Red Onions (Nashik Medium)',
-        quantityKg: 5000,
-        totalAmount: 140000,
-        status: 'PLACED',
-        timestamp: '32 mins ago',
-      },
-      {
-        id: 'ord-103',
-        orderNumber: '#MK-9404',
-        farmerName: 'Ganesh Shinde (Nagpur)',
-        buyerName: 'Nature Fresh Supermarkets',
-        produceName: 'Nagpur Mandarin Oranges',
-        quantityKg: 1800,
-        totalAmount: 72000,
-        status: 'CONFIRMED',
-        timestamp: '1 hour ago',
-      },
-      {
-        id: 'ord-104',
-        orderNumber: '#MK-9405',
-        farmerName: 'Balwant Singh (Ludhiana)',
-        buyerName: 'Punjab Agro Processor',
-        produceName: 'Sharbati Wheat (Grain Grade A)',
-        quantityKg: 10000,
-        totalAmount: 320000,
-        status: 'DELIVERED',
-        timestamp: '3 hours ago',
-      },
-    ];
+    return [];
   });
 
   // Live Produce Submissions State with Real-Time Polling
@@ -159,7 +114,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
       .then(res => res.json())
       .then(resData => {
         if (resData?.data?.totalGrossMarketValue) {
-          setLiveGmv(Math.max(142500, resData.data.totalGrossMarketValue));
+          setLiveGmv(resData.data.totalGrossMarketValue);
         }
       })
       .catch(() => {});
@@ -173,25 +128,26 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
       if (savedOrders) {
         const parsed = JSON.parse(savedOrders);
         const activeCount = parsed.filter((o: any) => !['COMPLETED', 'CANCELLED'].includes(o.status)).length;
-        setLiveActiveOrders(Math.max(1, activeCount));
+        setLiveActiveOrders(activeCount);
       }
       const savedFarmers = localStorage.getItem('mandikart_admin_farmers_data');
       if (savedFarmers) {
         const parsed = JSON.parse(savedFarmers);
         const verifiedCount = parsed.filter((f: any) => f.verificationStatus === 'VERIFIED').length;
-        setLiveVerifiedFarmers(Math.max(12, verifiedCount));
+        setLiveVerifiedFarmers(verifiedCount);
       }
     } catch {}
 
     return () => clearInterval(pollTimer);
   }, []);
 
+  // KPI Metrics (Clean Initial State)
   const kpis: KpiMetric[] = [
     {
       id: 'kpi-1',
       label: 'Gross Market Volume',
       value: `₹${liveGmv.toLocaleString('en-IN')}`,
-      change: '+14.2%',
+      change: '0%',
       isPositive: true,
       period: 'last 30 days',
       iconName: 'payments',
@@ -200,7 +156,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
       id: 'kpi-2',
       label: 'Verified Farmers',
       value: `${liveVerifiedFarmers}`,
-      change: '+8.6%',
+      change: '0%',
       isPositive: true,
       period: 'KYC certified',
       iconName: 'agriculture',
@@ -209,7 +165,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
       id: 'kpi-3',
       label: 'Active Escrow Trades',
       value: `${liveActiveOrders}`,
-      change: '+22.5%',
+      change: '0%',
       isPositive: true,
       period: 'in transit & processing',
       iconName: 'shopping_cart',
@@ -218,15 +174,16 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
       id: 'kpi-4',
       label: 'Spoilage Risk Rate',
       value: spoilageRate,
-      change: '-0.8%',
+      change: '0%',
       isPositive: true,
       period: 'cold-chain monitored',
       iconName: 'eco',
     },
   ];
 
-  // Mock AI Insights
-  const [aiInsights, setAiInsights] = useState<AiInsight[]>([
+  /*
+  // DEMO/MOCK ORDERS & AI INSIGHTS (COMMENTED OUT FOR RETRIEVAL)
+  const DEMO_AI_INSIGHTS: AiInsight[] = [
     {
       id: 'ai-1',
       title: 'Spoilage Alert: Transport Truck #MH-15-EG-8821',
@@ -236,23 +193,19 @@ export const Dashboard: React.FC<DashboardProps> = ({ user, onLogout, onNavigate
       category: 'SPOILAGE_RISK',
       timestamp: '5m ago',
     },
-    {
-      id: 'ai-2',
-      title: 'Market Demand Surge: Red Onions',
-      description: 'Regional spot market price anticipated to appreciate by 18% over the next 48 hours.',
-      severity: 'LOW',
-      recommendedAction: 'Broadcast Price Advisory to Nashik Farmer Clusters',
-      category: 'PRICE_VOLATILITY',
-      timestamp: '25m ago',
-    },
-  ]);
-
-  // Mock Regional Data
-  const regionalActivity: RegionalActivity[] = [
-    { region: 'West Zone', state: 'Maharashtra & Gujarat', activeFarmers: 342, activeBuyers: 89, volumeTons: 1250, healthScore: 98 },
-    { region: 'North Zone', state: 'Punjab & Haryana', activeFarmers: 280, activeBuyers: 64, volumeTons: 2100, healthScore: 96 },
-    { region: 'South Zone', state: 'Karnataka & AP', activeFarmers: 195, activeBuyers: 42, volumeTons: 890, healthScore: 94 },
   ];
+  */
+
+  const [aiInsights, setAiInsights] = useState<AiInsight[]>([]);
+  const regionalActivity: RegionalActivity[] = [];
+=======
+>>>>>>> 58c7761 (Comment out demo/mock data in UserApp and Admin Panel)
+  ];
+  */
+
+  const [recentOrders, setRecentOrders] = useState<OrderSummary[]>([]);
+  const [aiInsights, setAiInsights] = useState<AiInsight[]>([]);
+  const regionalActivity: RegionalActivity[] = [];
 
   // Handler for Exporting CSV/JSON Audit File
   const handleDownloadExport = () => {

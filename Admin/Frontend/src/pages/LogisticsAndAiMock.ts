@@ -6,7 +6,9 @@ import type {
   SupplyDemandForecast 
 } from '../types/logisticsAndAi';
 
-export const MOCK_SHIPMENTS: LogisticsShipment[] = [
+/*
+// DEMO/MOCK LOGISTICS & AI DATA (COMMENTED OUT FOR RETRIEVAL)
+export const DEMO_MOCK_SHIPMENTS: LogisticsShipment[] = [
   {
     id: 'shp-001',
     trackingId: 'TRK-9402-MH',
@@ -30,7 +32,7 @@ export const MOCK_SHIPMENTS: LogisticsShipment[] = [
   },
 ];
 
-export const MOCK_CARRIERS: CarrierPartner[] = [
+export const DEMO_MOCK_CARRIERS: CarrierPartner[] = [
   {
     id: 'car-101',
     name: 'AgroTruck Express',
@@ -44,7 +46,7 @@ export const MOCK_CARRIERS: CarrierPartner[] = [
   },
 ];
 
-export const MOCK_PRICE_FORECASTS: PriceForecast[] = [
+export const DEMO_MOCK_PRICE_FORECASTS: PriceForecast[] = [
   {
     cropName: 'Tomatoes (Hybrid Grade A)',
     category: 'Vegetables',
@@ -58,7 +60,7 @@ export const MOCK_PRICE_FORECASTS: PriceForecast[] = [
   },
 ];
 
-export const MOCK_SPOILAGE_ALERTS: SpoilageRiskAlert[] = [
+export const DEMO_MOCK_SPOILAGE_ALERTS: SpoilageRiskAlert[] = [
   {
     id: 'spl-301',
     batchId: 'BATCH-NAG-9399',
@@ -74,7 +76,7 @@ export const MOCK_SPOILAGE_ALERTS: SpoilageRiskAlert[] = [
   },
 ];
 
-export const MOCK_SUPPLY_DEMAND: SupplyDemandForecast[] = [
+export const DEMO_MOCK_SUPPLY_DEMAND: SupplyDemandForecast[] = [
   {
     region: 'Western Maharashtra',
     state: 'Maharashtra',
@@ -85,3 +87,11 @@ export const MOCK_SUPPLY_DEMAND: SupplyDemandForecast[] = [
     gapTons: 1,
   },
 ];
+*/
+
+export const MOCK_SHIPMENTS: LogisticsShipment[] = [];
+export const MOCK_CARRIERS: CarrierPartner[] = [];
+export const MOCK_PRICE_FORECASTS: PriceForecast[] = [];
+export const MOCK_SPOILAGE_ALERTS: SpoilageRiskAlert[] = [];
+export const MOCK_SUPPLY_DEMAND: SupplyDemandForecast[] = [];
+

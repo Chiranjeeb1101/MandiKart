@@ -18,13 +18,23 @@ import PrimaryButton from '../../components/PrimaryButton';
 
 export default function FarmerProfileScreen({ navigation, route }: any) {
   const farmerParam: Farmer | undefined = route?.params?.farmer;
-  const farmer: Farmer = farmerParam || SAMPLE_PRODUCTS[0].farmer;
+  const farmer: Farmer = farmerParam || (SAMPLE_PRODUCTS[0]?.farmer) || {
+    id: 'farmer-default',
+    name: 'Verified Local Farmer',
+    location: 'Agri Hub Depot',
+    state: 'India',
+    rating: 4.8,
+    reviewCount: 0,
+    isVerified: true,
+    totalProducts: 0,
+    memberSince: '2024',
+  };
 
   // Filter products grown by this farmer or sample set
   const farmerProducts: Product[] = SAMPLE_PRODUCTS.filter(
     (p) => p.farmer?.id === farmer.id || p.farmer?.name === farmer.name
   );
-  const displayProducts = farmerProducts.length > 0 ? farmerProducts : SAMPLE_PRODUCTS.slice(0, 4);
+  const displayProducts = farmerProducts;
 
   return (
     <SafeAreaView style={styles.safe} edges={['top']}>

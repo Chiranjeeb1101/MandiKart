@@ -27,7 +27,9 @@ export class CatalogController {
     const isMock = !process.env.SUPABASE_URL || process.env.SUPABASE_URL.includes('placeholder');
 
     if (isMock) {
-      const mockCatalog = [
+      /*
+      // DEMO MOCK CATALOG (COMMENTED OUT FOR RETRIEVAL)
+      const DEMO_MOCK_CATALOG = [
         {
           id: 'prod_1',
           farmerId: 'farmer_ramesh_01',
@@ -63,6 +65,8 @@ export class CatalogController {
           shelfLifeDays: 7,
         },
       ];
+      */
+      const mockCatalog: any[] = [];
 
       catalogCache.set(cacheKey, mockCatalog, 60);
 

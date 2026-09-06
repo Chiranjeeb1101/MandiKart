@@ -1,6 +1,8 @@
 import type { DetailedOrder, DisputeCase } from '../types/ordersAndDisputes';
 
-export const mockDetailedOrders: DetailedOrder[] = [
+/*
+// DEMO/MOCK ORDERS & DISPUTES DATA (COMMENTED OUT FOR RETRIEVAL)
+export const DEMO_mockDetailedOrders: DetailedOrder[] = [
   {
     id: 'ORD-9401',
     orderNumber: '#MK-9401',
@@ -153,7 +155,7 @@ export const mockDetailedOrders: DetailedOrder[] = [
   }
 ];
 
-export const mockDisputeCases: DisputeCase[] = [
+export const DEMO_mockDisputeCases: DisputeCase[] = [
   {
     id: 'DSP-201',
     disputeNumber: '#DSP-104',
@@ -207,6 +209,11 @@ export const mockDisputeCases: DisputeCase[] = [
     evidenceFiles: ['Weighbridge_Slip_Thane.pdf'],
   }
 ];
+*/
+
+export const mockDetailedOrders: DetailedOrder[] = [];
+export const mockDisputeCases: DisputeCase[] = [];
 
 export const MOCK_ORDERS = mockDetailedOrders;
 export const MOCK_DISPUTES = mockDisputeCases;
+

@@ -25,7 +25,7 @@ export default function OrderTrackingScreen({ navigation, route }: any) {
     total: paramOrder?.total || 395,
     itemsPreview: paramOrder?.itemsPreview ||
       (paramOrder?.items ? paramOrder.items.map((it: any) => it.product || it) : null) ||
-      [SAMPLE_PRODUCTS[0], SAMPLE_PRODUCTS[2], SAMPLE_PRODUCTS[7]],
+      [SAMPLE_PRODUCTS[0], SAMPLE_PRODUCTS[2], SAMPLE_PRODUCTS[7]].filter(Boolean),
     farmerName: paramOrder?.farmerName || 'Rajan Kumar',
     estimatedDelivery: paramOrder?.estimatedDelivery || 'Today by 5:30 PM',
     deliveryAddress: paramOrder?.deliveryAddress || 'Flat 402, Shivajinagar, Pune - 411005',

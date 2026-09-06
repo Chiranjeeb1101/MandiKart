@@ -1,6 +1,8 @@
 import type { FarmerUser } from '../types/admin';
 
-export const mockFarmers: FarmerUser[] = [
+/*
+// DEMO/MOCK FARMERS DATA (COMMENTED OUT FOR RETRIEVAL)
+export const DEMO_MOCK_FARMERS: FarmerUser[] = [
   {
     id: 'frm-101',
     farmerCode: '#FMR-8921',
@@ -115,3 +117,7 @@ export const mockFarmers: FarmerUser[] = [
     ],
   },
 ];
+*/
+
+export const mockFarmers: FarmerUser[] = [];
+

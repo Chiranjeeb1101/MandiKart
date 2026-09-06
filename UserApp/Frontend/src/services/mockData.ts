@@ -22,6 +22,7 @@ export const SAMPLE_CATEGORIES: Category[] = [
   { id: 'cat-9', name: 'Poultry', icon: '🐔', imageUrl: 'https://images.unsplash.com/photo-1548550023-2bdb3c5beed7?w=400', productCount: 4 },
 ];
 
+/*
 export const SAMPLE_FARMER: Farmer = {
   id: 'farmer-1',
   name: 'Rajan Kumar',
@@ -1076,3 +1077,60 @@ export const SAMPLE_CHAT_MESSAGES: ChatMessage[] = [
     type: 'text',
   },
 ];
+*/
+
+export const SAMPLE_PRODUCTS: Product[] = [];
+
+export const SAMPLE_FARMER: Farmer = {
+  id: '',
+  name: '',
+  location: '',
+  state: '',
+  rating: 0,
+  reviewCount: 0,
+  isVerified: false,
+  totalProducts: 0,
+  memberSince: '2024',
+};
+
+export const SAMPLE_FARMER_2: Farmer = {
+  id: '',
+  name: '',
+  location: '',
+  state: '',
+  rating: 0,
+  reviewCount: 0,
+  isVerified: false,
+  totalProducts: 0,
+  memberSince: '2024',
+};
+
+export const SAMPLE_ORDER: Order = {
+  id: '',
+  orderNumber: '',
+  status: 'PLACED',
+  items: [],
+  farmer: SAMPLE_FARMER,
+  deliveryAddress: {
+    id: '',
+    label: '',
+    fullName: '',
+    phone: '',
+    line1: '',
+    city: '',
+    state: '',
+    pincode: '',
+    isDefault: false,
+  },
+  paymentMethod: 'UPI',
+  subtotal: 0,
+  deliveryCharge: 0,
+  total: 0,
+  placedAt: '',
+};
+
+export const SAMPLE_NOTIFICATIONS: Notification[] = [];
+
+export const SAMPLE_CHAT_MESSAGES: ChatMessage[] = [];
+
+

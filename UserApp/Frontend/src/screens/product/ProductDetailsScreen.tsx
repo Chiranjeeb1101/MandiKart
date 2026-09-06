@@ -10,6 +10,7 @@ import QuantitySelector from '../../components/QuantitySelector';
 import FarmerCard from '../../components/FarmerCard';
 
 import NegotiationModal from '../../components/NegotiationModal';
+import { Product } from '../../types';
 import { useLocation } from '../../context/LocationContext';
 import { useCart } from '../../context/CartContext';
 import { useWishlist } from '../../context/WishlistContext';
@@ -23,14 +24,27 @@ export default function ProductDetailsScreen({ navigation, route }: any) {
   const productParam = route.params?.product;
   const productId = route.params?.productId || productParam?.id;
   const { getProductById } = useCatalog();
-  const product = productParam || getProductById(productId);
-
+  const product = productParam || (productId ? getProductById(productId) : null) || SAMPLE_PRODUCTS.find((p) => p.id === productId) || null;
   const { currentAddress } = useLocation();
   const { addToCart } = useCart();
   const { toggleWishlist, isWishlisted } = useWishlist();
   const [qty, setQty] = useState(1);
   const [isNegotiating, setIsNegotiating] = useState(false);
-  const [imgUri, setImgUri] = useState<string | null>(null);
+  const [imgUri, setImgUri] = useState<string>(product?.imageUrl || '');
+
+  if (!product) {
+    return (
+      <View style={[styles.container, { justifyContent: 'center', alignItems: 'center', padding: Spacing.xl }]}>
+        <Ionicons name="alert-circle-outline" size={48} color={Colors.textSecondary} />
+        <Text style={{ fontSize: 16, color: Colors.textSecondary, marginTop: Spacing.md }}>
+          Product details unavailable.
+        </Text>
+        <TouchableOpacity style={{ marginTop: Spacing.lg, paddingVertical: Spacing.md, paddingHorizontal: Spacing.xl, backgroundColor: Colors.primary, borderRadius: BorderRadius.md }} onPress={() => navigation.goBack()}>
+          <Text style={{ color: Colors.white, fontWeight: 'bold' }}>Go Back</Text>
+        </TouchableOpacity>
+      </View>
+    );
+  }
 
   const favorited = product ? isWishlisted(product.id) : false;
 

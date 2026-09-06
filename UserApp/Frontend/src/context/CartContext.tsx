@@ -23,11 +23,16 @@ interface CartContextType {
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-const INITIAL_CART: CartItem[] = [
+/*
+// DEMO/MOCK INITIAL CART DATA (COMMENTED OUT FOR RETRIEVAL)
+const DEMO_INITIAL_CART: CartItem[] = [
   { id: 'ci-1', product: SAMPLE_PRODUCTS[0], quantity: 2 }, // Fresh Tomatoes
   { id: 'ci-2', product: SAMPLE_PRODUCTS[2], quantity: 1 }, // Alphonso Mangoes
   { id: 'ci-3', product: SAMPLE_PRODUCTS[7], quantity: 1 }, // Farm Fresh Eggs
 ];
+*/
+const INITIAL_CART: CartItem[] = [];
+
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>(INITIAL_CART);

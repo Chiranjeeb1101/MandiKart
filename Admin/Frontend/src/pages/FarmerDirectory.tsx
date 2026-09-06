@@ -187,7 +187,7 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
   const [showSimulateModal, setShowSimulateModal] = useState(false);
 
   // Farmer Produce Submission Simulation State
-  const [selectedFarmerId, setSelectedFarmerId] = useState<string>(initialMockFarmers[0].id);
+  const [selectedFarmerId, setSelectedFarmerId] = useState<string>(initialMockFarmers[0]?.id || '');
   const [simCropName, setSimCropName] = useState('');
   const [simCategory, setSimCategory] = useState('Vegetables');
   const [simQuantityKg, setSimQuantityKg] = useState<number>(2000);

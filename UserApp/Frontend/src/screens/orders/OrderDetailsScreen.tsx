@@ -19,7 +19,7 @@ export default function OrderDetailsScreen({ navigation, route }: any) {
     status: 'DISPATCHED',
     total: 395,
     itemsCount: 3,
-    itemsPreview: [SAMPLE_PRODUCTS[0], SAMPLE_PRODUCTS[2], SAMPLE_PRODUCTS[7]],
+    itemsPreview: [SAMPLE_PRODUCTS[0], SAMPLE_PRODUCTS[2], SAMPLE_PRODUCTS[7]].filter(Boolean),
     deliveryAddress: 'Flat 402, Shivajinagar, Pune - 411005',
     farmerName: 'Rajan Kumar',
     estimatedDelivery: 'Today by 5:30 PM',

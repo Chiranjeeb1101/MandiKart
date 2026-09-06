@@ -23,7 +23,9 @@ interface BulkRequirement {
   createdAt: string;
 }
 
-const mockBulkRequirements: BulkRequirement[] = [
+/*
+// DEMO MOCK BULK REQUIREMENTS (COMMENTED OUT FOR RETRIEVAL)
+const DEMO_MOCK_BULK_REQUIREMENTS: BulkRequirement[] = [
   {
     id: 'breq_101',
     buyerId: 'buyer_default_01',
@@ -39,6 +41,9 @@ const mockBulkRequirements: BulkRequirement[] = [
     createdAt: new Date(Date.now() - 86400000).toISOString(),
   }
 ];
+*/
+const mockBulkRequirements: BulkRequirement[] = [];
+
 
 export class BulkRequirementsController {
   static async listRequirements(req: Request, res: Response): Promise<void> {

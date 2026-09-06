@@ -84,9 +84,27 @@ export class BuyerOrdersController {
     }));
 
     if (isMock) {
+      /*
+      // DEMO MOCK ORDERS (COMMENTED OUT FOR RETRIEVAL)
+      const DEMO_MOCK_ORDERS = [
+        {
+          id: 'ord_101',
+          orderNumber: 'MK-ORD-2026-9041',
+          status: 'CONFIRMED',
+          totalAmount: 13250,
+          deliveryOtp: '719284',
+          items: [
+            { cropName: 'Red Onion', grade: 'A', quantity: 500, unit: 'kg', pricePerUnit: 26.5 },
+          ],
+          driverName: 'Santosh Shinde',
+          driverPhone: '+91 9844001122',
+          createdAt: new Date().toISOString(),
+        },
+      ];
+      */
       res.status(200).json({
-        data: mappedReg,
-        meta: { total: mappedReg.length },
+        data: [],
+        meta: { total: 0 },
         error: null,
       });
       return;

@@ -8,8 +8,9 @@ import { UserRole, OrderStatus } from '@mandikart/shared-types';
 import { auditLog, getSupabaseAdmin } from '@mandikart/shared-core';
 import { BuyerOrderService } from '../services/order.service.js';
 
-// In-memory store for mock mode
-const mockNegotiations: any[] = [
+/*
+// DEMO MOCK NEGOTIATIONS (COMMENTED OUT FOR RETRIEVAL)
+const DEMO_MOCK_NEGOTIATIONS: any[] = [
   {
     id: 'neg_101',
     productId: 'prod_1',
@@ -22,7 +23,7 @@ const mockNegotiations: any[] = [
     counterPrice: 24.5,
     quantity: 200,
     unit: 'kg',
-    status: 'COUNTER_OFFERED', // PENDING_FARMER | COUNTER_OFFERED | ACCEPTED | REJECTED | ORDERED
+    status: 'COUNTER_OFFERED',
     remarks: 'Seeking regular weekly supply for restaurant chain.',
     history: [
       { sender: 'BUYER', price: 24.0, text: 'Can we settle at ₹24/kg for 200kg?', timestamp: new Date(Date.now() - 3600000).toISOString() },
@@ -31,6 +32,9 @@ const mockNegotiations: any[] = [
     updatedAt: new Date().toISOString(),
   }
 ];
+*/
+const mockNegotiations: any[] = [];
+
 
 export class BuyerNegotiationsController {
   static async listNegotiations(req: Request, res: Response): Promise<void> {
