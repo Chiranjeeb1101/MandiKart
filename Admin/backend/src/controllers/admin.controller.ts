@@ -190,21 +190,51 @@ export class AdminController {
       const regProducts = ProductRegistryService.getRegisteredProducts();
       const regMap = new Map(regProducts.map((p) => [p.id, p]));
 
+      const resolveProduceStatus = (
+        is_active: boolean | undefined,
+        target_buyer: string | undefined,
+        pStatus: string | undefined,
+        regStatus: string | undefined,
+        regTargetBuyer: string | undefined,
+        regIsActive: boolean | undefined
+      ): 'PENDING_APPROVAL' | 'APPROVED' | 'ACTIVE' | 'REJECTED' => {
+        if (pStatus === 'REJECTED' || regStatus === 'REJECTED' || target_buyer === 'REJECTED' || regTargetBuyer === 'REJECTED') {
+          return 'REJECTED';
+        }
+        if (
+          target_buyer === 'ADMIN_APPROVED' ||
+          regTargetBuyer === 'ADMIN_APPROVED' ||
+          pStatus === 'APPROVED' ||
+          pStatus === 'ADMIN_APPROVED' ||
+          regStatus === 'APPROVED' ||
+          regStatus === 'ADMIN_APPROVED'
+        ) {
+          return 'APPROVED';
+        }
+        if (
+          (is_active === true && (target_buyer === 'BOTH' || target_buyer === 'ALL')) ||
+          (regIsActive === true && (regTargetBuyer === 'BOTH' || regTargetBuyer === 'ALL')) ||
+          pStatus === 'ACTIVE' ||
+          regStatus === 'ACTIVE'
+        ) {
+          return 'ACTIVE';
+        }
+        return 'PENDING_APPROVAL';
+      };
+
       let list = (dbProducts || []).map((p: any) => {
         const regItem = regMap.get(p.id);
         const rawFirstImg = Array.isArray(p.images) && p.images.length > 0 ? p.images[0] : (regItem?.images?.[0]);
         const validImg = sanitizeImg(rawFirstImg, p.crop_name, p.category);
         const images = [validImg];
-        const isRejected = p.status === 'REJECTED' || (regItem as any)?.status === 'REJECTED';
-        const isActive = (p.is_active === true && p.target_buyer === 'BOTH') || ((regItem as any)?.isActive === true && (regItem as any)?.targetBuyer === 'BOTH') || p.status === 'ACTIVE' || (regItem as any)?.status === 'ACTIVE';
-        const isAdminApproved = p.target_buyer === 'ADMIN_APPROVED' || p.status === 'APPROVED' || (regItem as any)?.status === 'ADMIN_APPROVED' || (regItem as any)?.targetBuyer === 'ADMIN_APPROVED';
-        const resolvedStatus = isRejected
-          ? 'REJECTED'
-          : isActive
-          ? 'ACTIVE'
-          : isAdminApproved
-          ? 'APPROVED'
-          : 'PENDING_APPROVAL';
+        const resolvedStatus = resolveProduceStatus(
+          p.is_active,
+          p.target_buyer,
+          p.status,
+          (regItem as any)?.status,
+          (regItem as any)?.targetBuyer,
+          (regItem as any)?.isActive
+        );
 
         const farmerName = regItem?.farmerName || p.farmers?.full_name || 'Registered Farmer';
         const farmerPhone = regItem?.farmerPhone || p.farmers?.phone || '';
@@ -241,13 +271,14 @@ export class AdminController {
           const validImg = sanitizeImg(rawFirstImg, reg.cropName, reg.category);
           const images = [validImg];
           const existingIdx = list.findIndex((item: any) => item.id === reg.id);
-          const computedStatus = (reg as any).status === 'REJECTED'
-            ? 'REJECTED'
-            : (reg.isActive && reg.targetBuyer === 'BOTH')
-            ? 'ACTIVE'
-            : ((reg as any).status === 'ADMIN_APPROVED' || reg.targetBuyer === 'ADMIN_APPROVED')
-            ? 'APPROVED'
-            : 'PENDING_APPROVAL';
+          const computedStatus = resolveProduceStatus(
+            reg.isActive,
+            reg.targetBuyer,
+            reg.status,
+            reg.status,
+            reg.targetBuyer,
+            reg.isActive
+          );
 
           const formattedReg = {
             id: reg.id,
@@ -264,7 +295,7 @@ export class AdminController {
             pricePerKg: Number(reg.basePricePerUnit || 0),
             qualityGrade: (reg.grade === 'B' ? 'GRADE_B' : 'GRADE_A') as 'GRADE_A' | 'GRADE_B' | 'PREMIUM',
             harvestDate: 'Recent',
-            status: computedStatus as 'PENDING_APPROVAL' | 'ACTIVE' | 'REJECTED',
+            status: computedStatus as 'PENDING_APPROVAL' | 'APPROVED' | 'ACTIVE' | 'REJECTED',
             submittedAt: reg.createdAt ? new Date(reg.createdAt).toLocaleDateString() : 'Today',
             createdAt: reg.createdAt || new Date().toISOString(),
             mandiName: reg.pickupAddress || reg.location || 'Nashik APMC',
@@ -273,7 +304,7 @@ export class AdminController {
           };
 
           if (existingIdx >= 0) {
-            list[existingIdx] = { ...list[existingIdx], ...formattedReg };
+            list[existingIdx] = { ...formattedReg, ...list[existingIdx], status: computedStatus };
           } else {
             list.unshift(formattedReg);
           }

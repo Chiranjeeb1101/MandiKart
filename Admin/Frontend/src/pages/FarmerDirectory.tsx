@@ -61,6 +61,7 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'VERIFIED' | 'PENDING_KYC' | 'SUSPENDED'>('ALL');
   const [moderationTab, setModerationTab] = useState<'PENDING' | 'APPROVED' | 'ACTIVE' | 'REJECTED' | 'ALL'>('PENDING');
+  const [rawLiveProduce, setRawLiveProduce] = useState<any[]>([]);
 
   // Safe localStorage helper
   const safeSaveFarmers = (farmersToSave: FarmerUser[]) => {
@@ -94,6 +95,7 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
         const timeB = new Date(b.createdAt || b.submittedAt || 0).getTime();
         return timeB - timeA;
       });
+      setRawLiveProduce(liveProduceList);
 
       if (Array.isArray(farmersRes?.data) && farmersRes.data.length > 0) {
         const produceByFarmer = new Map<string, any[]>();
@@ -189,26 +191,50 @@ export const FarmerDirectory: React.FC<FarmerDirectoryProps> = ({
   const rejectedProduceListings: (FarmerProduceListing & { farmerFullName: string; farmerCode: string })[] = [];
   const allProduceListings: (FarmerProduceListing & { farmerFullName: string; farmerCode: string })[] = [];
 
-  farmers.forEach(f => {
-    f.activeListings.forEach(l => {
-      const item = {
-        ...l,
-        farmerFullName: f.fullName,
-        farmerCode: f.farmerCode,
-        farmerId: f.id,
-        imageUrl: l.imageUrl || getCropFallbackImage(l.cropName, l.category),
-      };
-      allProduceListings.push(item);
-      if (l.status === 'PENDING_APPROVAL') {
-        pendingProduceListings.push(item);
-      } else if (l.status === 'APPROVED' || l.status === 'ADMIN_APPROVED') {
-        approvedProduceListings.push(item);
-      } else if (l.status === 'ACTIVE') {
-        activeProduceListings.push(item);
-      } else if (l.status === 'REJECTED') {
-        rejectedProduceListings.push(item);
-      }
-    });
+  const rawListToProcess = rawLiveProduce.length > 0
+    ? rawLiveProduce.map(p => {
+        const matchedFarmer = farmers.find(f => f.id === p.farmerId);
+        const fullName = p.farmerName || p.farmerFullName || matchedFarmer?.fullName || 'Registered Farmer';
+        const farmerCode = p.farmerCode || (matchedFarmer ? matchedFarmer.farmerCode : (p.farmerPhone ? `FARM-${p.farmerPhone.slice(-4)}` : `FARM-${String(p.farmerId || p.id).slice(-4)}`));
+        const crop = p.cropName || 'Produce';
+        const cat = p.category || 'Vegetables';
+        const fallbackImg = getCropFallbackImage(crop, cat);
+        const rawImg = p.imageUrl || (p.images && p.images[0]);
+        const validImg = rawImg && !rawImg.startsWith('file://') ? rawImg : fallbackImg;
+
+        return {
+          id: p.id,
+          farmerId: p.farmerId,
+          farmerFullName: fullName,
+          farmerName: fullName,
+          farmerCode,
+          cropName: crop,
+          category: cat,
+          availableKg: Number(p.availableKg || p.available_quantity || p.quantityKg || 100),
+          pricePerKg: Number(p.pricePerKg || p.base_price_per_unit || 30),
+          qualityGrade: p.qualityGrade || (p.grade === 'B' ? 'GRADE_B' : 'GRADE_A'),
+          harvestDate: p.harvestDate || p.harvest_date || 'Recent',
+          submittedAt: p.submittedAt || (p.createdAt ? new Date(p.createdAt).toLocaleDateString() : 'Today'),
+          createdAt: p.createdAt || new Date().toISOString(),
+          status: p.status || 'PENDING_APPROVAL',
+          mandiName: p.mandiName || 'Nashik APMC',
+          imageUrl: validImg,
+          images: [validImg],
+        };
+      })
+    : farmers.flatMap(f => f.activeListings.map(l => ({ ...l, farmerFullName: f.fullName, farmerCode: f.farmerCode })));
+
+  rawListToProcess.forEach((item: any) => {
+    allProduceListings.push(item);
+    if (item.status === 'PENDING_APPROVAL') {
+      pendingProduceListings.push(item);
+    } else if (item.status === 'APPROVED' || item.status === 'ADMIN_APPROVED') {
+      approvedProduceListings.push(item);
+    } else if (item.status === 'ACTIVE') {
+      activeProduceListings.push(item);
+    } else if (item.status === 'REJECTED') {
+      rejectedProduceListings.push(item);
+    }
   });
 
   const sortByTime = (items: any[]) =>

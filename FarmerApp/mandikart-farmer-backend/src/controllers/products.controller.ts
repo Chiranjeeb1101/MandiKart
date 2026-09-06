@@ -326,7 +326,7 @@ export class ProductsController {
         quantityUnit: data.quantity_unit,
         basePricePerUnit: data.base_price_per_unit,
         minOrderQuantity: data.min_order_quantity,
-        targetBuyer: data.target_buyer,
+        targetBuyer: payload.targetBuyer || 'PENDING_APPROVAL',
         images: (data.images && data.images.length > 0) ? data.images : (payload.images || []),
         pickupAddress: data.pickup_address,
         shelfLifeDays: data.shelf_life_days,
