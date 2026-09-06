@@ -12,6 +12,7 @@ import { ordersRouter } from './routes/orders.routes.js';
 import { marketRouter } from './routes/market.routes.js';
 import { consentRouter } from './routes/consent.routes.js';
 import { notificationRouter } from './routes/notification.routes.js';
+import { negotiationsRouter } from './routes/negotiations.routes.js';
 import { errorHandler, sendSuccess } from './middlewares/errorHandler.js';
 import { InventoryService } from './services/inventory.service.js';
 
@@ -53,6 +54,7 @@ app.use('/api/v1/orders', ordersRouter);
 app.use('/api/v1/market', marketRouter);
 app.use('/api/v1/consent', consentRouter);
 app.use('/api/v1/notifications', notificationRouter);
+app.use('/api/v1/negotiations', negotiationsRouter);
 
 // Centralized error handler
 app.use(errorHandler);

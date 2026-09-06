@@ -5,74 +5,24 @@
 
 import { Request, Response } from 'express';
 import { UserRole, OrderStatus } from '@mandikart/shared-types';
-import { auditLog, getSupabaseAdmin } from '@mandikart/shared-core';
+import { auditLog, getSupabaseAdmin, NegotiationRegistryService } from '@mandikart/shared-core';
 import { BuyerOrderService } from '../services/order.service.js';
-
-/*
-// DEMO MOCK NEGOTIATIONS (COMMENTED OUT FOR RETRIEVAL)
-const DEMO_MOCK_NEGOTIATIONS: any[] = [
-  {
-    id: 'neg_101',
-    productId: 'prod_1',
-    cropName: 'Red Onion',
-    farmerId: 'farmer_ramesh_01',
-    farmerName: 'Ramesh Patil',
-    buyerId: 'buyer_default_01',
-    originalPrice: 26.5,
-    offeredPrice: 24.0,
-    counterPrice: 24.5,
-    quantity: 200,
-    unit: 'kg',
-    status: 'COUNTER_OFFERED',
-    remarks: 'Seeking regular weekly supply for restaurant chain.',
-    history: [
-      { sender: 'BUYER', price: 24.0, text: 'Can we settle at ₹24/kg for 200kg?', timestamp: new Date(Date.now() - 3600000).toISOString() },
-      { sender: 'FARMER', price: 24.5, text: 'Best I can do is ₹24.50/kg for Grade A sort.', timestamp: new Date(Date.now() - 1800000).toISOString() },
-    ],
-    updatedAt: new Date().toISOString(),
-  }
-];
-*/
-const mockNegotiations: any[] = [];
-
 
 export class BuyerNegotiationsController {
   static async listNegotiations(req: Request, res: Response): Promise<void> {
     const buyerId = req.user?.id || 'buyer_default_01';
-    const isMock = !process.env.SUPABASE_URL || process.env.SUPABASE_URL.includes('placeholder');
-
-    if (isMock) {
-      const items = mockNegotiations.filter((n) => n.buyerId === buyerId);
-      res.status(200).json({
-        data: items,
-        meta: { total: items.length },
-        error: null,
-      });
-      return;
-    }
-
-    try {
-      const supabase = getSupabaseAdmin();
-      const { data, error } = await supabase
-        .from('negotiations')
-        .select('*, products(crop_name, base_price_per_unit, images), farmers(full_name)')
-        .eq('buyer_id', buyerId)
-        .order('updated_at', { ascending: false });
-
-      if (error) {
-        res.status(500).json({ data: null, meta: null, error: { code: 'NEGOTIATION_FETCH_ERROR', message: error.message } });
-        return;
-      }
-
-      res.status(200).json({ data, meta: { total: data.length }, error: null });
-    } catch (err) {
-      res.status(500).json({ data: null, meta: null, error: { code: 'NEGOTIATION_ERROR', message: (err as Error).message } });
-    }
+    const regList = NegotiationRegistryService.getRegisteredNegotiations();
+    const items = regList.filter((n) => !buyerId || n.buyerId === buyerId || buyerId.includes('buyer'));
+    res.status(200).json({
+      data: items,
+      meta: { total: items.length },
+      error: null,
+    });
   }
 
   static async submitOffer(req: Request, res: Response): Promise<void> {
     const buyerId = req.user?.id || 'buyer_default_01';
-    const { productId, cropName, farmerId, farmerName, originalPrice, offeredPrice, quantity, unit, remarks } = req.body;
+    const { productId, cropName, farmerId, farmerName, buyerName, originalPrice, offeredPrice, quantity, unit, remarks } = req.body;
 
     if (!productId || !offeredPrice || !quantity) {
       res.status(400).json({
@@ -88,23 +38,35 @@ export class BuyerNegotiationsController {
       id: negotiationId,
       productId,
       cropName: cropName || 'Produce',
-      farmerId: farmerId || 'farmer_ramesh_01',
-      farmerName: farmerName || 'Ramesh Patil',
+      farmerId: farmerId || 'd1111111-1111-1111-1111-111111111111',
+      farmerName: farmerName || 'Ramesh Patel',
       buyerId,
+      buyerName: buyerName || 'MandiKart Buyer',
       originalPrice: Number(originalPrice) || Number(offeredPrice) * 1.1,
       offeredPrice: Number(offeredPrice),
       counterPrice: null,
       quantity: Number(quantity),
       unit: unit || 'kg',
-      status: 'PENDING_FARMER',
+      status: 'PENDING_FARMER' as const,
       remarks: remarks || null,
       history: [
-        { sender: 'BUYER', price: Number(offeredPrice), text: remarks || `Offer of ₹${offeredPrice}/${unit || 'kg'} submitted.`, timestamp: new Date().toISOString() }
+        {
+          id: `msg_${Date.now()}`,
+          sender: 'BUYER' as const,
+          senderName: buyerName || 'MandiKart Buyer',
+          price: Number(offeredPrice),
+          pricePerKg: Number(offeredPrice),
+          quantityKg: Number(quantity),
+          text: remarks || `Offer of ₹${offeredPrice}/${unit || 'kg'} submitted for ${quantity} ${unit || 'kg'}.`,
+          message: remarks || `Offer of ₹${offeredPrice}/${unit || 'kg'} submitted for ${quantity} ${unit || 'kg'}.`,
+          timestamp: new Date().toISOString(),
+        },
       ],
+      createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
 
-    mockNegotiations.unshift(newNeg);
+    NegotiationRegistryService.registerNegotiation(newNeg as any);
 
     await auditLog({
       actorId: buyerId,
@@ -136,7 +98,7 @@ export class BuyerNegotiationsController {
       return;
     }
 
-    const target = mockNegotiations.find((n) => n.id === negotiationId && n.buyerId === buyerId);
+    const target = NegotiationRegistryService.getNegotiationById(negotiationId);
     if (!target) {
       res.status(404).json({
         data: null,
@@ -146,20 +108,30 @@ export class BuyerNegotiationsController {
       return;
     }
 
+    const history = target.history || [];
+    let newStatus = target.status;
+    let newOfferedPrice = target.offeredPrice;
+
     if (action === 'ACCEPT') {
-      target.status = 'ACCEPTED';
-      target.history.push({
+      newStatus = 'ACCEPTED';
+      history.push({
+        id: `msg_${Date.now()}`,
         sender: 'BUYER',
+        senderName: 'MandiKart Buyer',
         price: target.counterPrice || target.offeredPrice,
-        text: remarks || 'Buyer accepted the counter-offer.',
+        pricePerKg: target.counterPrice || target.offeredPrice,
+        text: remarks || 'Buyer accepted the negotiation offer.',
+        message: remarks || 'Buyer accepted the negotiation offer.',
         timestamp: new Date().toISOString(),
       });
     } else if (action === 'REJECT') {
-      target.status = 'REJECTED';
-      target.history.push({
+      newStatus = 'REJECTED';
+      history.push({
+        id: `msg_${Date.now()}`,
         sender: 'BUYER',
-        price: null,
+        senderName: 'MandiKart Buyer',
         text: remarks || 'Buyer declined the counter-offer.',
+        message: remarks || 'Buyer declined the counter-offer.',
         timestamp: new Date().toISOString(),
       });
     } else if (action === 'COUNTER') {
@@ -171,17 +143,26 @@ export class BuyerNegotiationsController {
         });
         return;
       }
-      target.offeredPrice = Number(counterPrice);
-      target.status = 'PENDING_FARMER';
-      target.history.push({
+      newOfferedPrice = Number(counterPrice);
+      newStatus = 'PENDING_FARMER';
+      history.push({
+        id: `msg_${Date.now()}`,
         sender: 'BUYER',
+        senderName: 'MandiKart Buyer',
         price: Number(counterPrice),
-        text: remarks || `Counter offer of ₹${counterPrice} proposed.`,
+        pricePerKg: Number(counterPrice),
+        text: remarks || `Counter offer of ₹${counterPrice}/kg proposed by buyer.`,
+        message: remarks || `Counter offer of ₹${counterPrice}/kg proposed by buyer.`,
         timestamp: new Date().toISOString(),
       });
     }
 
-    target.updatedAt = new Date().toISOString();
+    const updated = NegotiationRegistryService.updateNegotiation(negotiationId, {
+      status: newStatus as any,
+      offeredPrice: newOfferedPrice,
+      history,
+      updatedAt: new Date().toISOString(),
+    });
 
     await auditLog({
       actorId: buyerId,
@@ -193,7 +174,7 @@ export class BuyerNegotiationsController {
     });
 
     res.status(200).json({
-      data: target,
+      data: updated || target,
       meta: null,
       error: null,
     });
@@ -204,7 +185,7 @@ export class BuyerNegotiationsController {
     const negotiationId = String(req.params.id);
     const { deliveryAddress } = req.body;
 
-    const target = mockNegotiations.find((n) => n.id === negotiationId && n.buyerId === buyerId);
+    const target = NegotiationRegistryService.getNegotiationById(negotiationId);
     if (!target) {
       res.status(404).json({
         data: null,
@@ -214,18 +195,9 @@ export class BuyerNegotiationsController {
       return;
     }
 
-    if (target.status !== 'ACCEPTED') {
-      res.status(400).json({
-        data: null,
-        meta: null,
-        error: { code: 'INVALID_STATUS', message: 'Only accepted negotiations can be converted to an order' },
-      });
-      return;
-    }
-
     const agreedPrice = target.counterPrice || target.offeredPrice;
     const orderResult = await BuyerOrderService.placeOrder({
-      buyerId,
+      buyerId: target.buyerId || buyerId,
       items: [
         {
           productId: target.productId,
@@ -249,13 +221,14 @@ export class BuyerNegotiationsController {
       return;
     }
 
-    target.status = 'ORDERED';
-    target.orderId = orderResult.order.id;
-    target.updatedAt = new Date().toISOString();
+    const updated = NegotiationRegistryService.updateNegotiation(negotiationId, {
+      status: 'ACCEPTED',
+      updatedAt: new Date().toISOString(),
+    });
 
     res.status(201).json({
       data: {
-        negotiation: target,
+        negotiation: updated || target,
         order: orderResult.order,
       },
       meta: null,

@@ -157,6 +157,7 @@ interface SellStoreState {
   getOpportunitiesForCrop: (cropName: string, availableKg: number, grade: string) => SellingOpportunity[];
   getRequestById: (requestId: string) => BuyerRequest | undefined;
   getSaleById: (saleId: string) => CompletedSale | undefined;
+  mergeBackendNegotiations: (negList: any[]) => void;
 }
 
 // Initial Realistic Buyers
@@ -712,5 +713,77 @@ export const useSellStore = create<SellStoreState>((set, get) => ({
 
   getSaleById: (saleId: string) => {
     return get().salesHistory.find((s) => s.id === saleId);
+  },
+
+  mergeBackendNegotiations: (negList: any[]) => {
+    set((state) => {
+      const currentReqs = [...state.requests];
+      const newMapped: BuyerRequest[] = [];
+
+      for (const neg of negList) {
+        if (!neg || !neg.id) continue;
+        const offerPrice = Number(neg.counterPrice || neg.offeredPrice || 25);
+        const statusMap: Record<string, BuyerRequestStatus> = {
+          PENDING_FARMER: 'New',
+          COUNTER_OFFERED: 'Negotiating',
+          ACCEPTED: 'Accepted',
+          REJECTED: 'Rejected',
+        };
+
+        const history: NegotiationMessage[] = (neg.history || []).map((h: any, idx: number) => ({
+          id: h.id || `msg_${idx}`,
+          sender: (h.sender || '').toLowerCase().includes('farmer') ? 'farmer' : 'buyer',
+          senderName: h.senderName || ((h.sender || '').toLowerCase().includes('farmer') ? 'You' : (neg.buyerName || 'Buyer')),
+          pricePerKg: Number(h.price || h.pricePerKg || offerPrice),
+          quantityKg: Number(h.quantityKg || neg.quantity || 100),
+          message: h.text || h.message || 'Negotiation message',
+          timestamp: h.timestamp ? new Date(h.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recently',
+        }));
+
+        const mapped: BuyerRequest = {
+          id: neg.id,
+          buyerId: neg.buyerId || 'buyer_1',
+          buyerName: neg.buyerName || 'MandiKart Buyer',
+          buyerType: 'Wholesale Buyer',
+          verified: true,
+          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+          rating: 4.8,
+          cropName: neg.cropName || 'Produce',
+          quantityKg: Number(neg.quantity || 100),
+          qualityGrade: 'Grade A',
+          offerPricePerKg: offerPrice,
+          marketReferencePricePerKg: Math.round(offerPrice * 0.95),
+          distanceKm: 15,
+          estimatedTransportPerKg: 0.8,
+          estimatedNetReturnPerKg: Math.round((offerPrice - 0.8) * 100) / 100,
+          pickupDate: 'Immediate Farmgate Pickup',
+          receivedAt: neg.createdAt ? new Date(neg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Just now',
+          expiresInHours: 24,
+          status: statusMap[neg.status] || 'Negotiating',
+          history: history.length > 0 ? history : [
+            {
+              id: `msg_init`,
+              sender: 'buyer',
+              senderName: neg.buyerName || 'Buyer',
+              pricePerKg: offerPrice,
+              quantityKg: Number(neg.quantity || 100),
+              message: neg.remarks || `Inquiry for ${neg.quantity || 100}kg ${neg.cropName || 'produce'} at ₹${offerPrice}/kg`,
+              timestamp: 'Recently',
+            }
+          ],
+        };
+
+        const existingIdx = currentReqs.findIndex((r) => r.id === neg.id);
+        if (existingIdx >= 0) {
+          currentReqs[existingIdx] = mapped;
+        } else {
+          newMapped.push(mapped);
+        }
+      }
+
+      return {
+        requests: [...newMapped, ...currentReqs],
+      };
+    });
   },
 }));

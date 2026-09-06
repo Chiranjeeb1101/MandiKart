@@ -147,8 +147,25 @@ export default function BuyerRequestsScreen() {
     setAcceptModalVisible(true);
   };
 
+  // Sync backend negotiations on mount
+  React.useEffect(() => {
+    const fetchNegotiations = async () => {
+      try {
+        const apiHost = Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://127.0.0.1:4000';
+        const res = await fetch(`${apiHost}/api/v1/negotiations`, {
+          headers: { Authorization: 'Bearer mock_jwt_token_farmer_1' },
+        });
+        const json = await res.json();
+        if (json.data && Array.isArray(json.data) && json.data.length > 0) {
+          useSellStore.getState().mergeBackendNegotiations(json.data);
+        }
+      } catch (e) {}
+    };
+    fetchNegotiations();
+  }, []);
+
   // Submit Counter Offer
-  const handleSubmitCounter = () => {
+  const handleSubmitCounter = async () => {
     if (!selectedRequest) return;
     const priceNum = parseFloat(counterPrice);
     const qtyNum = parseInt(counterQty, 10);
@@ -175,6 +192,25 @@ export default function BuyerRequestsScreen() {
     }
 
     counterOffer(selectedRequest.id, priceNum, qtyNum, counterMessage);
+
+    try {
+      const apiHost = Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://127.0.0.1:4000';
+      await fetch(`${apiHost}/api/v1/negotiations/${selectedRequest.id}/respond`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer mock_jwt_token_farmer_1',
+          'Idempotency-Key': `idemp-cnt-${Date.now()}`,
+        },
+        body: JSON.stringify({
+          action: 'COUNTER',
+          counterPrice: priceNum,
+          counterQty: qtyNum,
+          message: counterMessage,
+        }),
+      });
+    } catch (e) {}
+
     setCounterModalVisible(false);
     setDetailModalVisible(false);
     Alert.alert(
@@ -184,17 +220,34 @@ export default function BuyerRequestsScreen() {
   };
 
   // Submit Decline
-  const handleSubmitDecline = () => {
+  const handleSubmitDecline = async () => {
     if (!selectedRequest) return;
     const reasonText = declineNote ? `${declineReason} - ${declineNote}` : declineReason;
     rejectRequest(selectedRequest.id, reasonText);
+
+    try {
+      const apiHost = Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://127.0.0.1:4000';
+      await fetch(`${apiHost}/api/v1/negotiations/${selectedRequest.id}/respond`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer mock_jwt_token_farmer_1',
+          'Idempotency-Key': `idemp-dec-${Date.now()}`,
+        },
+        body: JSON.stringify({
+          action: 'REJECT',
+          rejectionReason: reasonText,
+        }),
+      });
+    } catch (e) {}
+
     setDeclineModalVisible(false);
     setDetailModalVisible(false);
     Alert.alert('Offer Declined', 'The buyer has been notified.');
   };
 
   // Submit Accept Offer
-  const handleConfirmAccept = () => {
+  const handleConfirmAccept = async () => {
     if (!selectedRequest) return;
     const res = acceptRequest(selectedRequest.id);
 
@@ -202,6 +255,21 @@ export default function BuyerRequestsScreen() {
       Alert.alert('Cannot Accept Offer', res.error || 'Failed to accept offer.');
       return;
     }
+
+    try {
+      const apiHost = Platform.OS === 'android' ? 'http://10.0.2.2:4000' : 'http://127.0.0.1:4000';
+      await fetch(`${apiHost}/api/v1/negotiations/${selectedRequest.id}/accept`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer mock_jwt_token_farmer_1',
+          'Idempotency-Key': `idemp-acc-${Date.now()}`,
+        },
+        body: JSON.stringify({
+          action: 'ACCEPT',
+        }),
+      });
+    } catch (e) {}
 
     setCreatedOrderId(res.orderId || 'MK-ORD-CONFIRMED');
     setAcceptModalVisible(false);
