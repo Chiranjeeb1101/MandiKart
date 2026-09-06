@@ -53,10 +53,14 @@ export function resolveFarmerApiBaseUrl(): string {
     }
   } catch {}
 
+  if (Platform.OS === 'android') {
+    return 'http://10.0.2.2:4000/api/v1';
+  }
+
   return (
     process.env.EXPO_PUBLIC_FARMER_API_URL ||
     process.env.EXPO_PUBLIC_API_URL ||
-    'http://10.179.209.101:4000/api/v1'
+    'http://localhost:4000/api/v1'
   );
 }
 

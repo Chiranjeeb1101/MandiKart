@@ -115,6 +115,41 @@ export const useProduceStore = create<ProduceStoreState>()(
 
       syncWithBackend: async (token?: string | null) => {
         try {
+          // Auto-sync any unsynced local crops created offline or during network timeouts
+          const currentCrops = get().crops || [];
+          const unsyncedLocalCrops = currentCrops.filter(c => c && c.id && c.id.startsWith('crop_'));
+
+          for (const localCrop of unsyncedLocalCrops) {
+            try {
+              const mappedGrade = localCrop.grade === 'Grade B' ? 'B' : localCrop.grade === 'Grade C' ? 'C' : 'A';
+              const created: any = await apiClient.createProduct({
+                cropName: localCrop.cropName.trim(),
+                cropVariety: localCrop.variety?.trim() || undefined,
+                grade: mappedGrade,
+                category: localCrop.category || 'Vegetables',
+                totalQuantity: localCrop.totalKg || localCrop.availableKg || 100,
+                quantityUnit: 'kg',
+                basePricePerUnit: localCrop.expectedPricePerKg || localCrop.referencePricePerKg || 30,
+                minOrderQuantity: 10,
+                targetBuyer: 'PENDING_APPROVAL',
+                status: 'PENDING_APPROVAL',
+                isActive: false,
+                images: localCrop.imageUri ? [localCrop.imageUri] : [],
+                shelfLifeDays: localCrop.shelfLifeDaysEstMax || 7,
+                pickupAddress: localCrop.location || 'Nashik Mandi Area',
+                farmerName: 'Farmer',
+                farmerPhone: '',
+                location: localCrop.location || 'Nashik, Maharashtra',
+              } as any, token);
+
+              if (created?.data?.id) {
+                get().replaceCropId(localCrop.id, created.data.id);
+              }
+            } catch (syncErr) {
+              console.log('[produceStore] Local crop sync retry notice:', localCrop.cropName, syncErr);
+            }
+          }
+
           const backendProducts = await apiClient.getProducts(token);
           if (!Array.isArray(backendProducts) || backendProducts.length === 0) {
             return;
